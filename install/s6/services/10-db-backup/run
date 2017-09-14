@@ -1,0 +1,256 @@
+#!/usr/bin/with-contenv bash
+
+date >/dev/null
+
+### Set Debug Mode
+      sleep 10
+      if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ]; then
+        set -x
+      fi
+
+### Sanity Test
+if [ !-n "DB_TYPE"]; then
+    echo '** [db-backup] ERROR: No Database Type Selected! '
+    exit 1
+fi
+
+if [ !-n "DB_HOST"]; then
+    echo '** [db-backup] ERROR: No Database Host Entered! '
+    exit 1
+fi
+
+
+### Set Defaults
+COMPRESSION=${COMPRESSION:-GZ}
+DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
+DB_DUMP_BEGIN=${DB_DUMP_BEGIN:-+0}
+DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backups}
+DBHOST=${DB_HOST}
+DBNAME=${DB_NAME}
+DBPASS=${DB_PASS}
+DBUSER=${DB_USER}
+DBTYPE=${DB_TYPE}
+MD5=${MD5:-TRUE}
+SPLIT_DB=${SPLIT_DB:-FALSE}
+TMPDIR=/tmp/backups
+
+
+### Set the Database Type
+       case "DBTYPE" in
+            "influx" | "influxdb" | "INFLUX" | "INFLUXDB"  )
+            DBTYPE=influx
+            DBPORT=${DB_PORT:-8088}
+            ;;
+            "mongo" | "mongodb" | "MONGO" | "MONGODB" )
+            DBTYPE=mongo
+            DBPORT=${DB_PORT:-27017}
+            [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DBUSER}"
+            [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DBPASS}"
+            [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DBNAME}"
+            ;;
+            "mysql" | "MYSQL" | "mariadb" | "MARIADB")
+            DBTYPE=mysql
+            DBPORT=${DB_PORT:-3306}
+            [[ ( -n "${DB_PASS}" ) ]] && MYSQL_PASS_STR=" -p${DBPASS}"
+            ;;
+            "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
+            DBTYPE=pgsql
+            DBPORT=${DB_PORT:-5432}
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DBPASS} "
+            ;;
+            "redis" | "REDIS"   )
+            DBTYPE=redis
+            DBPORT=${DB_PORT:-6379}
+            ;;
+            "rethink" | "RETHINK"   )
+            DBTYPE=rethink
+            DBPORT=${DB_PORT:-28015}
+            [[ ( -n "${DB_PASS}" ) ]] && echo $DB_PASS>/tmp/.rethink.auth; RETHINK_PASS_STR=" --password-file /tmp/.rethink.auth"
+            [[ ( -n "${DB_NAME}" ) ]] && RETHINK_DB_STR=" -e ${DBNAME}"
+            ;;
+        esac
+
+### Functions
+function backup_mysql() {
+    if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then   
+        DATABASES=`mysql -h $DBHOST -u$DBUSER -p$DBPASS --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
+        
+        for db in $DATABASES; do
+                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
+                    echo "** [db-backup] Dumping database: $db"
+                    TARGET=mysql_${db}_${DBHOST}_${now}.sql
+                    mysqldump --max-allowed-packet=512M -h $DBHOST -u$DBUSER ${MYSQL_PASS_STR} --databases $db > ${TMPDIR}/${TARGET}
+                    generate_md5
+                    compression
+                    move_backup
+                fi
+        done
+    else
+        mysqldump --max-allowed-packet=512M -A -h $DBHOST -u$DBUSER ${MYSQL_PASS_STR} > ${TMPDIR}/${TARGET}
+        generate_md5
+        compression
+        move_backup
+    fi
+}
+
+function backup_influx() {
+    for DB in $DB_NAME; do
+        influxd backup -database $DB -host {DBHOST} ${TMPDIR}/${TARGET}
+        generate_md5
+        compression
+        move_backup
+    done
+}
+
+function backup_mongo() {
+    mongodump --out ${TMPDIR}/${TARGET} --host ${DBHOST} --port ${DBPORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    cd ${TMPDIR}
+    tar cf ${TARGET}.tar ${TARGET}/*
+    TARGET=${TARGET}.tar   
+    generate_md5
+    compression
+    move_backup
+}
+
+function backup_pgsql() {
+  if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then   
+      DATABASES=$( ${POSTGRES_PASS_STR} psql -h $DBHOST -U $DBUSER -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+            for db in $DATABASES; do
+                echo "** [db-backup] Dumping database: $db"
+                TARGET=pgsql_${db}_${DBHOST}_${now}.sql
+                ${POSTGRES_PASS_STR} pg_dump -h ${DBHOST} -p ${DBPORT}-U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+                generate_md5
+                compression
+                move_backup
+            done
+        else
+            ${POSTGRES_PASS_STR} pg_dump -h ${DBHOST} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+            generate_md5
+            compression
+            move_backup
+  fi
+}
+
+function backup_redis() {
+    TARGET=redis_${db}_${DBHOST}_${now}.rdb
+    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} --rdb ${TMPDIR]/${TARGET}
+    echo "** [db-backup] Dumping Redis - Flushing Redis Cache First"
+    sleep 10
+    try=5
+    while [ $try -gt 0 ] ; do
+        saved=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
+        ok=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
+        if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]] ; then
+            generate_md5
+            compression
+            move_backup
+        fi
+        try=$((try - 1))
+        echo "** [db-backup] Redis Busy - Waiting and retrying in 5 seconds"
+        sleep 5
+    done
+}
+
+function backup_rethink() {
+    TARGET=rethink_${db}_${DBHOST}_${now}.tar.gz  
+    echo "** [db-backup] Dumping rethink Database: $db"
+    rethinkdb dump -f ${TMPDIR}/${TARGET} -c ${DBHOST}:${DBPORT} ${RETHINK_PASS_STR} ${RETHINK_DB_STR}
+    move_backup
+}
+
+function compression() {
+   case "$COMPRESSION" in
+        "GZ" | "gz" | "gzip" | "GZIP")
+        gzip ${TMPDIR}/${TARGET}
+        TARGET=${TARGET}.gz
+        ;;
+        "BZ" | "bz" | "bzip2" | "BZIP2" | "bzip" | "BZIP" | "bz2" | "BZ2")
+        bzip2 ${TMPDIR}/${TARGET}
+        TARGET=${TARGET}.bz2
+        ;;
+        "XZ" | "xz" | "XZIP" | "xzip" )
+        xz ${TMPDIR}/${TARGET}
+        TARGET=${TARGET}.xz
+        ;;
+        "NONE" | "none" | "FALSE" | "false")
+        ;;
+    esac
+}
+
+function generate_md5() {
+if [ "$MD5" = "TRUE" ] || [ "$MD5" = "true" ] ;  then  
+    cd $TMPDIR
+    md5sum ${TARGET} > ${TARGET}.md5
+fi
+}
+
+function move_backup() {
+    mkdir -p ${DB_DUMP_TARGET}
+    mv ${TMPDIR}/*.md5 ${DB_DUMP_TARGET}/
+    mv ${TMPDIR}/${TARGET} ${DB_DUMP_TARGET}/${TARGET}
+}
+
+
+### Container Startup  
+echo '** [db-backup] Initialized at at '$(date)
+
+### Wait for Next time to start backup
+  current_time=$(date +"%s")
+  today=$(date +"%Y%m%d")
+  
+
+  if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
+        waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+  else
+        target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
+    if [[ "$target_time" < "$current_time" ]]; then
+        target_time=$(($target_time + 24*60*60))
+    fi
+        waittime=$(($target_time - $current_time))
+  fi
+
+  sleep $waittime
+
+
+### Commence Backup
+  while true; do
+    # make sure the directory exists
+    mkdir -p $TMPDIR
+
+    Define Target name
+    now=$(date +"%Y%m%d-%H%M%S")
+    TARGET=${DBTYPE}_${DBNAME}_${DBHOST}_${now}.sql
+
+### Take a Dump
+       case "DBTYPE" in
+        "influx" )
+        function_backup_influx
+        ;;
+        "mysql" )
+        function_backup_mysql
+        ;;
+        "mongo" )
+        function_backup_mongo
+        ;;
+        "pgsql" )
+        function_backup_pgsql
+        ;;
+        "redis" )
+        function_backup_redis
+        ;;
+        "rethink" )
+        function_backup_rethink
+        ;;
+        esac
+
+
+### Automatic Cleanup
+    if [[ -n "$DB_CLEANUP_TIME" ]]; then
+          find $DB_DUMP_TARGET/  -mmin +$DB_CLEANUP_TIME -iname "$DBTYPE_$DBNAME_*.*" -exec rm {} \;
+    fi
+
+    ### Go back to Sleep until next Backup time
+    sleep $(($DB_DUMP_FREQ*60))
+
+  done
+fi

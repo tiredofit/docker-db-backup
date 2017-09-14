@@ -1,0 +1,38 @@
+version: '2'
+
+services:
+  example-db:
+    container_name: example-db
+    image: mariadb:latest
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=examplerootpassword
+      - MYSQL_DATABASE=example
+      - MYSQL_USER=example
+      - MYSQL_PASSWORD=examplepassword
+    restart: always
+
+  example-db-backup:
+    container_name: example-db-backup
+    image: tiredofit/db-backup
+    links:
+     - example-db
+    volumes:
+      - ./backups:/backups
+    environment:
+      - DB_TYPE=mariadb
+      - DB_HOST=example-db
+      - DB_NAME=example
+      - DB_USER=example
+      - DB_PASSWORD="examplepassword"
+      - DB_DUMP_FREQ=1440
+      - DB_DUMP_BEGIN=0000
+      - DB_CLEANUP_TIME=8640
+      - MD5=TRUE
+      - COMPRESSION=XZ
+      - SPLIT_DB=FALSE
+
+    restart: always
+
+

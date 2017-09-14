@@ -1,0 +1,25 @@
+FROM tiredofit/alpine:edge
+LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
+
+### Set Environment Variables
+   ENV ENABLE_SMTP=FALSE
+
+### Dependencies
+   RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+       apk update && \
+       apk add \
+       	   bzip2 \
+           influxdb@testing \
+           mongodb-tools \
+       	   mysql-client \
+       	   postgresql-client \
+       	   redis \
+    	   xz && \
+       rm -rf /var/cache/apk/* 
+
+### S6 Setup
+   ADD install/s6 /etc/s6
+
+### Entrypoint Configuration  
+   ENTRYPOINT ["/init"]
+
