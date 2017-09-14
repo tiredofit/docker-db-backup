@@ -69,7 +69,7 @@ The following directories are used for configuration and can be mapped for persi
 
 | Directory | Description |
 |-----------|-------------|
-| `/backup` | SQL Backups |
+| `/backups` | Backups |
       
 
 ## Environment Variables
