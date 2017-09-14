@@ -37,6 +37,10 @@ TMPDIR=/tmp/backups
 
 ### Set the Database Type
        case "DBTYPE" in
+            "couch" | "couchdb" | "COUCH" | "COUCHDB"  )
+            DBTYPE=couch
+            DBPORT=${DB_PORT:-5984}
+            ;;
             "influx" | "influxdb" | "INFLUX" | "INFLUXDB"  )
             DBTYPE=influx
             DBPORT=${DB_PORT:-8088}
@@ -71,6 +75,15 @@ TMPDIR=/tmp/backups
         esac
 
 ### Functions
+function backup_couch() {
+    TARGET=couch_${DBNAME}_${DBHOST}_${now}.txt
+    curl -X GET http://${DBHOST}:${DBPORT}/${DBNAME}/ all docs? include docs=true >${TMPDIR}/${TARGET}
+    generate_md5
+    compression
+    move_backup
+    done
+}
+
 function backup_mysql() {
     if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then   
         DATABASES=`mysql -h $DBHOST -u$DBUSER -p$DBPASS --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
@@ -223,23 +236,26 @@ echo '** [db-backup] Initialized at at '$(date)
 
 ### Take a Dump
        case "DBTYPE" in
+        "couch" )
+        backup_couch
+        ;;
         "influx" )
-        function_backup_influx
+        backup_influx
         ;;
         "mysql" )
-        function_backup_mysql
+        backup_mysql
         ;;
         "mongo" )
-        function_backup_mongo
+        backup_mongo
         ;;
         "pgsql" )
-        function_backup_pgsql
+        backup_pgsql
         ;;
         "redis" )
-        function_backup_redis
+        backup_redis
         ;;
         "rethink" )
-        function_backup_rethink
+        backup_rethink
         ;;
         esac
 

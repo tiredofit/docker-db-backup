@@ -4,7 +4,7 @@
 
 This will build a container for backing up multiple type of DB Servers
 
-Currently backs up InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink servers.
+Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink servers.
 
 * dump to local filesystem 
 * select database user and password
@@ -79,7 +79,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 
 | Parameter | Description |
 |-----------|-------------|
-| `DB_TYPE` | Type of DB Server to backup `influx` `mysql` `pgsql` `mongo` `redis` `rethink` 
+| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink` 
 | `DB_SERVER` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
