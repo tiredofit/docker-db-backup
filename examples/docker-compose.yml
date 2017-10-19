@@ -25,7 +25,7 @@ services:
       - DB_HOST=example-db
       - DB_NAME=example
       - DB_USER=example
-      - DB_PASSWORD="examplepassword"
+      - DB_PASS="examplepassword"
       - DB_DUMP_FREQ=1440
       - DB_DUMP_BEGIN=0000
       - DB_CLEANUP_TIME=8640

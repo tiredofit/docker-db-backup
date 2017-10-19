@@ -2,7 +2,8 @@ FROM tiredofit/alpine:edge
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
 ### Set Environment Variables
-   ENV ENABLE_SMTP=FALSE
+   ENV ENABLE_CRON=FALSE \
+       ENABLE_SMTP=FALSE
 
 ### Dependencies
    RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
@@ -18,7 +19,7 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
        rm -rf /var/cache/apk/* 
 
 ### S6 Setup
-   ADD install /
+   ADD install  /
 
 ### Entrypoint Configuration  
    ENTRYPOINT ["/init"]

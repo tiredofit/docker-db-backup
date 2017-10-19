@@ -3,22 +3,21 @@
 date >/dev/null
 
 ### Set Debug Mode
-      sleep 10
-      if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ]; then
-        set -x
-      fi
+sleep 10
+if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ]; then
+    set -x
+fi
 
 ### Sanity Test
-if [ !-n "DB_TYPE" ]; then
+if [ ! -n "$DB_TYPE" ]; then
     echo '** [db-backup] ERROR: No Database Type Selected! '
     exit 1
 fi
 
-if [ !-n "DB_HOST" ]; then
+if [ ! -n "$DB_HOST" ]; then
     echo '** [db-backup] ERROR: No Database Host Entered! '
     exit 1
 fi
-
 
 ### Set Defaults
 COMPRESSION=${COMPRESSION:-GZ}
@@ -34,9 +33,8 @@ MD5=${MD5:-TRUE}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
 
-
 ### Set the Database Type
-       case "DBTYPE" in
+       case "$DBTYPE" in
             "couch" | "couchdb" | "COUCH" | "COUCHDB"  )
             DBTYPE=couch
             DBPORT=${DB_PORT:-5984}
@@ -60,7 +58,7 @@ TMPDIR=/tmp/backups
             "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
             DBTYPE=pgsql
             DBPORT=${DB_PORT:-5432}
-            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DBPASS} "
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DBPASS}"
             ;;
             "redis" | "REDIS"   )
             DBTYPE=redis
@@ -81,7 +79,6 @@ function backup_couch() {
     generate_md5
     compression
     move_backup
-    done
 }
 
 function backup_mysql() {
@@ -131,13 +128,13 @@ function backup_pgsql() {
             for db in $DATABASES; do
                 echo "** [db-backup] Dumping database: $db"
                 TARGET=pgsql_${db}_${DBHOST}_${now}.sql
-                ${POSTGRES_PASS_STR} pg_dump -h ${DBHOST} -p ${DBPORT}-U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+                pg_dump -h ${DBHOST} -p ${DBPORT}-U ${DBUSER} $db > ${TMPDIR}/${TARGET}
                 generate_md5
                 compression
                 move_backup
             done
         else
-            ${POSTGRES_PASS_STR} pg_dump -h ${DBHOST} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+            pg_dump -h ${DBHOST} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
             generate_md5
             compression
             move_backup
@@ -146,22 +143,23 @@ function backup_pgsql() {
 
 function backup_redis() {
     TARGET=redis_${db}_${DBHOST}_${now}.rdb
-    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} --rdb ${TMPDIR]/${TARGET}
+    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} --rdb ${TMPDIR}/${TARGET}
     echo "** [db-backup] Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
         saved=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
         ok=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
-        if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]] ; then
-            generate_md5
-            compression
-            move_backup
+        if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
+            echo "** [db-backup] Redis Backup Complete"
         fi
         try=$((try - 1))
         echo "** [db-backup] Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
+    generate_md5
+    compression
+    move_backup
 }
 
 function backup_rethink() {
@@ -219,7 +217,7 @@ echo '** [db-backup] Initialized at at '$(date)
     if [[ "$target_time" < "$current_time" ]]; then
         target_time=$(($target_time + 24*60*60))
     fi
-        waittime=$(($target_time - $current_time))
+  waittime=$(($target_time - $current_time))
   fi
 
   sleep $waittime
@@ -230,12 +228,12 @@ echo '** [db-backup] Initialized at at '$(date)
     # make sure the directory exists
     mkdir -p $TMPDIR
 
-    Define Target name
+### Define Target name
     now=$(date +"%Y%m%d-%H%M%S")
     TARGET=${DBTYPE}_${DBNAME}_${DBHOST}_${now}.sql
 
 ### Take a Dump
-       case "DBTYPE" in
+       case "$DBTYPE" in
         "couch" )
         backup_couch
         ;;
