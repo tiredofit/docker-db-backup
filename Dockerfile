@@ -13,14 +13,12 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
            influxdb@testing \
            mongodb-tools \
        	   mysql-client \
-       	   redis \
-    	   xz
+       	   openssl
+           redis \
+    	   xz \
+           && \
 
 ### Build Postgres 10
-   RUN apk add --no-cache --virtual .fetch-deps \
-   		ca-certificates \
-   		openssl \
-	        && \
        mkdir -p /usr/src/postgresql && \
        curl https://ftp.postgresql.org/pub/source/v10.0/postgresql-10.0.tar.bz2 | tar xvfj - --strip 1 -C /usr/src/postgresql && \
  
@@ -69,7 +67,7 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
        make install-world && \
        make -C contrib install && \
 	\
-       apk del .fetch-deps .build-deps && \
+       apk del .build-deps && \
        cd / && \
        rm -rf \
         	/usr/src/postgresql \
