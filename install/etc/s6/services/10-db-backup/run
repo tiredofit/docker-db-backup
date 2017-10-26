@@ -128,12 +128,15 @@ function backup_pgsql() {
             for db in $DATABASES; do
                 echo "** [db-backup] Dumping database: $db"
                 TARGET=pgsql_${db}_${DBHOST}_${now}.sql
+                export PGPASSWORD=${DBPASS}
+
                 pg_dump -h ${DBHOST} -p ${DBPORT}-U ${DBUSER} $db > ${TMPDIR}/${TARGET}
                 generate_md5
                 compression
                 move_backup
             done
         else
+            export PGPASSWORD=${DBPASS}
             pg_dump -h ${DBHOST} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
             generate_md5
             compression
