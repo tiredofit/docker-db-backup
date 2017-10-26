@@ -1,4 +1,4 @@
-FROM registry.selfdesign.org/docker/alpine:edge
+FROM tiredofit/alpine:edge
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
 ### Set Environment Variables
