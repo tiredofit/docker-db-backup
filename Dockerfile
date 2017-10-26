@@ -13,7 +13,7 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
            influxdb@testing \
            mongodb-tools \
        	   mysql-client \
-       	   openssl
+       	   openssl \
            redis \
     	   xz \
            && \
