@@ -1,4 +1,8 @@
-## 1.1 - 2017-11-17 - <dave at tiredofit dot ca>
+## 1.4 - 2017-11-17 - <dave at tiredofit dot ca>
+
+* Switch to Packages Postgres
+
+## 1.31 - 2017-11-17 - <dave at tiredofit dot ca>
 
 * Fix to SPLIT_DB Postgresql Backup
 
