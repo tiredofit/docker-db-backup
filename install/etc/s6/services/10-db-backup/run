@@ -124,12 +124,11 @@ function backup_mongo() {
 
 function backup_pgsql() {
   if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then   
-      DATABASES=$( ${POSTGRES_PASS_STR} psql -h $DBHOST -U $DBUSER -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+      export PGPASSWORD=${DBPASS}
+      DATABASES=psql -h $DBHOST -U $DBUSER -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
             for db in $DATABASES; do
                 echo "** [db-backup] Dumping database: $db"
                 TARGET=pgsql_${db}_${DBHOST}_${now}.sql
-                export PGPASSWORD=${DBPASS}
-
                 pg_dump -h ${DBHOST} -p ${DBPORT}-U ${DBUSER} $db > ${TMPDIR}/${TARGET}
                 generate_md5
                 compression

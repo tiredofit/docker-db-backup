@@ -1,3 +1,7 @@
+## 1.1 - 2017-11-17 - <dave at tiredofit dot ca>
+
+* Fix to SPLIT_DB Postgresql Backup
+
 ## 1.3 - 2017-10-25 - <dave at tiredofit dot ca>
 
 * Remove Alpine postgres package and recompile version 10
