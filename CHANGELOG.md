@@ -1,3 +1,7 @@
+## 1.5 - 2017-01-28 - <dave at tiredofit dot ca>
+
+* Add Zabbix Checks
+
 ## 1.4 - 2017-11-17 - <dave at tiredofit dot ca>
 
 * Switch to Packages Postgres

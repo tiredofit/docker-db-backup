@@ -259,7 +259,12 @@ echo '** [db-backup] Initialized at at '$(date)
         ;;
         esac
 
-
+### Zabbix 
+    if [ "$ENABLE_ZABBIX" = "TRUE" ] || [ "$ENABLE_ZABBIX" = "true" ];  then
+        zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o `stat -c%s ${DB_DUMP_TARGET}/${TARGET}`
+        zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o `date -r  ${DB_DUMP_TARGET}/${TARGET} +'%s'`
+    fi
+    
 ### Automatic Cleanup
     if [[ -n "$DB_CLEANUP_TIME" ]]; then
           find $DB_DUMP_TARGET/  -mmin +$DB_CLEANUP_TIME -iname "$DBTYPE_$DBNAME_*.*" -exec rm {} \;
