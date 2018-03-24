@@ -1,5 +1,10 @@
 # tiredofit/db-backup
 
+[![Build Status](https://img.shields.io/docker/build/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
+[![Image Size](https://img.shields.io/microbadger/image-size/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
 # Introduction
 
 This will build a container for backing up multiple type of DB Servers
