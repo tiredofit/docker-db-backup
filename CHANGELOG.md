@@ -1,4 +1,8 @@
-## 1.5 - 2017-01-28 - <dave at tiredofit dot ca>
+## 1.6 - 2018-02-26 - <dave at tiredofit dot ca>
+
+* Add Parallel Compression mode (Default TRUE
+
+## 1.5 - 2018-01-28 - <dave at tiredofit dot ca>
 
 * Add Zabbix Checks
 

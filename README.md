@@ -1,10 +1,5 @@
 # tiredofit/db-backup
 
-[![Build Status](https://img.shields.io/docker/build/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
-[![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
-[![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
-[![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
-[![Image Size](https://img.shields.io/microbadger/image-size/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
 # Introduction
 
 This will build a container for backing up multiple type of DB Servers
@@ -99,7 +94,8 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.
 | `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, or none `NONE` - Default `GZ`
 | `MD5` | Generate MD5 Sum in Directory, `TRUE` or `FALSE` - Default `TRUE`
-| `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE`
+| `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE` |
+| `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE` |
 
 
 ## Maintenance

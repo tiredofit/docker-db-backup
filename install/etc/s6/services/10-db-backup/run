@@ -21,6 +21,7 @@ fi
 
 ### Set Defaults
 COMPRESSION=${COMPRESSION:-GZ}
+PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
 DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
 DB_DUMP_BEGIN=${DB_DUMP_BEGIN:-+0}
 DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backup}
@@ -32,6 +33,19 @@ DBTYPE=${DB_TYPE}
 MD5=${MD5:-TRUE}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
+
+### Set Compression Options
+
+if [ "$PARALLEL_COMPRESSION" = "TRUE " ]; then
+    BZIP="pbzip2"
+    GZIP="pigz"
+    XZIP="pixz"
+else
+    BZIP="bzip2"
+    GZIP="gzip"
+    XZIP=="xz"
+fi
+
 
 ### Set the Database Type
        case "$DBTYPE" in
@@ -174,15 +188,15 @@ function backup_rethink() {
 function compression() {
    case "$COMPRESSION" in
         "GZ" | "gz" | "gzip" | "GZIP")
-        gzip ${TMPDIR}/${TARGET}
+        $GZIP ${TMPDIR}/${TARGET}
         TARGET=${TARGET}.gz
         ;;
         "BZ" | "bz" | "bzip2" | "BZIP2" | "bzip" | "BZIP" | "bz2" | "BZ2")
-        bzip2 ${TMPDIR}/${TARGET}
+        $BZIP ${TMPDIR}/${TARGET}
         TARGET=${TARGET}.bz2
         ;;
         "XZ" | "xz" | "XZIP" | "xzip" )
-        xz ${TMPDIR}/${TARGET}
+        $XZIP ${TMPDIR}/${TARGET}
         TARGET=${TARGET}.xz
         ;;
         "NONE" | "none" | "FALSE" | "false")
