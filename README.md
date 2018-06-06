@@ -16,7 +16,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink se
 * select how often to run a dump
 * select when to start the first dump, whether time of day or relative to container start time
 
-This Container uses Alpine:Edge as a base.
+This Container uses a [customized version of](https://hub.docker.com/r/tiredofit/alpine) alpine:edge as a base.
 
 
 [Changelog](CHANGELOG.md)
@@ -69,7 +69,7 @@ The following directories are used for configuration and can be mapped for persi
 
 | Directory | Description |
 |-----------|-------------|
-| `/backups` | Backups |
+| `/backup` | Backups |
       
 
 ## Environment Variables
@@ -99,6 +99,9 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 
 
 ## Maintenance
+
+Manual Backups can be perforemd by entering the container and typing `backup-now`
+
 #### Shell Access
 
 For debugging and maintenance purposes you may want access the containers shell. 

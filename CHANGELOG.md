@@ -1,3 +1,7 @@
+## 1.7 - 2018-06-06 - <dave at tiredofit dot ca>
+
+* Added ability for Manual Backup (enter container and type `backup-now`)
+
 ## 1.6 - 2018-02-26 - <dave at tiredofit dot ca>
 
 * Add Parallel Compression mode (Default TRUE

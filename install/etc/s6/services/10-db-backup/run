@@ -2,8 +2,11 @@
 
 date >/dev/null
 
+if [ $1 != "NOW" ]; then
+    sleep 10
+fi
+
 ### Set Debug Mode
-sleep 10
 if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ]; then
     set -x
 fi
@@ -34,8 +37,12 @@ MD5=${MD5:-TRUE}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
 
-### Set Compression Options
+if [ $1 = "NOW" ]; then
+    DB_DUMP_BEGIN=+0
+    MANUAL=TRUE
+fi
 
+### Set Compression Options
 if [ "$PARALLEL_COMPRESSION" = "TRUE " ]; then
     BZIP="pbzip2"
     GZIP="pigz"
@@ -225,7 +232,6 @@ echo '** [db-backup] Initialized at at '$(date)
   current_time=$(date +"%s")
   today=$(date +"%Y%m%d")
   
-
   if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
         waittime=$(( ${BASH_REMATCH[1]} * 60 ))
   else
@@ -285,7 +291,11 @@ echo '** [db-backup] Initialized at at '$(date)
     fi
 
     ### Go back to Sleep until next Backup time
-    sleep $(($DB_DUMP_FREQ*60))
+    if [ "$MANUAL" = "TRUE" ]; then
+        exit 1;
+    else
+        sleep $(($DB_DUMP_FREQ*60))
+    fi
 
   done
 fi
