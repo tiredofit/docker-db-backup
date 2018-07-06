@@ -80,7 +80,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | Parameter | Description |
 |-----------|-------------|
 | `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink` 
-| `DB_SERVER` | Server Hostname e.g. `mariadb`
+| `DB_HOST` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
 | `DB_PASS` | (optional if DB doesn't require it) password for the database
