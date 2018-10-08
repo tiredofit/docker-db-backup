@@ -157,7 +157,7 @@ function backup_pgsql() {
             done
         else
             export PGPASSWORD=${DBPASS}
-            pg_dump -h ${DBHOST} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+            pg_dump -h ${DBHOST} -U ${DBUSER} ${DBNAME} > ${TMPDIR}/${TARGET}
             generate_md5
             compression
             move_backup
