@@ -1,5 +1,12 @@
 # tiredofit/db-backup
 
+
+[![Build Status](https://img.shields.io/docker/build/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
+[![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
+
+
 # Introduction
 
 This will build a container for backing up multiple type of DB Servers
@@ -16,8 +23,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink se
 * select how often to run a dump
 * select when to start the first dump, whether time of day or relative to container start time
 
-This Container uses a [customized version of](https://hub.docker.com/r/tiredofit/alpine) alpine:edge as a base.
-
+This Container uses Alpine:Edge as a base.
 
 [Changelog](CHANGELOG.md)
 
@@ -45,7 +51,8 @@ You must have a working DB server or container available for this to work proper
 
 # Installation
 
-Automated builds of the image are available on [Docker Hub](https://hub.docker.com/tiredofit/db-backup) and is the recommended method of installation.
+Automated builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/db-backup) and is the recommended 
+method of installation.
 
 
 ```bash
@@ -80,7 +87,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | Parameter | Description |
 |-----------|-------------|
 | `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink` 
-| `DB_HOST` | Server Hostname e.g. `mariadb`
+| `DB_SERVER` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
 | `DB_PASS` | (optional if DB doesn't require it) password for the database
@@ -89,7 +96,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | | Absolute HHMM, e.g. `2330` or `0415`
 | | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half
 | `DB_DUMP_DEBUG` | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.
-| `DB_DUMP_TARGET` | Where to put the dump file, should be a directory. Default - `/backups` |
+| `DB_DUMP_TARGET` | Where to put the dump file, should be a directory. Supports three formats |
 | |  Local If the value of `DB_DUMP_TARGET` starts with a `/` character, will dump to a local path, which should be volume-mounted.
 | `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.
 | `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, or none `NONE` - Default `GZ`

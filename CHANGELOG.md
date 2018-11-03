@@ -1,3 +1,11 @@
+## 1.9 - 2018-11-03 - <dave at tiredofit dot ca>
+
+* Switch from OpenSSL to LibreSSL
+
+## 1.8 - 2018-07-18 - <dave at tiredofit dot ca>
+
+* Fix warnings on startup related to 1.7 Changes
+
 ## 1.7 - 2018-06-06 - <dave at tiredofit dot ca>
 
 * Added ability for Manual Backup (enter container and type `backup-now`)
