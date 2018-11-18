@@ -1,3 +1,7 @@
+## 1.10 - 2018-11-19 - <dave at tiredofit dot ca>
+
+* Fix for InfluxDB for backing up and supporting DB_PORT variable - Thanks skylord123@github
+
 ## 1.9 - 2018-11-03 - <dave at tiredofit dot ca>
 
 * Switch from OpenSSL to LibreSSL
