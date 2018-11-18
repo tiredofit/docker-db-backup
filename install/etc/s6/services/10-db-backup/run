@@ -2,7 +2,7 @@
 
 date >/dev/null
 
-if [ $1 != "NOW" ]; then
+if [ "$1" != "NOW" ]; then
     sleep 10
 fi
 
@@ -37,7 +37,7 @@ MD5=${MD5:-TRUE}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
 
-if [ $1 = "NOW" ]; then
+if [ "$1" = "NOW" ]; then
     DB_DUMP_BEGIN=+0
     MANUAL=TRUE
 fi
