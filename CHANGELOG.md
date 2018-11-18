@@ -1,3 +1,7 @@
+## 1.11 - 2018-11-19 - <skylord123 at github>
+
+* Fix for Urnary Operator Error
+
 ## 1.10 - 2018-11-19 - <dave at tiredofit dot ca>
 
 * Fix for InfluxDB for backing up and supporting DB_PORT variable - Thanks skylord123@github
