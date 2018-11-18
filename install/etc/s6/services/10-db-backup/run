@@ -126,7 +126,7 @@ function backup_mysql() {
 
 function backup_influx() {
     for DB in $DB_NAME; do
-        influxd backup -database $DB -host ${DBHOST} -p ${DBPORT} ${TMPDIR}/${TARGET}
+        influxd backup -database $DB -host ${DBHOST}:${DBPORT} ${TMPDIR}/${TARGET}
         generate_md5
         compression
         move_backup
