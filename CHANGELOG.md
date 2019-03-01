@@ -1,3 +1,7 @@
+## 1.12 - 2019-03-01 - <stevetodorov at github>
+
+* Fix for XZ Compression failing
+
 ## 1.11 - 2018-11-19 - <skylord123 at github>
 
 * Fix for Urnary Operator Error
