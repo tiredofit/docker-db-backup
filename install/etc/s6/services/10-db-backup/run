@@ -50,7 +50,7 @@ if [ "$PARALLEL_COMPRESSION" = "TRUE " ]; then
 else
     BZIP="bzip2"
     GZIP="gzip"
-    XZIP=="xz"
+    XZIP="xz"
 fi
 
 
