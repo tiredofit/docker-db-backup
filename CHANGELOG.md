@@ -1,3 +1,8 @@
+## 1.13 - 2019-03-09 - <dave at tiredofit dot ca>
+
+* Fixed Postgres backup without SPLIT_DB enabled (credit MelwinKfr@github)
+* Added DB_PORT reference to properly backup Postgres with non default ports (thanks Maxximus007@github)
+
 ## 1.12 - 2019-03-01 - <stevetodorov at github>
 
 * Fix for XZ Compression failing
