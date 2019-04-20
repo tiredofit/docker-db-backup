@@ -1,11 +1,10 @@
-## 1.13 - 2019-03-09 - <dave at tiredofit dot ca>
+## 1.13 - 2019-04-20 - <dave at tiredofit dot ca>
 
-* Fixed Postgres backup without SPLIT_DB enabled (credit MelwinKfr@github)
-* Added DB_PORT reference to properly backup Postgres with non default ports (thanks Maxximus007@github)
+* Switch to using locally built mongodb-tools from tiredofit/mongo-builder due to Alpine removing precompiled packages from repositories
 
-## 1.12 - 2019-03-01 - <stevetodorov at github>
+## 1.12 - 2018-12-03 - <dave at tiredofit dot ca>
 
-* Fix for XZ Compression failing
+* MongoDB Backup Fix
 
 ## 1.11 - 2018-11-19 - <skylord123 at github>
 

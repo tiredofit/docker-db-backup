@@ -1,5 +1,10 @@
+FROM tiredofit/mongo-builder as mongo-packages
+
 FROM tiredofit/alpine:edge
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
+
+### Copy Mongo Packages
+COPY --from=mongo-packages / /usr/src/apk
 
 ### Set Environment Variables
    ENV ENABLE_CRON=FALSE \
@@ -17,9 +22,9 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
            xz-dev \
            && \
            \
-       apk add --virtual .db-backup-run-deps  \
+       apk add -t .db-backup-run-deps \
        	   bzip2 \
-           mongodb-tools \
+           influxdb \
            mariadb-client \
            libressl \
            pigz \
@@ -28,22 +33,27 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
            redis \
            xz \
            && \
-        apk add \
-            influxdb@testing \
-            pixz@testing \
+       apk add \
+           pixz@testing \
            && \
-          \
-          cd /usr/src && \
-          mkdir -p pbzip2 && \
-          curl -ssL https://launchpad.net/pbzip2/1.1/1.1.13/+download/pbzip2-1.1.13.tar.gz | tar xvfz - --strip=1 -C /usr/src/pbzip2 && \
-          cd pbzip2 && \
-          make && \
-          make install && \
-          \
-          # Cleanup
-          rm -rf /usr/src/* && \
-          apk del .db-backup-build-deps && \
-          rm -rf /tmp/* /var/cache/apk/*
+        
+       ## Locally Install Mongo Package
+       cd /usr/src/apk && \
+       apk add -t .db-backup-mongo-deps --allow-untrusted \
+           mongodb-tools*.apk \
+           && \
+       \
+       cd /usr/src && \
+       mkdir -p pbzip2 && \
+       curl -ssL https://launchpad.net/pbzip2/1.1/1.1.13/+download/pbzip2-1.1.13.tar.gz | tar xvfz - --strip=1 -C /usr/src/pbzip2 && \
+       cd pbzip2 && \
+       make && \
+       make install && \
+       \
+### Cleanup
+       rm -rf /usr/src/* && \
+       apk del .db-backup-build-deps && \
+       rm -rf /tmp/* /var/cache/apk/*
 
 ### S6 Setup
     ADD install  /
