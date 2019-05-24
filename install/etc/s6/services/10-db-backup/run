@@ -84,6 +84,7 @@ fi
             "redis" | "REDIS"   )
             DBTYPE=redis
             DBPORT=${DB_PORT:-6379}
+            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DBPASS}"
             ;;
             "rethink" | "RETHINK"   )
             DBTYPE=rethink
@@ -103,9 +104,9 @@ function backup_couch() {
 }
 
 function backup_mysql() {
-    if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then   
+    if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then
         DATABASES=`mysql -h $DBHOST -u$DBUSER -p$DBPASS --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
-        
+
         for db in $DATABASES; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     echo "** [db-backup] Dumping database: $db"
@@ -137,7 +138,7 @@ function backup_mongo() {
     mongodump --out ${TMPDIR}/${TARGET} --host ${DBHOST} --port ${DBPORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     cd ${TMPDIR}
     tar cf ${TARGET}.tar ${TARGET}/*
-    TARGET=${TARGET}.tar   
+    TARGET=${TARGET}.tar
     generate_md5
     compression
     move_backup
@@ -166,13 +167,13 @@ function backup_pgsql() {
 
 function backup_redis() {
     TARGET=redis_${db}_${DBHOST}_${now}.rdb
-    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} --rdb ${TMPDIR}/${TARGET}
+    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} --rdb ${TMPDIR}/${TARGET}
     echo "** [db-backup] Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
-        saved=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
-        ok=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
+        saved=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
+        ok=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
             echo "** [db-backup] Redis Backup Complete"
         fi
@@ -186,7 +187,7 @@ function backup_redis() {
 }
 
 function backup_rethink() {
-    TARGET=rethink_${db}_${DBHOST}_${now}.tar.gz  
+    TARGET=rethink_${db}_${DBHOST}_${now}.tar.gz
     echo "** [db-backup] Dumping rethink Database: $db"
     rethinkdb dump -f ${TMPDIR}/${TARGET} -c ${DBHOST}:${DBPORT} ${RETHINK_PASS_STR} ${RETHINK_DB_STR}
     move_backup
@@ -212,7 +213,7 @@ function compression() {
 }
 
 function generate_md5() {
-if [ "$MD5" = "TRUE" ] || [ "$MD5" = "true" ] ;  then  
+if [ "$MD5" = "TRUE" ] || [ "$MD5" = "true" ] ;  then
     cd $TMPDIR
     md5sum ${TARGET} > ${TARGET}.md5
 fi
@@ -225,13 +226,13 @@ function move_backup() {
 }
 
 
-### Container Startup  
+### Container Startup
 echo '** [db-backup] Initialized at at '$(date)
 
 ### Wait for Next time to start backup
   current_time=$(date +"%s")
   today=$(date +"%Y%m%d")
-  
+
   if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
         waittime=$(( ${BASH_REMATCH[1]} * 60 ))
   else
@@ -279,12 +280,12 @@ echo '** [db-backup] Initialized at at '$(date)
         ;;
         esac
 
-### Zabbix 
+### Zabbix
     if [ "$ENABLE_ZABBIX" = "TRUE" ] || [ "$ENABLE_ZABBIX" = "true" ];  then
         zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o `stat -c%s ${DB_DUMP_TARGET}/${TARGET}`
         zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o `date -r  ${DB_DUMP_TARGET}/${TARGET} +'%s'`
     fi
-    
+
 ### Automatic Cleanup
     if [[ -n "$DB_CLEANUP_TIME" ]]; then
           find $DB_DUMP_TARGET/  -mmin +$DB_CLEANUP_TIME -iname "$DBTYPE_$DBNAME_*.*" -exec rm {} \;
