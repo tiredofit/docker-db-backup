@@ -1,3 +1,7 @@
+## 1.15 - 2019-05-24 - <claudioaltamura @ github>
+
+* Added abaility to backup password protected Redis Hosts
+
 ## 1.14 - 2019-04-20 - <dave at tiredofit dot ca>
 
 * Switch to using locally built mongodb-tools from tiredofit/mongo-builder due to Alpine removing precompiled packages from repositories
