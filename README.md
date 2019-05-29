@@ -13,7 +13,7 @@ This will build a container for backing up multiple type of DB Servers
 
 Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink servers.
 
-* dump to local filesystem 
+* dump to local filesystem
 * select database user and password
 * backup all databases
 * choose to have an MD5 sum after backup for verification
@@ -40,7 +40,7 @@ This Container uses Alpine:Edge as a base.
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
     - [Data Volumes](#data-volumes)
-    - [Environment Variables](#environmentvariables)   
+    - [Environment Variables](#environmentvariables)
 - [Maintenance](#maintenance)
     - [Shell Access](#shell-access)
 
@@ -51,7 +51,7 @@ You must have a working DB server or container available for this to work proper
 
 # Installation
 
-Automated builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/db-backup) and is the recommended 
+Automated builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/db-backup) and is the recommended
 method of installation.
 
 
@@ -77,7 +77,7 @@ The following directories are used for configuration and can be mapped for persi
 | Directory | Description |
 |-----------|-------------|
 | `/backup` | Backups |
-      
+
 
 ## Environment Variables
 
@@ -87,8 +87,8 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | Parameter | Description |
 |-----------|-------------|
 | `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, or none `NONE` - Default `GZ`
-| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink` 
-| `DB_SERVER` | Server Hostname e.g. `mariadb`
+| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink`
+| `DB_HOST` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
 | `DB_PASS` | (optional if DB doesn't require it) password for the database
@@ -109,7 +109,7 @@ Manual Backups can be perforemd by entering the container and typing `backup-now
 
 #### Shell Access
 
-For debugging and maintenance purposes you may want access the containers shell. 
+For debugging and maintenance purposes you may want access the containers shell.
 
 ```bash
 docker exec -it (whatever your container name is e.g.) db-backup bash
