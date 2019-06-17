@@ -1,3 +1,8 @@
+## 1.16 - 2019-06-16 - <dave at tiredofit dot ca>
+
+* Check to see if Database Exists before performing backup
+* Fix for MysQL/MariaDB custom ports - Credit to <spumer@github>
+
 ## 1.15 - 2019-05-24 - <claudioaltamura @ github>
 
 * Added abaility to backup password protected Redis Hosts

@@ -1,4 +1,4 @@
-# tiredofit/db-backup
+# hub.docker.com/r/tiredofit/db-backup
 
 
 [![Build Status](https://img.shields.io/docker/build/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
@@ -23,7 +23,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink se
 * select how often to run a dump
 * select when to start the first dump, whether time of day or relative to container start time
 
-This Container uses Alpine:Edge as a base.
+* This Container uses a [customized Alpine Linux base](https://hub.docker.com/r/tiredofit/alpine) which includes [s6 overlay](https://github.com/just-containers/s6-overlay) enabled for PID 1 Init capabilities, [zabbix-agent](https://zabbix.org) based on `3.4` compiled for individual container monitoring, Cron also installed along with other tools (bash,curl, less, logrotate, nano, vim) for easier management. It also supports sending to external SMTP servers
 
 [Changelog](CHANGELOG.md)
 
@@ -56,7 +56,7 @@ method of installation.
 
 
 ```bash
-docker pull tiredofit/db-backup
+docker pull tiredofit/db-backup:latest
 ```
 
 # Quick Start
@@ -92,6 +92,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
 | `DB_PASS` | (optional if DB doesn't require it) password for the database
+| `DB_PORT` | (optional) Set port to connect to DB_HOST. Defaults are provided
 | `DB_DUMP_FREQ` | How often to do a dump, in minutes. Defaults to 1440 minutes, or once per day.
 | `DB_DUMP_BEGIN` | What time to do the first dump. Defaults to immediate. Must be in one of two formats
 | | Absolute HHMM, e.g. `2330` or `0415`

@@ -193,6 +193,78 @@ function backup_rethink() {
     move_backup
 }
 
+function check_availability() {
+### Set the Database Type
+   case "$DBTYPE" in
+        "couch" )
+            COUNTER=0
+            while ! (nc -z ${DBHOST} ${DBPORT}) ; do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] CouchDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "influx" )
+            COUNTER=0
+            while ! (nc -z ${DBHOST} ${DBPORT}) ; do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] InfluxDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "mongo" )
+            COUNTER=0
+            while ! (nc -z ${DBHOST} ${DBPORT}) ; do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] Mongo Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "mysql" )
+            COUNTER=0
+            while true; do
+                mysqlcmd='mysql -u'${DBUSER}' -P '${DBPORT}' -h '${DBHOST}' -p'${DBPASS}
+                out="`$mysqlcmd -e "SELECT COUNT(*) FROM information_schema.FILES;" 2>&1`"
+                echo "$out" | grep -E "COUNT|Enter" 2>&1 > /dev/null
+                if [ $? -eq 0 ]; then
+                    :
+                    break
+                fi
+                echo "** [db-backup] MySQL/MariaDB Server "$DBHOST" is not accessible, retrying.. ($COUNTER seconds so far)"
+                sleep 5
+                let COUNTER+=5
+            done
+        ;;
+        "pgsql" )
+            # Wait until mongo logs that it's ready (or timeout after 60s)
+            COUNTER=0
+            export PGPASSWORD=${DBPASS} 
+            until pg_isready --dbname=${DBNAME} --host=${DBHOST} --port=${DBPORT} --username=${DBUSER} -q
+            do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] Postgres Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "redis" )
+            COUNTER=0
+            while ! (nc -z ${DBHOST} ${DBPORT}) ; do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] Redis Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "rethink" )
+            COUNTER=0
+            while ! (nc -z ${DBHOST} ${DBPORT}) ; do
+                sleep 5
+                let COUNTER+=5
+                echo "** [db-backup] RethinkDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+    esac    
+}
+
 function compression() {
    case "$COMPRESSION" in
         "GZ" | "gz" | "gzip" | "GZIP")
@@ -258,24 +330,31 @@ echo '** [db-backup] Initialized at at '$(date)
 ### Take a Dump
        case "$DBTYPE" in
         "couch" )
+        check_availability
         backup_couch
         ;;
         "influx" )
+        check_availability
         backup_influx
         ;;
         "mysql" )
+        check_availability
         backup_mysql
         ;;
         "mongo" )
+        check_availability
         backup_mongo
         ;;
         "pgsql" )
+        check_availability
         backup_pgsql
         ;;
         "redis" )
+        check_availability
         backup_redis
         ;;
         "rethink" )
+        check_availability
         backup_rethink
         ;;
         esac
