@@ -118,7 +118,7 @@ function backup_mysql() {
                 fi
         done
     else
-        mysqldump --max-allowed-packet=512M -A -h $DBHOST -u$DBUSER ${MYSQL_PASS_STR} > ${TMPDIR}/${TARGET}
+        mysqldump --max-allowed-packet=512M -A -h $DBHOST -P $DBPORT -u$DBUSER ${MYSQL_PASS_STR} > ${TMPDIR}/${TARGET}
         generate_md5
         compression
         move_backup
