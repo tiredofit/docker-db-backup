@@ -97,7 +97,7 @@ fi
 ### Functions
 function backup_couch() {
     TARGET=couch_${DBNAME}_${DBHOST}_${now}.txt
-    curl -X GET http://${DBHOST}:${DBPORT}/${DBNAME}/ all docs? include docs=true >${TMPDIR}/${TARGET}
+    curl -X GET http://${DBHOST}:${DBPORT}/${DBNAME}/_all_docs?include_docs=true >${TMPDIR}/${TARGET}
     generate_md5
     compression
     move_backup
