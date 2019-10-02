@@ -8,7 +8,8 @@ COPY --from=mongo-packages / /usr/src/apk
 
 ### Set Environment Variables
    ENV ENABLE_CRON=FALSE \
-       ENABLE_SMTP=FALSE
+       ENABLE_SMTP=FALSE \
+       ENABLE_ZABBIX=FALSE
 
 ### Dependencies
    RUN set -ex && \
