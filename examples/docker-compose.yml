@@ -19,7 +19,7 @@ services:
     links:
      - example-db
     volumes:
-      - ./backups:/backups
+      - ./backups:/backup
     environment:
       - DB_TYPE=mariadb
       - DB_HOST=example-db
@@ -32,7 +32,6 @@ services:
       - MD5=TRUE
       - COMPRESSION=XZ
       - SPLIT_DB=FALSE
-
     restart: always
 
 
