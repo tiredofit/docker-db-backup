@@ -1,3 +1,10 @@
+## 1.17.0 2019-12-09 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Stop compiling mongodb-tools as it is back in Alpine:edge repositories
+      - Cleanup Code
+
+
 ## 1.16 - 2019-06-16 - <dave at tiredofit dot ca>
 
 * Check to see if Database Exists before performing backup
