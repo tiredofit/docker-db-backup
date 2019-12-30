@@ -1,3 +1,27 @@
+## 1.18.0 2019-12-29 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update image to support new tiredofit/alpine base images
+
+
+## 1.17.3 2019-12-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Quiet down Zabbix Agent
+
+
+## 1.17.2 2019-12-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Re Enable ZABBIX
+
+
+## 1.17.1 2019-12-10 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix spelling mistake in container initialization
+
+
 ## 1.17.0 2019-12-09 <dave at tiredofit dot ca>
 
    ### Changed

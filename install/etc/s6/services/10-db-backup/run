@@ -1,26 +1,17 @@
 #!/usr/bin/with-contenv bash
 
+source /assets/functions/*
+PROCESS_NAME="db-backup"
+
 date >/dev/null
 
 if [ "$1" != "NOW" ]; then
     sleep 10
 fi
 
-### Set Debug Mode
-if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ]; then
-    set -x
-fi
-
 ### Sanity Test
-if [ ! -n "$DB_TYPE" ]; then
-    echo '** [db-backup] ERROR: No Database Type Selected! '
-    exit 1
-fi
-
-if [ ! -n "$DB_HOST" ]; then
-    echo '** [db-backup] ERROR: No Database Host Entered! '
-    exit 1
-fi
+sanity_var DB_TYPE "Database Type"
+sanity_var DB_HOST "Database Host"
 
 ### Set Defaults
 COMPRESSION=${COMPRESSION:-GZ}
@@ -149,7 +140,7 @@ function backup_pgsql() {
       export PGPASSWORD=${DBPASS}
       DATABASES=`psql -h $DBHOST -U $DBUSER -p ${DBPORT} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' `
             for db in $DATABASES; do
-                echo "** [db-backup] Dumping database: $db"
+                print_info "Dumping database: $db"
                 TARGET=pgsql_${db}_${DBHOST}_${now}.sql
                 pg_dump -h ${DBHOST} -p ${DBPORT} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
                 generate_md5
@@ -168,17 +159,17 @@ function backup_pgsql() {
 function backup_redis() {
     TARGET=redis_${db}_${DBHOST}_${now}.rdb
     echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} --rdb ${TMPDIR}/${TARGET}
-    echo "** [db-backup] Dumping Redis - Flushing Redis Cache First"
+    print_info "Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
         saved=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
         ok=$(echo 'info Persistence' | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
-            echo "** [db-backup] Redis Backup Complete"
+            print_info "Redis Backup Complete"
         fi
         try=$((try - 1))
-        echo "** [db-backup] Redis Busy - Waiting and retrying in 5 seconds"
+        print_info "Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
     generate_md5
@@ -188,7 +179,7 @@ function backup_redis() {
 
 function backup_rethink() {
     TARGET=rethink_${db}_${DBHOST}_${now}.tar.gz
-    echo "** [db-backup] Dumping rethink Database: $db"
+    print_info "Dumping rethink Database: $db"
     rethinkdb dump -f ${TMPDIR}/${TARGET} -c ${DBHOST}:${DBPORT} ${RETHINK_PASS_STR} ${RETHINK_DB_STR}
     move_backup
 }
@@ -201,7 +192,7 @@ function check_availability() {
             while ! (nc -z ${DBHOST} ${DBPORT}) ; do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] CouchDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "CouchDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "influx" )
@@ -209,7 +200,7 @@ function check_availability() {
             while ! (nc -z ${DBHOST} ${DBPORT}) ; do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] InfluxDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "InfluxDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "mongo" )
@@ -217,7 +208,7 @@ function check_availability() {
             while ! (nc -z ${DBHOST} ${DBPORT}) ; do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] Mongo Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "Mongo Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "mysql" )
@@ -230,7 +221,7 @@ function check_availability() {
                     :
                     break
                 fi
-                echo "** [db-backup] MySQL/MariaDB Server "$DBHOST" is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "MySQL/MariaDB Server "$DBHOST" is not accessible, retrying.. ($COUNTER seconds so far)"
                 sleep 5
                 let COUNTER+=5
             done
@@ -243,7 +234,7 @@ function check_availability() {
             do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] Postgres Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "Postgres Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "redis" )
@@ -251,7 +242,7 @@ function check_availability() {
             while ! (nc -z ${DBHOST} ${DBPORT}) ; do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] Redis Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "Redis Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "rethink" )
@@ -259,7 +250,7 @@ function check_availability() {
             while ! (nc -z ${DBHOST} ${DBPORT}) ; do
                 sleep 5
                 let COUNTER+=5
-                echo "** [db-backup] RethinkDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
+                print_warn "RethinkDB Host '"$DBHOST"' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
     esac    
@@ -299,7 +290,7 @@ function move_backup() {
 
 
 ### Container Startup
-echo '** [db-backup] Initialized at at '$(date)
+print_info "Initialized on `date`"
 
 ### Wait for Next time to start backup
   current_time=$(date +"%s")
@@ -361,8 +352,8 @@ echo '** [db-backup] Initialized at at '$(date)
 
 ### Zabbix
     if [ "$ENABLE_ZABBIX" = "TRUE" ] || [ "$ENABLE_ZABBIX" = "true" ];  then
-        zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o `stat -c%s ${DB_DUMP_TARGET}/${TARGET}`
-        zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o `date -r  ${DB_DUMP_TARGET}/${TARGET} +'%s'`
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o `stat -c%s ${DB_DUMP_TARGET}/${TARGET}`
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o `date -r  ${DB_DUMP_TARGET}/${TARGET} +'%s'`
     fi
 
 ### Automatic Cleanup
