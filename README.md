@@ -10,7 +10,7 @@
 
 This will build a container for backing up multiple type of DB Servers
 
-Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink servers.
+Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis, Rethink servers.
 
 * dump to local filesystem
 * select database user and password
