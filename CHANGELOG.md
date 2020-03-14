@@ -1,3 +1,9 @@
+## 1.18.1 2020-03-14 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Allow for passwords with spaces in them for MariaDB / MySQL
+
+
 ## 1.18.0 2019-12-29 <dave at tiredofit dot ca>
 
    ### Added
