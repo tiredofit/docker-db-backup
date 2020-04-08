@@ -65,7 +65,7 @@ fi
             "mysql" | "MYSQL" | "mariadb" | "MARIADB")
             DBTYPE=mysql
             DBPORT=${DB_PORT:-3306}
-            [[ ( -n "${DB_PASS}" ) ]] && MYSQL_PASS_STR=" -p'${DBPASS}'"
+            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DBPASS}
             ;;
             "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
             DBTYPE=pgsql
@@ -96,20 +96,20 @@ function backup_couch() {
 
 function backup_mysql() {
     if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then
-        DATABASES=`mysql -h ${DBHOST} -P $DBPORT -u$DBUSER -p"${DBPASS}" --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
+        DATABASES=`mysql -h ${DBHOST} -P $DBPORT -u$DBUSER --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
 
         for db in $DATABASES; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     echo "** [db-backup] Dumping database: $db"
                     TARGET=mysql_${db}_${DBHOST}_${now}.sql
-                    mysqldump --max-allowed-packet=512M -h $DBHOST -P $DBPORT -u$DBUSER ${MYSQL_PASS_STR} --databases $db > ${TMPDIR}/${TARGET}
+                    mysqldump --max-allowed-packet=512M -h $DBHOST -P $DBPORT -u$DBUSER --databases $db > ${TMPDIR}/${TARGET}
                     generate_md5
                     compression
                     move_backup
                 fi
         done
     else
-        mysqldump --max-allowed-packet=512M -A -h $DBHOST -P $DBPORT -u$DBUSER ${MYSQL_PASS_STR} > ${TMPDIR}/${TARGET}
+        mysqldump --max-allowed-packet=512M -A -h $DBHOST -P $DBPORT -u$DBUSER > ${TMPDIR}/${TARGET}
         generate_md5
         compression
         move_backup
