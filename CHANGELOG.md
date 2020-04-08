@@ -1,3 +1,8 @@
+## 1.18.2 2020-04-08 <hyun007 @ github>
+
+   ### Changed
+      - Rework to allow passwords with spaces in them for MariaDB / MySQL
+
 ## 1.18.1 2020-03-14 <dave at tiredofit dot ca>
 
    ### Changed

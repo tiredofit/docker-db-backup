@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bash
 
-source /assets/functions/*
+for s in /assets/functions/*; do source $s; done
 PROCESS_NAME="db-backup"
 
 date >/dev/null
