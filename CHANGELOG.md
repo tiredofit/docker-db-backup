@@ -1,3 +1,9 @@
+## 1.20.0 2020-04-22 <dave at tiredofit dot ca>
+
+   ### Added
+      - Docker Secrets Support for DB_USER and DB_PASS variables
+
+
 ## 1.19.0 2020-04-22 <dave at tiredofit dot ca>
 
    ### Added
