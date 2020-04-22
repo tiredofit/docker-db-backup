@@ -108,7 +108,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 
 ## Maintenance
 
-Manual Backups can be perforemd by entering the container and typing `backup-now`
+Manual Backups can be performed by entering the container and typing `backup-now`
 
 
 #### Shell Access
