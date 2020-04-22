@@ -12,6 +12,8 @@ fi
 ### Sanity Test
 sanity_var DB_TYPE "Database Type"
 sanity_var DB_HOST "Database Host"
+file_env 'DB_USER'
+file_env 'DB_PASS'
 
 ### Set Defaults
 COMPRESSION=${COMPRESSION:-GZ}
@@ -25,9 +27,9 @@ DBPASS=${DB_PASS}
 DBUSER=${DB_USER}
 DBTYPE=${DB_TYPE}
 MD5=${MD5:-TRUE}
+SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
-SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 
 if [ "$1" = "NOW" ]; then
     DB_DUMP_BEGIN=+0

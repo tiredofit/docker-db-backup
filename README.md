@@ -137,7 +137,7 @@ $ cat post-script.sh
 ## $7=FILESIZE (Filesize of backup)
 ## $8=MD5_RESULT (MD5Sum if enabled)
 
-echo "${1} Backup Completed on ${2} for ${3} on ${4} ${5}. Filename: ${5} Size: ${6} MD5: ${7}"
+echo "${1} Backup Completed on ${2} for ${3} on ${4} ${5}. Filename: ${6} Size: ${7} bytes MD5: ${8}"
 ````
 Outputs the following on the console:
 
