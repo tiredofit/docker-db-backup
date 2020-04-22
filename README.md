@@ -21,6 +21,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink se
 * connect to any container running on the same system
 * select how often to run a dump
 * select when to start the first dump, whether time of day or relative to container start time
+* Execute script after backup for monitoring/alerting purposes
 
 * This Container uses a [customized Alpine Linux base](https://hub.docker.com/r/tiredofit/alpine) which includes [s6 overlay](https://github.com/just-containers/s6-overlay) enabled for PID 1 Init capabilities, [zabbix-agent](https://zabbix.org) for individual container monitoring, Cron also installed along with other tools (bash,curl, less, logrotate, nano, vim) for easier management. It also supports sending to external SMTP servers.
 
@@ -42,6 +43,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB Postgres, Redis, Rethink se
     - [Environment Variables](#environmentvariables)
 - [Maintenance](#maintenance)
     - [Shell Access](#shell-access)
+    - [Custom Scripts](#custom-scripts)
 
 # Prerequisites
 
@@ -76,6 +78,7 @@ The following directories are used for configuration and can be mapped for persi
 | Directory | Description |
 |-----------|-------------|
 | `/backup` | Backups |
+| `/assets/custom-scripts | *Optional* Put custom scripts in this directory to execute after backup operations`
 
 
 ## Environment Variables
@@ -107,6 +110,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 
 Manual Backups can be perforemd by entering the container and typing `backup-now`
 
+
 #### Shell Access
 
 For debugging and maintenance purposes you may want access the containers shell.
@@ -115,3 +119,28 @@ For debugging and maintenance purposes you may want access the containers shell.
 docker exec -it (whatever your container name is e.g.) db-backup bash
 ```
 
+#### Custom Scripts
+
+If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in this directory. See the following example to utilize:
+
+````bash
+$ cat post-script.sh 
+##!/bin/bash
+
+## Example Post Script
+## $1=DB_TYPE (Type of Backup)
+## $2=DB_HOST (Backup Host)
+## #3=DB_NAME (Name of Database backed up
+## $4=DATE (Date of Backup)
+## $5=TIME (Time of Backup)
+## $6=BACKUP_FILENAME (Filename of Backup)
+## $7=FILESIZE (Filesize of backup)
+## $8=MD5_RESULT (MD5Sum if enabled)
+
+echo "${1} Backup Completed on ${2} for ${3} on ${4} ${5}. Filename: ${5} Size: ${6} MD5: ${7}"
+````
+Outputs the following on the console:
+
+`mysql Backup Completed on example-db for example on 2020-04-22 05:19:10. Filename: mysql_example_example-db_20200422-051910.sql.bz2 Size: 7795 bytes MD5: 952fbaafa30437494fdf3989a662cd40`
+
+If you wish to change the size value from bytes to megabytes set environment variable `SIZE_VALUE=megabytes`

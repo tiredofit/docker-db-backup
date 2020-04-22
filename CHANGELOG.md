@@ -1,3 +1,9 @@
+## 1.19.0 2020-04-22 <dave at tiredofit dot ca>
+
+   ### Added
+      - Custom Script support to execute upon compleition of backup
+
+
 ## 1.18.2 2020-04-08 <hyun007 @ github>
 
    ### Changed

@@ -27,6 +27,7 @@ DBTYPE=${DB_TYPE}
 MD5=${MD5:-TRUE}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
+SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 
 if [ "$1" = "NOW" ]; then
     DB_DUMP_BEGIN=+0
@@ -279,6 +280,7 @@ function generate_md5() {
 if [ "$MD5" = "TRUE" ] || [ "$MD5" = "true" ] ;  then
     cd $TMPDIR
     md5sum ${TARGET} > ${TARGET}.md5
+    MD5VALUE=$(md5sum ${TARGET} | awk '{ print $1}')
 fi
 }
 
@@ -286,6 +288,22 @@ function move_backup() {
     mkdir -p ${DB_DUMP_TARGET}
     mv ${TMPDIR}/*.md5 ${DB_DUMP_TARGET}/
     mv ${TMPDIR}/${TARGET} ${DB_DUMP_TARGET}/${TARGET}
+    case "$SIZE_VALUE" in
+        "b" | "bytes" )
+            SIZE_VALUE=1
+        ;;
+        "[kK]" | "[kK][bB]" | "kilobytes" | "[mM]" | "[mM][bB]" | "megabytes" )
+            SIZE_VALUE="-h"
+        ;;
+        *)
+            SIZE_VALUE=1
+        ;;
+    esac
+    if [ "$SIZE_VALUE" = "1" ] ; then
+        FILESIZE=$(stat -c%s "${DB_DUMP_TARGET}/${TARGET}")
+    else
+        FILESIZE=$(du -h "${DB_DUMP_TARGET}/${TARGET}" | awk '{ print $1}')
+    fi
 }
 
 
@@ -316,6 +334,8 @@ print_info "Initialized on `date`"
 
 ### Define Target name
     now=$(date +"%Y%m%d-%H%M%S")
+    now_time=$(date +"%H:%M:%S")
+    now_date=$(date +"%Y-%m-%d")
     TARGET=${DBTYPE}_${DBNAME}_${DBHOST}_${now}.sql
 
 ### Take a Dump
@@ -360,6 +380,17 @@ print_info "Initialized on `date`"
     if [[ -n "$DB_CLEANUP_TIME" ]]; then
           find $DB_DUMP_TARGET/  -mmin +$DB_CLEANUP_TIME -iname "$DBTYPE_$DBNAME_*.*" -exec rm {} \;
     fi
+
+### Post Backup Custom Script Support
+    if [ -d /assets/custom-scripts/ ] ; then
+    print_info "Found Custom Scripts to Execute"
+    for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
+      print_info "Running Script ${f}"
+      ## script DB_TYPE DB_HOST DB_NAME DATE BACKUP_FILENAME FILESIZE MD5_VALUE 
+      chmod +x ${f} 
+      ${f} "${DBTYPE}" "${DBHOST}" "${DBNAME}" "${now_date}" "${now_time}" "${TARGET}" "${FILESIZE}" "${MD5VALUE}"
+    done
+    fi  
 
     ### Go back to Sleep until next Backup time
     if [ "$MANUAL" = "TRUE" ]; then
