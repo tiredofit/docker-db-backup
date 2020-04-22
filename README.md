@@ -78,7 +78,7 @@ The following directories are used for configuration and can be mapped for persi
 | Directory | Description |
 |-----------|-------------|
 | `/backup` | Backups |
-| `/assets/custom-scripts | *Optional* Put custom scripts in this directory to execute after backup operations`
+| `/assets/custom-scripts` | *Optional* Put custom scripts in this directory to execute after backup operations
 
 
 ## Environment Variables
