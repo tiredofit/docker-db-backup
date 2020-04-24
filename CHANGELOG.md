@@ -1,3 +1,9 @@
+## 1.20.1 2020-04-24 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix Auto Cleanup routines when using `root` as username
+
+
 ## 1.20.0 2020-04-22 <dave at tiredofit dot ca>
 
    ### Added
