@@ -1,3 +1,13 @@
+## 1.21.0 2020-06-03 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add S3 Compatible Storage Support
+
+   ### Changed
+      - Switch some variables to support tiredofit/alpine base image better
+      - Fix issue with parallel compression not working correctly
+
+
 ## 1.20.1 2020-04-24 <dave at tiredofit dot ca>
 
    ### Changed

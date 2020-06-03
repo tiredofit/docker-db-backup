@@ -16,20 +16,34 @@ file_env 'DB_USER'
 file_env 'DB_PASS'
 
 ### Set Defaults
+BACKUP_LOCATION=${BACKUP_LOCATION:-"FILESYSTEM"}
 COMPRESSION=${COMPRESSION:-GZ}
-PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
-DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
 DB_DUMP_BEGIN=${DB_DUMP_BEGIN:-+0}
+DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
 DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backup}
 DBHOST=${DB_HOST}
 DBNAME=${DB_NAME}
 DBPASS=${DB_PASS}
-DBUSER=${DB_USER}
 DBTYPE=${DB_TYPE}
+DBUSER=${DB_USER}
 MD5=${MD5:-TRUE}
+PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
 SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
+
+if [ "BACKUP_TYPE" = "S3" ] || [ "BACKUP_TYPE" = "s3" ] || [ "BACKUP_TYPE" = "MINIO" ] || [ "BACKUP_TYPE" = "minio" ]
+    S3_PROTOCOL=${S3_PROTOCOL:-"https"}
+    sanity_var S3_HOST "S3 Host"
+    sanity_var S3_BUCKET "S3 Bucket"
+    sanity_var S3_KEY_ID "S3 Key ID"
+    sanity_var S3_KEY_SECRET "S3 Key Secret"
+    sanity_var S3_URI_STYLE "S3 URI Style (Virtualhost or Path)"
+    sanity_var S3_PATH "S3 Path"
+    file_env 'S3_KEY_ID'
+    file_env 'S3_KEY_SECRET'
+
+fi
 
 if [ "$1" = "NOW" ]; then
     DB_DUMP_BEGIN=+0
@@ -37,7 +51,7 @@ if [ "$1" = "NOW" ]; then
 fi
 
 ### Set Compression Options
-if [ "$PARALLEL_COMPRESSION" = "TRUE " ]; then
+if var_true $PARALLEL_COMPRESSION ; then
     BZIP="pbzip2"
     GZIP="pigz"
     XZIP="pixz"
@@ -98,7 +112,7 @@ function backup_couch() {
 }
 
 function backup_mysql() {
-    if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then
+    if var_true $SPLIT_DB ; then
         DATABASES=`mysql -h ${DBHOST} -P $DBPORT -u$DBUSER --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema`
 
         for db in $DATABASES; do
@@ -139,7 +153,7 @@ function backup_mongo() {
 }
 
 function backup_pgsql() {
-  if [ "$SPLIT_DB" = "TRUE" ] || [ "$SPLIT_DB" = "true" ];  then
+  if var_true $SPLIT_DB ; then
       export PGPASSWORD=${DBPASS}
       DATABASES=`psql -h $DBHOST -U $DBUSER -p ${DBPORT} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' `
             for db in $DATABASES; do
@@ -279,7 +293,7 @@ function compression() {
 }
 
 function generate_md5() {
-if [ "$MD5" = "TRUE" ] || [ "$MD5" = "true" ] ;  then
+if var_true $MD5 ; then
     cd $TMPDIR
     md5sum ${TARGET} > ${TARGET}.md5
     MD5VALUE=$(md5sum ${TARGET} | awk '{ print $1}')
@@ -287,9 +301,6 @@ fi
 }
 
 function move_backup() {
-    mkdir -p ${DB_DUMP_TARGET}
-    mv ${TMPDIR}/*.md5 ${DB_DUMP_TARGET}/
-    mv ${TMPDIR}/${TARGET} ${DB_DUMP_TARGET}/${TARGET}
     case "$SIZE_VALUE" in
         "b" | "bytes" )
             SIZE_VALUE=1
@@ -306,6 +317,47 @@ function move_backup() {
     else
         FILESIZE=$(du -h "${DB_DUMP_TARGET}/${TARGET}" | awk '{ print $1}')
     fi
+
+    case "${BACKUP_LOCATION}" in
+        "FILE" | "file" | "filesystem" | "FILESYSTEM" )
+            mkdir -p ${DB_DUMP_TARGET}
+            mv ${TMPDIR}/*.md5 ${DB_DUMP_TARGET}/
+            mv ${TMPDIR}/${TARGET} ${DB_DUMP_TARGET}/${TARGET}
+        ;;
+        "S3" | "s3" | "MINIO" | "minio" )
+            s3_content_type="application/octet-stream"
+            if [ "$S3_URI_STYLE" = "VIRTUALHOST" ] || [ "$S3_URI_STYLE" = "VHOST" ] [ "$S3_URI_STYLE" = "virtualhost" ] [ "$S3_URI_STYLE" = "vhost" ] ; then
+                s3_url="${S3_BUCKET}.${S3_HOST}"
+            else
+                s3_url="${S3_HOST}/${S3_BUCKET}"
+            fi
+            
+            if var_true $MD5 ; then
+                s3_date="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
+                s3_md5="$(libressl md5 -binary < "${TMPDIR}/${TARGET}.md5" | base64)"
+                sig="$(printf "PUT\n$s3_md5\n${s3_content_type}\n$s3_date\n/$S3_BUCKET/$S3_PATH/${TARGET}.md5" | libressl sha1 -binary -hmac "${S3_KEY_SECRET}" | base64)"
+                print_debug "Uploading ${TARGET}.md5 to S3"
+                curl -T "${TMPDIR}/${TARGET}.md5" ${S3_PROTOCOL}://${s3_url}/${S3_PATH}/${TARGET}.md5 \
+                     -H "Date: $date" \
+                     -H "Authorization: AWS ${S3_KEY_ID}:$sig" \
+                     -H "Content-Type: ${s3_content_type}" \
+                     -H "Content-MD5: ${s3_md5}"
+            fi
+
+            s3_date="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
+            s3_md5="$(libressl md5 -binary < "${TMPDIR}/${TARGET}" | base64)"
+            sig="$(printf "PUT\n$s3_md5\n${s3_content_type}\n$s3_date\n/$S3_BUCKET/$S3_PATH/${TARGET}" | libressl sha1 -binary -hmac "${S3_KEY_SECRET}" | base64)"
+            print_debug "Uploading ${TARGET} to S3"
+            curl -T ${TMPDIR}/${TARGET} ${S3_PROTOCOL}://${s3_url}/${S3_PATH}/${TARGET} \
+                 -H "Date: $s3_date" \
+                 -H "Authorization: AWS ${S3_KEY_ID}:$sig" \
+                 -H "Content-Type: ${s3_content_type}" \
+                 -H "Content-MD5: ${s3_md5}"
+
+            rm -rf ${TMPDIR}/*.md5
+            rm -rf ${TMPDIR}/${TARGET}
+        ;;
+    esac
 }
 
 
@@ -373,7 +425,7 @@ print_info "Initialized on `date`"
         esac
 
 ### Zabbix
-    if [ "$ENABLE_ZABBIX" = "TRUE" ] || [ "$ENABLE_ZABBIX" = "true" ];  then
+    if var_true $ENABLE_ZABBIX ; then
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o `stat -c%s ${DB_DUMP_TARGET}/${TARGET}`
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o `date -r  ${DB_DUMP_TARGET}/${TARGET} +'%s'`
     fi
@@ -395,7 +447,7 @@ print_info "Initialized on `date`"
     fi  
 
     ### Go back to Sleep until next Backup time
-    if [ "$MANUAL" = "TRUE" ]; then
+    if var_true $MANUAL ; then
         exit 1;
     else
         sleep $(($DB_DUMP_FREQ*60))

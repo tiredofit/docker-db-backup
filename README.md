@@ -12,7 +12,7 @@ This will build a container for backing up multiple type of DB Servers
 
 Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis, Rethink servers.
 
-* dump to local filesystem
+* dump to local filesystem or backup to S3 Compatible services
 * select database user and password
 * backup all databases
 * choose to have an MD5 sum after backup for verification
@@ -88,6 +88,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 
 | Parameter | Description |
 |-----------|-------------|
+| `BACKUP_LOCATION` | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi - Default `FILESYSTEM`
 | `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, or none `NONE` - Default `GZ`
 | `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink`
 | `DB_HOST` | Server Hostname e.g. `mariadb`
@@ -105,6 +106,19 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE` |
 | `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE` |
 
+**Backing Up to S3 Compatible Services**
+
+If `BACKUP_LOCATION` = `S3` then the following options are used.
+
+| Parameter | Description |
+|-----------|-------------|
+| `S3_BUCKET` | S3 Bucket name e.g. 'mybucket' |
+| `S3_HOSTNAME` | Hostname of S3 Server e.g "s3.amazonaws.com" - You can also include a port if necessary
+| `S3_KEY_ID` | S3 Key ID |
+| `S3_KEY_SECRET` | S3 Key Secret |
+| `S3_PATH` | S3 Pathname to save to e.g. '`backup`' |
+| `S3_PROTOCOL` | Use either `http` or `https` to access service - Default `https` |
+| `S3_URI_STYLE` | Choose either `VIRTUALHOST` or `PATH` style - Default `VIRTUALHOST`
 
 ## Maintenance
 
