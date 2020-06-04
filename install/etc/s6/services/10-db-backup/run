@@ -32,7 +32,7 @@ SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 SPLIT_DB=${SPLIT_DB:-FALSE}
 TMPDIR=/tmp/backups
 
-if [ "BACKUP_TYPE" = "S3" ] || [ "BACKUP_TYPE" = "s3" ] || [ "BACKUP_TYPE" = "MINIO" ] || [ "BACKUP_TYPE" = "minio" ]
+if [ "BACKUP_TYPE" = "S3" ] || [ "BACKUP_TYPE" = "s3" ] || [ "BACKUP_TYPE" = "MINIO" ] || [ "BACKUP_TYPE" = "minio" ] ; then
     S3_PROTOCOL=${S3_PROTOCOL:-"https"}
     sanity_var S3_HOST "S3 Host"
     sanity_var S3_BUCKET "S3 Bucket"

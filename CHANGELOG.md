@@ -1,3 +1,9 @@
+## 1.21.1 2020-06-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Bugfix to initalization routine
+
+
 ## 1.21.0 2020-06-03 <dave at tiredofit dot ca>
 
    ### Added
