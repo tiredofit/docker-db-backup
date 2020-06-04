@@ -6,7 +6,6 @@ services:
     image: mariadb:latest
     volumes:
       - ./db:/var/lib/mysql
-      - ./post-script.sh:/assets/custom-scripts/post-script.sh
     environment:
       - MYSQL_ROOT_PASSWORD=examplerootpassword
       - MYSQL_DATABASE=example
@@ -21,6 +20,7 @@ services:
      - example-db
     volumes:
       - ./backups:/backup
+      - ./post-script.sh:/assets/custom-scripts/post-script.sh
     environment:
       - DB_TYPE=mariadb
       - DB_HOST=example-db
