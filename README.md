@@ -102,6 +102,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half
 | `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.
 | `DEBUG_MODE` | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.
+| `EXTRA_OPTS` | If you need to pass extra arguments to the backup command, add them here e.g. "--extra-command"
 | `MD5` | Generate MD5 Sum in Directory, `TRUE` or `FALSE` - Default `TRUE`
 | `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE` |
 | `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE` |
