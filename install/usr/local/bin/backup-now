@@ -1,4 +1,4 @@
 #!/usr/bin/with-contenv bash
 
 echo '** Performing Manual Backup'
-/etc/s6/services/10-db-backup/run NOW
+/etc/services.available/10-db-backup/run NOW

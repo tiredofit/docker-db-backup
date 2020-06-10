@@ -1,3 +1,9 @@
+## 1.21.3 2020-06-10 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix `backup-now` manual script due to services.available change
+
+
 ## 1.21.2 2020-06-08 <dave at tiredofit dot ca>
 
    ### Added
