@@ -1,3 +1,9 @@
+## 1.22.0 2020-06-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - Added EXTRA_OPTS variable to all backup commands to pass extra arguments
+
+
 ## 1.21.3 2020-06-10 <dave at tiredofit dot ca>
 
    ### Changed

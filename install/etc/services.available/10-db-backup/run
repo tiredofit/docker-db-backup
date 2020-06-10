@@ -120,14 +120,14 @@ function backup_mysql() {
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     echo "** [db-backup] Dumping database: $db"
                     TARGET=mysql_${db}_${DBHOST}_${now}.sql
-                    mysqldump --max-allowed-packet=512M -h $DBHOST -P $DBPORT -u$DBUSER --databases $db > ${TMPDIR}/${TARGET}
+                    mysqldump --max-allowed-packet=512M -h $DBHOST -P $DBPORT -u$DBUSER  ${EXTRA_OPTS} --databases $db > ${TMPDIR}/${TARGET}
                     generate_md5
                     compression
                     move_backup
                 fi
         done
     else
-        mysqldump --max-allowed-packet=512M -A -h $DBHOST -P $DBPORT -u$DBUSER > ${TMPDIR}/${TARGET}
+        mysqldump --max-allowed-packet=512M -A -h $DBHOST -P $DBPORT -u$DBUSER  ${EXTRA_OPTS} > ${TMPDIR}/${TARGET}
         generate_md5
         compression
         move_backup
@@ -160,14 +160,14 @@ function backup_pgsql() {
             for db in $DATABASES; do
                 print_info "Dumping database: $db"
                 TARGET=pgsql_${db}_${DBHOST}_${now}.sql
-                pg_dump -h ${DBHOST} -p ${DBPORT} -U ${DBUSER} $db > ${TMPDIR}/${TARGET}
+                pg_dump -h ${DBHOST} -p ${DBPORT} -U ${DBUSER} $db ${EXTRA_OPTS}> ${TMPDIR}/${TARGET}
                 generate_md5
                 compression
                 move_backup
             done
         else
             export PGPASSWORD=${DBPASS}
-            pg_dump -h ${DBHOST} -U ${DBUSER} -p ${DBPORT} ${DBNAME} > ${TMPDIR}/${TARGET}
+            pg_dump -h ${DBHOST} -U ${DBUSER} -p ${DBPORT} ${DBNAME} ${EXTRA_OPTS}> ${TMPDIR}/${TARGET}
             generate_md5
             compression
             move_backup
@@ -176,7 +176,7 @@ function backup_pgsql() {
 
 function backup_redis() {
     TARGET=redis_${db}_${DBHOST}_${now}.rdb
-    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} --rdb ${TMPDIR}/${TARGET}
+    echo bgsave | redis-cli -h ${DBHOST} -p ${DBPORT} ${REDIS_PASS_STR} --rdb ${TMPDIR}/${TARGET} ${EXTRA_OPTS}
     print_info "Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
@@ -198,7 +198,7 @@ function backup_redis() {
 function backup_rethink() {
     TARGET=rethink_${db}_${DBHOST}_${now}.tar.gz
     print_info "Dumping rethink Database: $db"
-    rethinkdb dump -f ${TMPDIR}/${TARGET} -c ${DBHOST}:${DBPORT} ${RETHINK_PASS_STR} ${RETHINK_DB_STR}
+    rethinkdb dump -f ${TMPDIR}/${TARGET} -c ${DBHOST}:${DBPORT} ${RETHINK_PASS_STR} ${RETHINK_DB_STR} ${EXTRA_OPTS}
     move_backup
 }
 
@@ -277,16 +277,16 @@ function check_availability() {
 function compression() {
    case "$COMPRESSION" in
         "GZ" | "gz" | "gzip" | "GZIP")
-        $GZIP ${TMPDIR}/${TARGET}
-        TARGET=${TARGET}.gz
+            $GZIP ${TMPDIR}/${TARGET}
+            TARGET=${TARGET}.gz
         ;;
         "BZ" | "bz" | "bzip2" | "BZIP2" | "bzip" | "BZIP" | "bz2" | "BZ2")
-        $BZIP ${TMPDIR}/${TARGET}
-        TARGET=${TARGET}.bz2
+            $BZIP ${TMPDIR}/${TARGET}
+            TARGET=${TARGET}.bz2
         ;;
         "XZ" | "xz" | "XZIP" | "xzip" )
-        $XZIP ${TMPDIR}/${TARGET}
-        TARGET=${TARGET}.xz
+            $XZIP ${TMPDIR}/${TARGET}
+            TARGET=${TARGET}.xz
         ;;
         "NONE" | "none" | "FALSE" | "false")
         ;;
