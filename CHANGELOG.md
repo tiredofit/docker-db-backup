@@ -1,3 +1,10 @@
+## 1.23.0 2020-06-15 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add zstd compression support
+      - Add choice of compression level
+
+
 ## 1.22.0 2020-06-10 <dave at tiredofit dot ca>
 
    ### Added

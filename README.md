@@ -17,7 +17,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis, Rethink s
 * backup all databases
 * choose to have an MD5 sum after backup for verification
 * delete old backups after specific amount of time
-* choose compression type (none, gz, bz, xz)
+* choose compression type (none, gz, bz, xz, zstd)
 * connect to any container running on the same system
 * select how often to run a dump
 * select when to start the first dump, whether time of day or relative to container start time
@@ -83,13 +83,16 @@ The following directories are used for configuration and can be mapped for persi
 
 ## Environment Variables
 
+*If you are trying to backup a database that doesn't have a user or a password (you should!) make sure you set `CONTAINER_ENABLE_DOCKER_SECRETS=FALSE`*
+
 Along with the Environment Variables from the [Base image](https://hub.docker.com/r/tiredofit/alpine), below is the complete list of available options that can be used to customize your installation.
 
 
 | Parameter | Description |
 |-----------|-------------|
 | `BACKUP_LOCATION` | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi - Default `FILESYSTEM`
-| `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, or none `NONE` - Default `GZ`
+| `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE` - Default `GZ`
+| `COMPRESSION_LEVEL` | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - Default `3` |
 | `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink`
 | `DB_HOST` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
@@ -106,6 +109,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `MD5` | Generate MD5 Sum in Directory, `TRUE` or `FALSE` - Default `TRUE`
 | `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE` |
 | `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE` |
+
 
 **Backing Up to S3 Compatible Services**
 

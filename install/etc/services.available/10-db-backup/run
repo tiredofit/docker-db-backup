@@ -13,12 +13,14 @@ fi
 ### Sanity Test
 sanity_var DB_TYPE "Database Type"
 sanity_var DB_HOST "Database Host"
+
 file_env 'DB_USER'
 file_env 'DB_PASS'
 
 ### Set Defaults
 BACKUP_LOCATION=${BACKUP_LOCATION:-"FILESYSTEM"}
 COMPRESSION=${COMPRESSION:-GZ}
+COMPRESSION_LEVEL=${COMPRESSION_LEVEL:-"3"}
 DB_DUMP_BEGIN=${DB_DUMP_BEGIN:-+0}
 DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
 DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backup}
@@ -43,7 +45,6 @@ if [ "BACKUP_TYPE" = "S3" ] || [ "BACKUP_TYPE" = "s3" ] || [ "BACKUP_TYPE" = "MI
     sanity_var S3_PATH "S3 Path"
     file_env 'S3_KEY_ID'
     file_env 'S3_KEY_SECRET'
-
 fi
 
 if [ "$1" = "NOW" ]; then
@@ -53,13 +54,15 @@ fi
 
 ### Set Compression Options
 if var_true $PARALLEL_COMPRESSION ; then
-    BZIP="pbzip2"
-    GZIP="pigz"
-    XZIP="pixz"
+    BZIP="pbzip2 -${COMPRESSION_LEVEL}"
+    GZIP="pigz -${COMPRESSION_LEVEL}"
+    XZIP="pixz -${COMPRESSION_LEVEL}"
+    ZSTD="zstd --rm -${COMPRESSION_LEVEL}"
 else
-    BZIP="bzip2"
-    GZIP="gzip"
-    XZIP="xz"
+    BZIP="bzip2 -${COMPRESSION_LEVEL}"
+    GZIP="gzip -${COMPRESSION_LEVEL}"
+    XZIP="xz -${COMPRESSION_LEVEL} "
+    ZSTD="zstd --rm -${COMPRESSION_LEVEL}"
 fi
 
 
@@ -287,6 +290,10 @@ function compression() {
         "XZ" | "xz" | "XZIP" | "xzip" )
             $XZIP ${TMPDIR}/${TARGET}
             TARGET=${TARGET}.xz
+        ;;
+        "ZSTD" | "zstd" | "ZST" | "zst" )
+            $ZSTD ${TMPDIR}/${TARGET}
+            TARGET=${TARGET}.zst
         ;;
         "NONE" | "none" | "FALSE" | "false")
         ;;
