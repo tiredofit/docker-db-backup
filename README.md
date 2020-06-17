@@ -10,7 +10,7 @@
 
 This will build a container for backing up multiple type of DB Servers
 
-Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis, Rethink servers.
+Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 * dump to local filesystem or backup to S3 Compatible services
 * select database user and password
@@ -93,7 +93,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `BACKUP_LOCATION` | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi - Default `FILESYSTEM`
 | `COMPRESSION` | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE` - Default `GZ`
 | `COMPRESSION_LEVEL` | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - Default `3` |
-| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `rethink`
+| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` |
 | `DB_HOST` | Server Hostname e.g. `mariadb`
 | `DB_NAME` | Schema Name e.g. `database`
 | `DB_USER` | username for the database - use `root` to backup all MySQL of them.
@@ -110,6 +110,7 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE` |
 | `SPLIT_DB` | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE` |
 
+When using compression with MongoDB, only `GZ` compression is possible.
 
 **Backing Up to S3 Compatible Services**
 
