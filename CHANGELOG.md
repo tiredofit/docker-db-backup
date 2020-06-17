@@ -1,3 +1,16 @@
+## 2.0.0 2020-06-17 <dave at tiredofit dot ca>
+
+   ### Added
+      - Reworked compression routines to remove dependency on temporary files
+      - Changed the way that MongoDB compression works - only supports GZ going forward
+
+   ### Changed
+      - Code cleanup (removed function prefixes, added verbosity)
+
+   ### Reverted
+      - Removed Rethink Support
+
+
 ## 1.23.0 2020-06-15 <dave at tiredofit dot ca>
 
    ### Added
