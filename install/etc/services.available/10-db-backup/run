@@ -444,14 +444,19 @@ print_debug "Backup routines Initialized on $(date)"
         find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
     fi
 
+    if [ -n "$POST_SCRIPT" ] ; then
+        print_notice "Found POST_SCRIPT environment variable. Executing"
+        "${POST_SCRIPT}"
+    fi
+
 ### Post Backup Custom Script Support
     if [ -d /assets/custom-scripts/ ] ; then
-    print_notice "Found Custom Scripts to Execute"
+    print_notice "Found Custom Filesystem Scripts to Execute"
     for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
       print_notice "Running Script ${f}"
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME DATE BACKUP_FILENAME FILESIZE MD5_VALUE
       chmod +x "${f}"
-      ${f} "$"{exit_code}"" "${dbtype}" "${dbhost}" "${dbname}" "${now_date}" "${now_time}" "${target}" "${FILESIZE}" "${MD5VALUE}"
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${now_date}" "${now_time}" "${target}" "${FILESIZE}" "${MD5VALUE}"
     done
     fi
 
