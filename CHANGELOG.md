@@ -1,3 +1,10 @@
+## 2.1.0 2020-08-29 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add Exit Code variable to be used for custom scripts - See README.md for placement
+      - Add POST_SCRIPT environment variable to execute command instead of relying on custom script
+
+
 ## 2.0.0 2020-06-17 <dave at tiredofit dot ca>
 
    ### Added
