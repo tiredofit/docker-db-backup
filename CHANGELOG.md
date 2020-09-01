@@ -1,3 +1,9 @@
+## 2.1.1 2020-09-01 <zicklag@github>
+
+   ### Fixed
+      - Add eval to POST_SCRIPT execution
+
+
 ## 2.1.0 2020-08-29 <dave at tiredofit dot ca>
 
    ### Added
