@@ -446,7 +446,7 @@ print_debug "Backup routines Initialized on $(date)"
 
     if [ -n "$POST_SCRIPT" ] ; then
         print_notice "Found POST_SCRIPT environment variable. Executing"
-        "${POST_SCRIPT}"
+        eval "${POST_SCRIPT}"
     fi
 
 ### Post Backup Custom Script Support
