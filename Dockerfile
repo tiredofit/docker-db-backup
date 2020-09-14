@@ -9,7 +9,7 @@ ENV ENABLE_CRON=FALSE \
 
 ### Dependencies
 RUN set -ex && \
-    echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+    echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk update && \
     apk upgrade && \
     apk add -t .db-backup-build-deps \
@@ -19,7 +19,7 @@ RUN set -ex && \
                xz-dev \
                && \
     \
-    apk add -t .db-backup-run-deps \
+    apk add --no-cache -t .db-backup-run-deps \
       	       bzip2 \
                influxdb \
                mariadb-client \
@@ -33,9 +33,9 @@ RUN set -ex && \
                zstd \
                && \
     \
-    apk add \
-            pixz@testing \
-            && \
+    apk add --no-cache \
+               pixz@testing \
+               && \
     \
     mkdir -p /usr/src/pbzip2 && \
     curl -ssL https://launchpad.net/pbzip2/1.1/1.1.13/+download/pbzip2-1.1.13.tar.gz | tar xvfz - --strip=1 -C /usr/src/pbzip2 && \

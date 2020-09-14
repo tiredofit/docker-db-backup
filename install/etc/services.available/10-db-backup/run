@@ -14,8 +14,44 @@ fi
 sanity_var DB_TYPE "Database Type"
 sanity_var DB_HOST "Database Host"
 
-file_env 'DB_USER'
-file_env 'DB_PASS'
+### Set the Database Type
+dbtype=${DB_TYPE}
+
+case "$dbtype" in
+    "couch" | "couchdb" | "COUCH" | "COUCHDB"  )
+        dbtype=couch
+        dbport=${DB_PORT:-5984}
+        file_env 'DB_USER'
+        file_env 'DB_PASS'
+    ;;
+    "influx" | "influxdb" | "INFLUX" | "INFLUXDB"  )
+        dbtype=influx
+        dbport=${DB_PORT:-8088}
+        file_env 'DB_USER'
+        file_env 'DB_PASS'
+    ;;
+    "mongo" | "mongodb" | "MONGO" | "MONGODB" )
+        dbtype=mongo
+        dbport=${DB_PORT:-27017}
+        [[ ( -n "${DB_USER}" ) ]] && file_env 'DB_USER'
+        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+    ;;
+    "mysql" | "MYSQL" | "mariadb" | "MARIADB")
+        dbtype=mysql
+        dbport=${DB_PORT:-3306}
+        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+    ;;
+    "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
+        dbtype=pgsql
+        dbport=${DB_PORT:-5432}
+        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+    ;;
+    "redis" | "REDIS"   )
+        dbtype=redis
+        dbport=${DB_PORT:-6379}
+        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+    ;;
+esac
 
 ### Set Defaults
 BACKUP_LOCATION=${BACKUP_LOCATION:-"FILESYSTEM"}
@@ -27,7 +63,6 @@ DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backup}
 dbhost=${DB_HOST}
 dbname=${DB_NAME}
 dbpass=${DB_PASS}
-dbtype=${DB_TYPE}
 dbuser=${DB_USER}
 MD5=${MD5:-TRUE}
 PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
@@ -65,39 +100,23 @@ else
     zstd="zstd --rm -${COMPRESSION_LEVEL}"
 fi
 
-### Set the Database Type
-       case "$dbtype" in
-            "couch" | "couchdb" | "COUCH" | "COUCHDB"  )
-                dbtype=couch
-                dbport=${DB_PORT:-5984}
-            ;;
-            "influx" | "influxdb" | "INFLUX" | "INFLUXDB"  )
-                dbtype=influx
-                dbport=${DB_PORT:-8088}
-            ;;
-            "mongo" | "mongodb" | "MONGO" | "MONGODB" )
-            dbtype=mongo
-            dbport=${DB_PORT:-27017}
-                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${dbuser}"
-                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${dbpass}"
-                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${dbname}"
-            ;;
-            "mysql" | "MYSQL" | "mariadb" | "MARIADB")
-                dbtype=mysql
-                dbport=${DB_PORT:-3306}
-                [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${dbpass}
-            ;;
-            "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
-                dbtype=pgsql
-                dbport=${DB_PORT:-5432}
-                [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${dbpass}"
-            ;;
-            "redis" | "REDIS"   )
-                dbtype=redis
-                dbport=${DB_PORT:-6379}
-                [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${dbpass}"
-            ;;
-        esac
+### Set the Database Authentication Details
+case "$dbtype" in
+    "mongo" )
+        [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${dbuser}"
+        [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${dbpass}"
+        [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${dbname}"
+    ;;
+    "mysql" )
+        [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${dbpass}
+    ;;
+    "postgres" )
+        [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${dbpass}"
+    ;;
+    "redis" )
+        [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${dbpass}"
+    ;;
+esac
 
 ### Functions
 backup_couch() {
