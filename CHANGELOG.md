@@ -1,3 +1,10 @@
+## 2.2.0 2020-09-14 <alwynpan@github>
+
+   ### Fixed
+      - Allow to use MariaDB and MongoDBs with no username and password while still allowing Docker Secrets
+      - Changed source of Alpine package repositories
+
+
 ## 2.1.1 2020-09-01 <zicklag@github>
 
    ### Fixed
