@@ -394,21 +394,23 @@ move_backup() {
 print_debug "Backup routines Initialized on $(date)"
 
 ### Wait for Next time to start backup
-  current_time=$(date +"%s")
-  today=$(date +"%Y%m%d")
+  if [ "$1" != "NOW" ]; then
+    current_time=$(date +"%s")
+    today=$(date +"%Y%m%d")
 
-  if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
-        waittime=$(( ${BASH_REMATCH[1]} * 60 ))
-  else
-        target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
-    if [[ "$target_time" < "$current_time" ]]; then
-        target_time=$(($target_time + 24*60*60))
+    if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
+            waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+    else
+            target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
+        if [[ "$target_time" < "$current_time" ]]; then
+            target_time=$(($target_time + 24*60*60))
+        fi
+        waittime=$(($target_time - $current_time))
     fi
-  waittime=$(($target_time - $current_time))
-  fi
 
-  print_notice "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
-  sleep $waittime
+        print_notice "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
+        sleep $waittime
+  fi
 
 
 ### Commence Backup
