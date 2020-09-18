@@ -1,3 +1,8 @@
+## 2.2.1 2020-09-17 <alwynpan@github>
+
+   ### Fixed
+      - Ondemand/Manual backup with `backup-now` was throwing errors not being able to find a proper date
+
 ## 2.2.0 2020-09-14 <alwynpan@github>
 
    ### Fixed
