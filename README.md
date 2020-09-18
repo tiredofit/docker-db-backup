@@ -32,28 +32,29 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Authors](#authors)
-- [Table of Contents](#table-of-contents)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [Quick Start](#quick-start)
-- [Configuration](#configuration)
-  - [Data-Volumes](#data-volumes)
-  - [Environment Variables](#environment-variables)
-- [Maintenance](#maintenance)
-  - [Shell Access](#shell-access)
-    - [Custom Scripts](#custom-scripts)
-- [Example Post Script](#example-post-script)
-- [$1=EXIT_CODE (After running backup routine)](#1exit_code-after-running-backup-routine)
-- [$2=DB_TYPE (Type of Backup)](#2db_type-type-of-backup)
-- [$3=DB_HOST (Backup Host)](#3db_host-backup-host)
-- [#4=DB_NAME (Name of Database backed up](#4db_name-name-of-database-backed-up)
-- [$5=DATE (Date of Backup)](#5date-date-of-backup)
-- [$6=TIME (Time of Backup)](#6time-time-of-backup)
-- [$7=BACKUP_FILENAME (Filename of Backup)](#7backup_filename-filename-of-backup)
-- [$8=FILESIZE (Filesize of backup)](#8filesize-filesize-of-backup)
-- [$9=MD5_RESULT (MD5Sum if enabled)](#9md5_result-md5sum-if-enabled)
+- [hub.docker.com/r/tiredofit/db-backup](#hubdockercomrtiredofitdb-backup)
+  - [Introduction](#introduction)
+  - [Authors](#authors)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+    - [Quick Start](#quick-start)
+  - [Configuration](#configuration)
+    - [Data-Volumes](#data-volumes)
+    - [Environment Variables](#environment-variables)
+  - [Maintenance](#maintenance)
+    - [Shell Access](#shell-access)
+      - [Custom Scripts](#custom-scripts)
+  - [Example Post Script](#example-post-script)
+  - [$1=EXIT_CODE (After running backup routine)](#1exit_code-after-running-backup-routine)
+  - [$2=DB_TYPE (Type of Backup)](#2db_type-type-of-backup)
+  - [$3=DB_HOST (Backup Host)](#3db_host-backup-host)
+  - [#4=DB_NAME (Name of Database backed up](#4db_name-name-of-database-backed-up)
+  - [$5=DATE (Date of Backup)](#5date-date-of-backup)
+  - [$6=TIME (Time of Backup)](#6time-time-of-backup)
+  - [$7=BACKUP_FILENAME (Filename of Backup)](#7backup_filename-filename-of-backup)
+  - [$8=FILESIZE (Filesize of backup)](#8filesize-filesize-of-backup)
+  - [$9=MD5_RESULT (MD5Sum if enabled)](#9md5_result-md5sum-if-enabled)
 
 ## Prerequisites
 
@@ -89,8 +90,6 @@ The following directories are used for configuration and can be mapped for persi
 | `/assets/custom-scripts` | *Optional* Put custom scripts in this directory to execute after backup operations |
 
 ### Environment Variables
-
-*If you are trying to backup a database that doesn't have a user or a password (you should!) make sure you set `CONTAINER_ENABLE_DOCKER_SECRETS=FALSE`*
 
 Along with the Environment Variables from the [Base image](https://hub.docker.com/r/tiredofit/alpine), below is the complete list of available options that can be used to customize your installation.
 
