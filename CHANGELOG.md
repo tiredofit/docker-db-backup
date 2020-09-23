@@ -1,3 +1,8 @@
+## 2.2.2 2020-09-22 <tpansino@github>
+
+   ### Fixed
+      - Patch for 2.2.0 release fixing Docker Secrets Support. Was skipping password check.
+
 ## 2.2.1 2020-09-17 <alwynpan@github>
 
    ### Fixed
