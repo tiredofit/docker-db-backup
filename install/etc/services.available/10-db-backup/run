@@ -33,23 +33,23 @@ case "$dbtype" in
     "mongo" | "mongodb" | "MONGO" | "MONGODB" )
         dbtype=mongo
         dbport=${DB_PORT:-27017}
-        [[ ( -n "${DB_USER}" ) ]] && file_env 'DB_USER'
-        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+        [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
+        [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
     ;;
     "mysql" | "MYSQL" | "mariadb" | "MARIADB")
         dbtype=mysql
         dbport=${DB_PORT:-3306}
-        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+        [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
     ;;
     "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
         dbtype=pgsql
         dbport=${DB_PORT:-5432}
-        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+        [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
     ;;
     "redis" | "REDIS"   )
         dbtype=redis
         dbport=${DB_PORT:-6379}
-        [[ ( -n "${DB_PASS}" ) ]] && file_env 'DB_PASS'
+        [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
     ;;
 esac
 
