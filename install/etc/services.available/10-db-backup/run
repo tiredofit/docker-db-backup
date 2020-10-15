@@ -41,6 +41,10 @@ case "$dbtype" in
         dbport=${DB_PORT:-3306}
         [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
     ;;
+    "mssql" | "MSSQL" | "microsoftsql" | "MICROSOFTSQL")
+        dbtype=mssql
+        dbport=${DB_PORT:-1433}
+    ;;
     "postgres" | "postgresql" | "pgsql" | "POSTGRES" | "POSTGRESQL" | "PGSQL" )
         dbtype=pgsql
         dbport=${DB_PORT:-5432}
@@ -128,30 +132,6 @@ backup_couch() {
     move_backup
 }
 
-backup_mysql() {
-    if var_true "$SPLIT_DB" ; then
-        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
-
-        for db in $DATABASES; do
-                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
-                    print_notice "Dumping MariaDB database: $db"
-                    target=mysql_${db}_${dbhost}_${now}.sql
-                    compression
-                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
-                    exit_code=$?
-                    generate_md5
-                    move_backup
-                fi
-        done
-    else
-        compression
-        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
-        exit_code=$?
-        generate_md5
-        move_backup
-    fi
-}
-
 backup_influx() {
     if [ "${COMPRESSION}" = "NONE" ] || [ "${COMPRESSION}" = "none" ] || [ "${COMPRESSION}" = "FALSE" ] || [ "${COMPRESSION}" = "false" ] ; then
         :
@@ -180,6 +160,35 @@ backup_mongo() {
     cd ${tmpdir}
     generate_md5
     move_backup
+}
+
+backup_mssql() {
+    target=mssql_${dbname}_${dbhost}_${now}.bak
+    /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${tmpdir}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+}
+
+backup_mysql() {
+    if var_true "$SPLIT_DB" ; then
+        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
+
+        for db in $DATABASES; do
+                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
+                    print_notice "Dumping MariaDB database: $db"
+                    target=mysql_${db}_${dbhost}_${now}.sql
+                    compression
+                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
+                    exit_code=$?
+                    generate_md5
+                    move_backup
+                fi
+        done
+    else
+        compression
+        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+        exit_code=$?
+        generate_md5
+        move_backup
+    fi
 }
 
 backup_pgsql() {
@@ -266,6 +275,14 @@ check_availability() {
                 print_warn "MySQL/MariaDB Server '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
                 sleep 5
                 (( COUNTER+=5 ))
+            done
+        ;;
+        "mssql" )
+            COUNTER=0
+            while ! (nc -z ${dbhost} ${dbport}) ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "MSSQL Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
         ;;
         "pgsql" )
@@ -433,6 +450,10 @@ print_debug "Backup routines Initialized on $(date)"
         "influx" )
             check_availability
             backup_influx
+        ;;
+        "mssql" )
+            check_availability
+            backup_mssql
         ;;
         "mysql" )
             check_availability

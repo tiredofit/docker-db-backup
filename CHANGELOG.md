@@ -1,3 +1,10 @@
+## 2.3.0 2020-10-15 <dave at tiredofit dot ca>
+
+   ### Added
+      - Microsoft SQL Server support (experimental)
+   ### Changed
+      - Compiled Postgresql 13 from source to backup psql/13 hosts
+
 ## 2.2.2 2020-09-22 <tpansino@github>
 
    ### Fixed
