@@ -140,6 +140,7 @@ backup_influx() {
         influx_compression="-portable"
     fi
     for DB in $DB_NAME; do
+        target=influx_${DB}_${dbhost}_${now}
         influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${tmpdir}/${target}
         exit_code=$?
         generate_md5
