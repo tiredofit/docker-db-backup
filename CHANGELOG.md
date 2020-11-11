@@ -1,7 +1,13 @@
+## 2.3.1 2020-11-11 <bambi73@github>
+
+   ### Fixed
+      - Multiple Influx DB's not being backed up correctly
+
 ## 2.3.0 2020-10-15 <dave at tiredofit dot ca>
 
    ### Added
       - Microsoft SQL Server support (experimental)
+
    ### Changed
       - Compiled Postgresql 13 from source to backup psql/13 hosts
 
