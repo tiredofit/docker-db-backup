@@ -1,3 +1,9 @@
+## 2.3.2 2020-11-14 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Reapply S6-Overlay into filesystem as Postgresql build is removing S6 files due to edge containing S6 overlay
+
+
 ## 2.3.1 2020-11-11 <bambi73@github>
 
    ### Fixed
