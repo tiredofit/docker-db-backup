@@ -1,3 +1,9 @@
+## 2.4.0 2020-12-07 <dave at tiredofit dot ca>
+
+   ### Added
+      - Switch back to packges for Postgresql (now 13.1)
+
+
 ## 2.3.2 2020-11-14 <dave at tiredofit dot ca>
 
    ### Changed
