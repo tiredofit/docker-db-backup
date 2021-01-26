@@ -42,6 +42,11 @@ case "$dbtype" in
         [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
     ;;
     "mssql" | "MSSQL" | "microsoftsql" | "MICROSOFTSQL")
+        apkArch="$(apk --print-arch)"; \
+	    case "$apkArch" in
+		    x86_64) mssql=true ;;
+		    *) print_error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
+        esac
         dbtype=mssql
         dbport=${DB_PORT:-1433}
     ;;

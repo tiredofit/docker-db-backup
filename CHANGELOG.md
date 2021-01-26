@@ -1,3 +1,13 @@
+## 2.5.0 2021-01-25 <dave at tiredofit dot ca>
+
+   ### Added
+      - Multi Platform Build Variants (ARMv7 AMD64 AArch64)
+
+   ### Changed
+      - Alpine 3.13 Base
+      - Compile Pixz as opposed to relying on testing repository
+      - MSSQL Support only available under AMD64. Container exits if any other platform detected when MSSQL set to be backed up.
+
 ## 2.4.0 2020-12-07 <dave at tiredofit dot ca>
 
    ### Added
