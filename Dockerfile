@@ -22,6 +22,7 @@ RUN set -ex && \
     apk add --no-cache -t .db-backup-run-deps \
       	       bzip2 \
                influxdb \
+               libarchive \
                mariadb-client \
                mongodb-tools \
                libressl \

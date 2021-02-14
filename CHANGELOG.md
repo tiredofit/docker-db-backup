@@ -1,3 +1,9 @@
+## 2.5.1 2021-02-14 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix xz backups with `PARALLEL_COMPRESION=TRUE`
+
+
 ## 2.5.0 2021-01-25 <dave at tiredofit dot ca>
 
    ### Added
