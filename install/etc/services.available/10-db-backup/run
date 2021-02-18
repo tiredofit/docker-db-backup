@@ -60,6 +60,9 @@ case "$dbtype" in
         dbport=${DB_PORT:-6379}
         [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
     ;;
+    "sqlite" | "sqlite3" | "SQLITE" | "SQLITE3" )
+        dbtype=sqlite3
+    ;;
 esac
 
 ### Set Defaults
@@ -241,6 +244,22 @@ backup_redis() {
     move_backup
 }
 
+backup_sqlite3() {
+    db=$(basename "$dbhost")
+    db="${db%.*}"
+    target=sqlite3_${db}_${now}.sqlite3
+    compression
+
+    print_info "Dumping sqlite3 database: ${dbhost}"
+    sqlite3 "${dbhost}" ".backup '${tmpdir}/backup.sqlite3'"
+    exit_code=$?
+
+    cat "${tmpdir}/backup.sqlite3" | $dumpoutput > "${tmpdir}/${target}"
+
+    generate_md5
+    move_backup
+}
+
 check_availability() {
 ### Set the Database Type
    case "$dbtype" in
@@ -308,6 +327,15 @@ check_availability() {
                 (( COUNTER+=5 ))
                 print_warn "Redis Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
             done
+        ;;
+        "sqlite3" )
+            if [[ ! -e "${dbhost}" ]]; then
+                print_error "File '${dbhost}' does not exist."
+            elif [[ ! -f "${dbhost}" ]]; then
+                print_error "File '${dbhost}' is not a file."
+            elif [[ ! -r "${dbhost}" ]]; then
+                print_error "File '${dbhost}' is not readable."
+            fi
         ;;
     esac
 }
@@ -476,6 +504,10 @@ print_debug "Backup routines Initialized on $(date)"
         "redis" )
             check_availability
             backup_redis
+        ;;
+        "sqlite3" )
+            check_availability
+            backup_sqlite3
         ;;
         esac
 
