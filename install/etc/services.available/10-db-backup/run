@@ -331,10 +331,16 @@ check_availability() {
         "sqlite3" )
             if [[ ! -e "${dbhost}" ]]; then
                 print_error "File '${dbhost}' does not exist."
+                exit_code=2
+                exit $exit_code
             elif [[ ! -f "${dbhost}" ]]; then
                 print_error "File '${dbhost}' is not a file."
+                exit_code=2
+                exit $exit_code
             elif [[ ! -r "${dbhost}" ]]; then
                 print_error "File '${dbhost}' is not readable."
+                exit_code=2
+                exit $exit_code
             fi
         ;;
     esac
