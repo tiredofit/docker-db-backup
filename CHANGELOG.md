@@ -1,3 +1,9 @@
+## 2.6.0 2021-02-19 <tpansino@github>
+
+   ### Added
+      - SQLite support
+
+
 ## 2.5.1 2021-02-14 <dave at tiredofit dot ca>
 
    ### Changed
