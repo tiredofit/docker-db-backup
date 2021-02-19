@@ -30,6 +30,7 @@ RUN set -ex && \
                postgresql \
                postgresql-client \
                redis \
+               sqlite \
                xz \
                zstd \
                && \
