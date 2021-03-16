@@ -1,6 +1,5 @@
 # hub.docker.com/r/tiredofit/db-backup
 
-[![Build Status](https://img.shields.io/docker/build/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
 [![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg)](https://hub.docker.com/r/tiredofit/db-backup)
 [![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/db-backup.svg)](https://microbadger.com/images/tiredofit/db-backup)
@@ -32,29 +31,18 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 ## Table of Contents
 
-- [hub.docker.com/r/tiredofit/db-backup](#hubdockercomrtiredofitdb-backup)
-  - [Introduction](#introduction)
-  - [Authors](#authors)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-    - [Quick Start](#quick-start)
-  - [Configuration](#configuration)
-    - [Data-Volumes](#data-volumes)
-    - [Environment Variables](#environment-variables)
-  - [Maintenance](#maintenance)
-    - [Shell Access](#shell-access)
-      - [Custom Scripts](#custom-scripts)
-  - [Example Post Script](#example-post-script)
-  - [$1=EXIT_CODE (After running backup routine)](#1exit_code-after-running-backup-routine)
-  - [$2=DB_TYPE (Type of Backup)](#2db_type-type-of-backup)
-  - [$3=DB_HOST (Backup Host)](#3db_host-backup-host)
-  - [#4=DB_NAME (Name of Database backed up](#4db_name-name-of-database-backed-up)
-  - [$5=DATE (Date of Backup)](#5date-date-of-backup)
-  - [$6=TIME (Time of Backup)](#6time-time-of-backup)
-  - [$7=BACKUP_FILENAME (Filename of Backup)](#7backup_filename-filename-of-backup)
-  - [$8=FILESIZE (Filesize of backup)](#8filesize-filesize-of-backup)
-  - [$9=MD5_RESULT (MD5Sum if enabled)](#9md5_result-md5sum-if-enabled)
+- [Introduction](#introduction)
+- [Authors](#authors)
+- [Table of Contents](#table-of-contents)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+  - [Quick Start](#quick-start)
+- [Configuration](#configuration)
+  - [Data-Volumes](#data-volumes)
+  - [Environment Variables](#environment-variables)
+- [Maintenance](#maintenance)
+  - [Shell Access](#shell-access)
+    - [Custom Scripts](#custom-scripts)
 
 ## Prerequisites
 
@@ -125,7 +113,7 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | Parameter       | Description                                                                             |
 | --------------- | --------------------------------------------------------------------------------------- |
 | `S3_BUCKET`     | S3 Bucket name e.g. 'mybucket'                                                          |
-| `S3_HOSTNAME`   | Hostname of S3 Server e.g "s3.amazonaws.com" - You can also include a port if necessary |
+| `S3_HOST`       | Hostname of S3 Server e.g "s3.amazonaws.com" - You can also include a port if necessary |
 | `S3_KEY_ID`     | S3 Key ID                                                                               |
 | `S3_KEY_SECRET` | S3 Key Secret                                                                           |
 | `S3_PATH`       | S3 Pathname to save to e.g. '`backup`'                                                  |
@@ -152,16 +140,16 @@ If you want to execute a custom script at the end of backup, you can drop bash s
 $ cat post-script.sh
 ##!/bin/bash
 
-## Example Post Script
-## $1=EXIT_CODE (After running backup routine)
-## $2=DB_TYPE (Type of Backup)
-## $3=DB_HOST (Backup Host)
-## #4=DB_NAME (Name of Database backed up
-## $5=DATE (Date of Backup)
-## $6=TIME (Time of Backup)
-## $7=BACKUP_FILENAME (Filename of Backup)
-## $8=FILESIZE (Filesize of backup)
-## $9=MD5_RESULT (MD5Sum if enabled)
+# #### Example Post Script
+# #### $1=EXIT_CODE (After running backup routine)
+# #### $2=DB_TYPE (Type of Backup)
+# #### $3=DB_HOST (Backup Host)
+# #### #4=DB_NAME (Name of Database backed up
+# #### $5=DATE (Date of Backup)
+# ####  $6=TIME (Time of Backup)
+# ####  $7=BACKUP_FILENAME (Filename of Backup)
+# ####  $8=FILESIZE (Filesize of backup)
+# ####  $9=MD5_RESULT (MD5Sum if enabled)
 
 echo "${1} ${2} Backup Completed on ${3} for ${4} on ${5} ${6}. Filename: ${7} Size: ${8} bytes MD5: ${9}"
 ````
