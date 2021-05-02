@@ -1,7 +1,7 @@
 ### Application Level Image CI
 ### Dave Conroy <dave at tiredofit dot ca>
 
-name: 'Build Images'
+name: 'build'
 
 on:
   push:
