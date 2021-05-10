@@ -411,34 +411,10 @@ move_backup() {
             mv ${tmpdir}/"${target}" "${DB_DUMP_TARGET}"/"${target}"
         ;;
         "S3" | "s3" | "MINIO" | "minio" )
-            s3_content_type="application/octet-stream"
-            if [ "$S3_URI_STYLE" = "VIRTUALHOST" ] || [ "$S3_URI_STYLE" = "VHOST" ] || [ "$S3_URI_STYLE" = "virtualhost" ] || [ "$S3_URI_STYLE" = "vhost" ] ; then
-                s3_url="${S3_BUCKET}.${S3_HOST}"
-            else
-                s3_url="${S3_HOST}/${S3_BUCKET}"
-            fi
-
-            if var_true "$MD5" ; then
-                s3_date="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
-                s3_md5="$(libressl md5 -binary < "${tmpdir}/${target}.md5" | base64)"
-                sig="$(printf "PUT\n$s3_md5\n${s3_content_type}\n$s3_date\n/$S3_BUCKET/$S3_PATH/${target}.md5" | libressl sha1 -binary -hmac "${S3_KEY_SECRET}" | base64)"
-                print_debug "Uploading ${target}.md5 to S3"
-                curl -T "${tmpdir}/${target}.md5" "${S3_PROTOCOL}"://"${s3_url}"/"${S3_PATH}"/"${target}".md5 \
-                     -H "Date: $date" \
-                     -H "Authorization: AWS ${S3_KEY_ID}:$sig" \
-                     -H "Content-Type: ${s3_content_type}" \
-                     -H "Content-MD5: ${s3_md5}"
-            fi
-
-            s3_date="$(LC_ALL=C date -u +"%a, %d %b %Y %X %z")"
-            s3_md5="$(libressl md5 -binary < "${tmpdir}/${target}" | base64)"
-            sig="$(printf "PUT\n$s3_md5\n${s3_content_type}\n$s3_date\n/$S3_BUCKET/$S3_PATH/${target}" | libressl sha1 -binary -hmac "${S3_KEY_SECRET}" | base64)"
-            print_debug "Uploading ${target} to S3"
-            curl -T ${tmpdir}/"${target}" "${S3_PROTOCOL}"://"${s3_url}"/"${S3_PATH}"/"${target}" \
-                 -H "Date: $s3_date" \
-                 -H "Authorization: AWS ${S3_KEY_ID}:$sig" \
-                 -H "Content-Type: ${s3_content_type}" \
-                 -H "Content-MD5: ${s3_md5}"
+            export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
+            export AWS_DEFAULT_REGION=ap-northeast-2
+            aws s3 cp ${tmpdir}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target}
 
             rm -rf ${tmpdir}/*.md5
             rm -rf ${tmpdir}/"${target}"
