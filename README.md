@@ -71,7 +71,7 @@ Builds of the image are available on [Docker Hub](https://hub.docker.com/r/tired
 docker pull tiredofit/backuppc:(imagetag)
 ```
 
-The following image tags are available along with their taged release based on what's written in the [Changelog](CHANGELOG.md):
+The following image tags are available along with their tagged release based on what's written in the [Changelog](CHANGELOG.md):
 
 | Container OS | Tag       |
 | ------------ | --------- |
