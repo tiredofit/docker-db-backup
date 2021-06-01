@@ -65,10 +65,10 @@ You must have a working DB server or container available for this to work proper
 Clone this repository and build the image with `docker build -t (imagename) .`
 
 ### Prebuilt Images
-Builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/backuppc) and is the recommended method of installation.
+Builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/db-backup) and is the recommended method of installation.
 
 ```bash
-docker pull tiredofit/backuppc:(imagetag)
+docker pull tiredofit/db-backup:(imagetag)
 ```
 
 The following image tags are available along with their tagged release based on what's written in the [Changelog](CHANGELOG.md):
