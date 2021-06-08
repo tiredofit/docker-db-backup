@@ -203,7 +203,9 @@ backup_mysql() {
 backup_pgsql() {
   if var_true $SPLIT_DB ; then
       export PGPASSWORD=${dbpass}
-      DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+      authdb=${DB_USER}
+      [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
+      DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
             for db in $DATABASES; do
                 print_info "Dumping database: $db"
                 target=pgsql_${db}_${dbhost}_${now}.sql
@@ -213,13 +215,13 @@ backup_pgsql() {
                 generate_md5
                 move_backup
             done
-        else
-            export PGPASSWORD=${dbpass}
-            compression
-            pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
-            exit_code=$?
-            generate_md5
-            move_backup
+  else
+      export PGPASSWORD=${dbpass}
+      compression
+      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+      exit_code=$?
+      generate_md5
+      move_backup
   fi
 }
 
