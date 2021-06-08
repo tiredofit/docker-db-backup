@@ -1,4 +1,4 @@
-## 2.6.1 2021-02-19 <jwillmer@github>
+## 2.6.1 2021-06-08 <jwillmer@github>
 
    ### Changed
       - Fix for Issue #14 - SPLIT_DB=TRUE was not working for Postgres DB server
