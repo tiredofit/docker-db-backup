@@ -116,7 +116,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `COMPRESSION_LEVEL`    | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - Default `3`                                                           |
 | `DB_TYPE`              | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                                             |
 | `DB_HOST`              | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                                      |
-| `DB_NAME`              | Schema Name e.g. `database` (Used in pgsql as auth db when using `SPLIT_DB`)                                                                                                                                                                       |
+| `DB_NAME`              | Schema Name e.g. `database` (Used in `pgsql` as auth db when using `SINGLE_DB=FALSE`. Can contain multiple names for `mysql`: "`db1 db2`" or leave undefined for all)                                                                                                                                                                       |
 | `DB_USER`              | username for the database - use `root` to backup all MySQL of them.                                                                                                                                |
 | `DB_PASS`              | (optional if DB doesn't require it) password for the database                                                                                                                                      |
 | `DB_PORT`              | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                                   |
@@ -130,7 +130,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `MD5`                  | Generate MD5 Sum in Directory, `TRUE` or `FALSE` - Default `TRUE`                                                                                                                                  |
 | `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE`                                                                                                                     |
 | `POST_SCRIPT`          | Fill this variable in with a command to execute post the script backing up                                                                                                                         |  |
-| `SPLIT_DB`             | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE`                                                           |
+| `SINGLE_DB`            | Used in `mysql` and `pgsql`: Set to FALSE to create backups for all DBs. - Default `TRUE`                                                           |
 
 When using compression with MongoDB, only `GZ` compression is possible.
 

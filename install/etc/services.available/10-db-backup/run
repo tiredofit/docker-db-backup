@@ -79,7 +79,18 @@ dbuser=${DB_USER}
 MD5=${MD5:-TRUE}
 PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
 SIZE_VALUE=${SIZE_VALUE:-"bytes"}
-SPLIT_DB=${SPLIT_DB:-FALSE}
+
+# convert removed param to prevent old scripts from breaking
+if [ -n "${SPLIT_DB}" ]; then
+  if [ "${SPLIT_DB}" = "TRUE" ]; then
+    SINGLE_DB=FALSE
+  else
+    SINGLE_DB=TRUE
+  fi
+fi
+SINGLE_DB=${SINGLE_DB:-TRUE}
+
+
 tmpdir=/tmp/backups
 
 if [ "$BACKUP_TYPE" = "S3" ] || [ "$BACKUP_TYPE" = "s3" ] || [ "$BACKUP_TYPE" = "MINIO" ] || [ "$BACKUP_TYPE" = "minio" ] ; then
@@ -177,9 +188,20 @@ backup_mssql() {
 }
 
 backup_mysql() {
-    if var_true "$SPLIT_DB" ; then
+    if var_true "$SINGLE_DB" ; then
+        # dump all db's if dbname is not set
+        if [ -n "${dbname}" ]; then
+          db_option="--databases ${dbname}"
+        else
+          db_option=""
+        fi
+        compression
+        mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u $dbuser ${EXTRA_OPTS} ${db_option} | $dumpoutput > ${tmpdir}/${target}
+        exit_code=$?
+        generate_md5
+        move_backup
+    else
         DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
-
         for db in $DATABASES; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     print_notice "Dumping MariaDB database: $db"
@@ -191,17 +213,18 @@ backup_mysql() {
                     move_backup
                 fi
         done
-    else
-        compression
-        mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u $dbuser ${EXTRA_OPTS} --databases ${dbname} | $dumpoutput > ${tmpdir}/${target}
-        exit_code=$?
-        generate_md5
-        move_backup
     fi
 }
 
 backup_pgsql() {
-  if var_true $SPLIT_DB ; then
+  if var_true $SINGLE_DB ; then
+      export PGPASSWORD=${dbpass}
+      compression
+      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+      exit_code=$?
+      generate_md5
+      move_backup
+  else
       export PGPASSWORD=${dbpass}
       authdb=${DB_USER}
       [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
@@ -215,13 +238,6 @@ backup_pgsql() {
                 generate_md5
                 move_backup
             done
-  else
-      export PGPASSWORD=${dbpass}
-      compression
-      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
-      exit_code=$?
-      generate_md5
-      move_backup
   fi
 }
 
