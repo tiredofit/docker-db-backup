@@ -1,3 +1,10 @@
+## 2.7.0 2021-06-17 <dave at tiredofit dot ca>
+
+   ### Added
+      - MongoDB Authentication Database support (DB_AUTH)
+      - Alpine 3.14 base
+
+
 ## 2.6.1 2021-06-08 <jwillmer@github>
 
    ### Changed
