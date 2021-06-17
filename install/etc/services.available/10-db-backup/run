@@ -35,7 +35,6 @@ case "$dbtype" in
         dbport=${DB_PORT:-27017}
         [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
         [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
-    ;;
     "mysql" | "MYSQL" | "mariadb" | "MARIADB")
         dbtype=mysql
         dbport=${DB_PORT:-3306}
@@ -118,6 +117,7 @@ case "$dbtype" in
         [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${dbuser}"
         [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${dbpass}"
         [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${dbname}"
+        [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
     ;;
     "mysql" )
         [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${dbpass}
@@ -164,7 +164,7 @@ backup_mongo() {
         target=${dbtype}_${dbname}_${dbhost}_${now}.archivegz
         mongo_compression="--gzip"
     fi
-    mongodump --archive=${tmpdir}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    mongodump --archive=${tmpdir}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
     cd ${tmpdir}
     generate_md5

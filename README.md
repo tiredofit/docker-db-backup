@@ -114,6 +114,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `BACKUP_LOCATION`      | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi - Default `FILESYSTEM`                                                                                                   |
 | `COMPRESSION`          | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE` - Default `GZ`                                                                                                             |
 | `COMPRESSION_LEVEL`    | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - Default `3`                                                           |
+| `DB_AUTH`              | (Mongo Only - Optional) Authentication Database |
 | `DB_TYPE`              | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                                             |
 | `DB_HOST`              | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                                      |
 | `DB_NAME`              | Schema Name e.g. `database`                                                                                                                                                                        |
