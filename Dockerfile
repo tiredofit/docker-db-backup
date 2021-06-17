@@ -1,4 +1,4 @@
-FROM tiredofit/alpine:3.14
+FROM tiredofit/alpine:3.13
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.5.2.1-1 \
