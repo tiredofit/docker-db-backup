@@ -35,6 +35,7 @@ case "$dbtype" in
         dbport=${DB_PORT:-27017}
         [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
         [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+    ;;
     "mysql" | "MYSQL" | "mariadb" | "MARIADB")
         dbtype=mysql
         dbport=${DB_PORT:-3306}
