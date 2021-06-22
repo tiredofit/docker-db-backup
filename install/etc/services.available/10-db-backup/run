@@ -178,14 +178,14 @@ backup_mssql() {
 
 backup_mysql() {
     if var_true "$SPLIT_DB" ; then
-        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
+        DATABASES=$(mysql -h ${dbhost} -P $dbport -u $dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
 
         for db in $DATABASES; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     print_notice "Dumping MariaDB database: $db"
                     target=mysql_${db}_${dbhost}_${now}.sql
                     compression
-                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
+                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u $dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
                     exit_code=$?
                     generate_md5
                     move_backup
@@ -193,7 +193,7 @@ backup_mysql() {
         done
     else
         compression
-        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u $dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
         exit_code=$?
         generate_md5
         move_backup
