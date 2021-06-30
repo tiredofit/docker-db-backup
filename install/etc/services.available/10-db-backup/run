@@ -148,6 +148,7 @@ backup_influx() {
         print_notice "Compressing InfluxDB backup with gzip"
         influx_compression="-portable"
     fi
+
     for DB in $DB_NAME; do
         target=influx_${DB}_${dbhost}_${now}
         influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${tmpdir}/${target}
@@ -165,6 +166,7 @@ backup_mongo() {
         target=${dbtype}_${dbname}_${dbhost}_${now}.archivegz
         mongo_compression="--gzip"
     fi
+
     mongodump --archive=${tmpdir}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
     cd ${tmpdir}
@@ -202,11 +204,11 @@ backup_mysql() {
 }
 
 backup_pgsql() {
-  if var_true $SPLIT_DB ; then
-      export PGPASSWORD=${dbpass}
-      authdb=${DB_USER}
-      [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
-      DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+    if var_true $SPLIT_DB ; then
+        export PGPASSWORD=${dbpass}
+        authdb=${DB_USER}
+        [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
+        DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
             for db in $DATABASES; do
                 print_info "Dumping database: $db"
                 target=pgsql_${db}_${dbhost}_${now}.sql
@@ -216,14 +218,14 @@ backup_pgsql() {
                 generate_md5
                 move_backup
             done
-  else
-      export PGPASSWORD=${dbpass}
-      compression
-      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
-      exit_code=$?
-      generate_md5
-      move_backup
-  fi
+    else
+        export PGPASSWORD=${dbpass}
+        compression
+        pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+        exit_code=$?
+        generate_md5
+        move_backup
+    fi
 }
 
 backup_redis() {
@@ -232,16 +234,20 @@ backup_redis() {
     print_info "Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
+
     while [ $try -gt 0 ] ; do
         saved=$(echo 'info Persistence' | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
         ok=$(echo 'info Persistence' | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
+
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
             print_info "Redis Backup Complete"
         fi
+
         try=$((try - 1))
         print_info "Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
+
     generate_md5
     compression
     move_backup
@@ -265,7 +271,7 @@ backup_sqlite3() {
 
 check_availability() {
 ### Set the Database Type
-   case "$dbtype" in
+    case "$dbtype" in
         "couch" )
             COUNTER=0
             while ! (nc -z ${dbhost} ${dbport}) ; do
@@ -350,7 +356,7 @@ check_availability() {
 }
 
 compression() {
-   case "$COMPRESSION" in
+    case "$COMPRESSION" in
         "GZ" | "gz" | "gzip" | "GZIP")
             print_notice "Compressing backup with gzip"
             target=${target}.gz
@@ -378,12 +384,12 @@ compression() {
 }
 
 generate_md5() {
-if var_true "$MD5" ; then
-    print_notice "Generating MD5 for ${target}"
-    cd $tmpdir
-    md5sum "${target}" > "${target}".md5
-    MD5VALUE=$(md5sum "${target}" | awk '{ print $1}')
-fi
+    if var_true "$MD5" ; then
+        print_notice "Generating MD5 for ${target}"
+        cd $tmpdir
+        md5sum "${target}" > "${target}".md5
+        MD5VALUE=$(md5sum "${target}" | awk '{ print $1}')
+    fi
 }
 
 move_backup() {
@@ -399,6 +405,7 @@ move_backup() {
             SIZE_VALUE=1
         ;;
     esac
+
     if [ "$SIZE_VALUE" = "1" ] ; then
         FILESIZE=$(stat -c%s "${tmpdir}/${target}")
         print_notice "Backup of ${target} created with the size of ${FILESIZE} bytes"
@@ -430,7 +437,7 @@ move_backup() {
 print_debug "Backup routines Initialized on $(date)"
 
 ### Wait for Next time to start backup
-  if [ "$1" != "NOW" ]; then
+if [ "$1" != "NOW" ]; then
     current_time=$(date +"%s")
     today=$(date +"%Y%m%d")
 
@@ -444,24 +451,24 @@ print_debug "Backup routines Initialized on $(date)"
         waittime=$(($target_time - $current_time))
     fi
 
-        print_notice "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
-        sleep $waittime
-  fi
+    print_notice "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
+    sleep $waittime
+fi
 
 
 ### Commence Backup
-  while true; do
+while true; do
     # make sure the directory exists
     mkdir -p $tmpdir
 
-### Define Target name
+    ### Define Target name
     now=$(date +"%Y%m%d-%H%M%S")
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
     target=${dbtype}_${dbname}_${dbhost}_${now}.sql
 
-### Take a Dump
-       case "$dbtype" in
+    ### Take a Dump
+    case "$dbtype" in
         "couch" )
             check_availability
             backup_couch
@@ -494,16 +501,16 @@ print_debug "Backup routines Initialized on $(date)"
             check_availability
             backup_sqlite3
         ;;
-        esac
+    esac
 
-### Zabbix
+    ### Zabbix
     if var_true "$ENABLE_ZABBIX" ; then
         print_notice "Sending Backup Statistics to Zabbix"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
     fi
 
-### Automatic Cleanup
+    ### Automatic Cleanup
     if [[ -n "$DB_CLEANUP_TIME" ]]; then
         print_notice "Cleaning up old backups"
         find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
@@ -514,15 +521,16 @@ print_debug "Backup routines Initialized on $(date)"
         eval "${POST_SCRIPT}"
     fi
 
-### Post Backup Custom Script Support
+    ### Post Backup Custom Script Support
     if [ -d /assets/custom-scripts/ ] ; then
-    print_notice "Found Custom Filesystem Scripts to Execute"
-    for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
-      print_notice "Running Script ${f}"
-      ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME DATE BACKUP_FILENAME FILESIZE MD5_VALUE
-      chmod +x "${f}"
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${now_date}" "${now_time}" "${target}" "${FILESIZE}" "${MD5VALUE}"
-    done
+        print_notice "Found Custom Filesystem Scripts to Execute"
+
+        for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
+            print_notice "Running Script ${f}"
+            ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME DATE BACKUP_FILENAME FILESIZE MD5_VALUE
+            chmod +x "${f}"
+            ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${now_date}" "${now_time}" "${target}" "${FILESIZE}" "${MD5VALUE}"
+        done
     fi
 
     ### Go back to Sleep until next Backup time
@@ -532,5 +540,4 @@ print_debug "Backup routines Initialized on $(date)"
         sleep $(($DB_DUMP_FREQ*60))
     fi
 
-  done
-fi
+done
