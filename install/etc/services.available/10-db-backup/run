@@ -180,27 +180,41 @@ backup_mssql() {
 }
 
 backup_mysql() {
+    process_privilege_error=false
+
     if var_true "$SPLIT_DB" ; then
-        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
+        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema)
 
         for db in $DATABASES; do
-                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
-                    print_notice "Dumping MariaDB database: $db"
-                    target=mysql_${db}_${dbhost}_${now}.sql
-                    compression
-                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
-                    exit_code=$?
-                    generate_md5
-                    move_backup
+            if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
+                print_notice "Dumping MySQL/MariaDB database: $db"
+                target=mysql_${db}_${dbhost}_${now}.sql
+                compression
+                out="$({ mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}; } 2>&1)"
+                exit_code=$?
+                echo "$out" | grep "'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces" 2>&1 > /dev/null
+                if [ $? -eq 0 ]; then 
+                    process_privilege_error=true
                 fi
+                generate_md5
+                move_backup
+            fi
         done
     else
         compression
-        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+        out="$({ mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}; } 2>&1)"
         exit_code=$?
+        echo "$out" | grep "'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces" 2>&1 > /dev/null
+        if [ $? -eq 0 ]; then
+            process_privilege_error
+        fi
         generate_md5
         move_backup
     fi
+
+    if [ "$process_privilege_error" = true ] ; then
+        print_notice "User does not have the PROCESS privilege. Backup with --no-tablespaces option."
+    fi    
 }
 
 backup_pgsql() {
@@ -299,10 +313,9 @@ check_availability() {
         "mysql" )
             COUNTER=0
             while true; do
-                mysqlcmd='mysql -u'${dbuser}' -P '${dbport}' -h '${dbhost}' -p'${dbpass}
-                out="$($mysqlcmd -e "SELECT COUNT(*) FROM information_schema.FILES;" 2>&1)"
-                echo "$out" | grep -E "COUNT|Enter" 2>&1 > /dev/null
-                if [ $? -eq 0 ]; then
+                mysqlcmd='mysqlshow -u'${dbuser}' -p'${dbpass}' -P '${dbport}' -h '${dbhost}' '${dbname}
+                out="$($mysqlcmd | grep -v Wildcard | grep -o ${dbname} 2>&1)"
+                if [ "$out" == "${dbname}" ]; then
                     :
                     break
                 fi
