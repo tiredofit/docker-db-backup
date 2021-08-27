@@ -1,4 +1,4 @@
-FROM tiredofit/alpine:3.13
+FROM tiredofit/alpine:3.14
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.5.2.1-1 \
@@ -16,6 +16,7 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
+               py3-pip \
                xz-dev \
                && \
     \
@@ -29,6 +30,7 @@ RUN set -ex && \
                pigz \
                postgresql \
                postgresql-client \
+               python3 \
                redis \
                sqlite \
                xz \
@@ -55,19 +57,15 @@ RUN set -ex && \
         --sysconfdir=/etc \
         --localstatedir=/var \
         && \
-     make && \
-     make install && \
-     \
+    make && \
+    make install && \
+    pip3 install --upgrade pip && \
+    pip3 install awscli && \
+    \	
 ### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \
-    rm -rf /tmp/* /var/cache/apk/*
-
-RUN apk add --no-cache \
-               python3 \
-               py3-pip \
-          && pip3 install --upgrade pip \
-          && pip3 install awscli
+    rm -rf /root/.cache /tmp/* /var/cache/apk/*
 
 ### S6 Setup
     ADD install  /

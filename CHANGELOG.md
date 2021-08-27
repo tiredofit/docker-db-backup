@@ -1,3 +1,13 @@
+## 2.8.0 2021-08-27 <dave at tiredofit dot ca>
+
+   ### Added
+      - Alpine 3.14 Base
+
+   ### Changed
+      - Fix for syntax error in 2.7.0 Release (Credit the1ts@github)
+      - Cleanup image and leftover cache with AWS CLI installation
+
+
 ## 2.7.0 2021-06-17 <dave at tiredofit dot ca>
 
    ### Added
