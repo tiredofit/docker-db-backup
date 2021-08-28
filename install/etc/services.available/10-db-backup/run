@@ -294,8 +294,7 @@ check_availability() {
             COUNTER=0
             while true; do
                 mysqlcmd='mysql -u'${dbuser}' -P '${dbport}' -h '${dbhost}' -p'${dbpass}
-                out="$($mysqlcmd -e "SELECT COUNT(*) FROM information_schema.FILES;" 2>&1)"
-                echo "$out" | grep -E "COUNT|Enter" 2>&1 > /dev/null
+                out=$($mysqlcmd -e "SHOW STATUS;")
                 if [ $? -eq 0 ]; then
                     :
                     break
