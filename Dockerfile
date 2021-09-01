@@ -2,10 +2,10 @@ FROM tiredofit/alpine:3.14
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.5.2.1-1 \
-    ENABLE_CRON=FALSE \
-    ENABLE_SMTP=FALSE \
-    ENABLE_ZABBIX=TRUE \
-    ZABBIX_HOSTNAME=db-backup
+    CONTAINER_ENABLE_SCHEDULING=FALSE \
+    CONTAINER_ENABLE_MESSAGING=FALSE \
+    CONTAINER_ENABLE_MONITORING=TRUE \
+    CONTAINER_NAME=db-backup
 
     ### Dependencies
 RUN set -ex && \
