@@ -121,6 +121,7 @@ RUN set -ex && \
                influxdb \
                libarchive \
                mariadb-client \
+               mariadb-connector-c \
                mongodb-tools \
                libressl \
                pigz \
