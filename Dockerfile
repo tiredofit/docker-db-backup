@@ -16,7 +16,6 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
-               py3-pip \
                xz-dev \
                && \
     \
@@ -31,6 +30,7 @@ RUN set -ex && \
                postgresql \
                postgresql-client \
                python3 \
+               py3-pip \
                redis \
                sqlite \
                xz \
