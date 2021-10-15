@@ -1,3 +1,9 @@
+## 2.8.2 2021-10-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Change to using aws cli from Alpine repositories (fixes #81)
+
+
 ## 2.8.1 2021-09-01 <dave at tiredofit dot ca>
 
    ### Changed

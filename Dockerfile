@@ -1,4 +1,4 @@
-FROM tiredofit/alpine:3.14
+FROM docker.io/tiredofit/alpine:3.14
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.5.2.1-1 \
@@ -16,12 +16,12 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
-               py3-pip \
                xz-dev \
                && \
     \
     apk add --no-cache -t .db-backup-run-deps \
-      	       bzip2 \
+               aws-cli \
+               bzip2 \
                influxdb \
                libarchive \
                mariadb-client \
@@ -30,7 +30,6 @@ RUN set -ex && \
                pigz \
                postgresql \
                postgresql-client \
-               python3 \
                redis \
                sqlite \
                xz \
@@ -59,9 +58,7 @@ RUN set -ex && \
         && \
     make && \
     make install && \
-    pip3 install --upgrade pip && \
-    pip3 install awscli && \
-    \	
+    \
 ### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \
