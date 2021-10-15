@@ -1,3 +1,10 @@
+## 2.9.0 2021-10-15 <dave at tiredofit dot ca>
+
+   ### Added
+      - Postgresql 14 Support (compiled)
+      - MSSQL 17.8.1.1
+
+
 ## 2.8.2 2021-10-15 <dave at tiredofit dot ca>
 
    ### Changed
