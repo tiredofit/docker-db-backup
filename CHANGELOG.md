@@ -1,3 +1,10 @@
+## 2.9.1 2021-10-15 <sbrunecker@github>
+
+   ### Fixed
+      - Allow MariaDB 8.0 servers to be backed up
+      - Fixed DB available check getting stuck with empty password
+
+
 ## 2.9.0 2021-10-15 <dave at tiredofit dot ca>
 
    ### Added
