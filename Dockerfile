@@ -5,12 +5,10 @@ ENV MSSQL_VERSION=17.8.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE
 
-
 ENV LANG=en_US.utf8 \
     PG_MAJOR=14 \
     PG_VERSION=14.0 \
     PGDATA=/var/lib/postgresql/data
-
 
 ### Create User Accounts
 RUN set -ex && \
