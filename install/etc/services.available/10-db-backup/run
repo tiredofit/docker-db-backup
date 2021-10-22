@@ -243,8 +243,10 @@ backup_redis() {
         print_info "Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
-    generate_md5
+    target_original=${target}
     compression
+    $dumpoutput "${tmpdir}/${target_original}"
+    generate_md5
     move_backup
 }
 
