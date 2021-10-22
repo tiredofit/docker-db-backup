@@ -237,13 +237,16 @@ backup_redis() {
         ok=$(echo 'info Persistence' | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
             print_info "Redis Backup Complete"
+            break
         fi
         try=$((try - 1))
         print_info "Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
-    generate_md5
+    target_original=${target}
     compression
+    $dumpoutput "${tmpdir}/${target_original}"
+    generate_md5
     move_backup
 }
 
