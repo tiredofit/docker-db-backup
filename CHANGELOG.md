@@ -1,3 +1,8 @@
+## 2.9.2 2021-10-22 <teenigma@github>
+   
+   ### Fixed
+      - Fix compression failing on Redis backup
+
 ## 2.9.1 2021-10-15 <sbrunecker@github>
 
    ### Fixed
