@@ -1,4 +1,4 @@
-FROM docker.io/tiredofit/alpine:3.14
+FROM docker.io/tiredofit/alpine:3.15
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.8.1.1-1 \
