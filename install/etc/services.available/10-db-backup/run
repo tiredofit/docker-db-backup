@@ -1,7 +1,6 @@
 #!/usr/bin/with-contenv bash
 
 source /assets/functions/00-container
-
 PROCESS_NAME="db-backup"
 
 date >/dev/null
