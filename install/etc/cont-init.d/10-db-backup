@@ -13,3 +13,5 @@ if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEN
 # Autoregister=dbbackup
 EOF
 fi
+
+liftoff

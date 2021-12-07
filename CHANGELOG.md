@@ -1,3 +1,9 @@
+## 2.9.5 2021-12-07 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for 2.9.3
+
+
 ## 2.9.4 2021-12-07 <dave at tiredofit dot ca>
 
    ### Added
