@@ -438,9 +438,10 @@ print_debug "Backup routines Initialized on $(date)"
     today=$(date +"%Y%m%d")
 
     if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
-            waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+        waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+        target_time=$(($current_time + $waittime))
     else
-            target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
+        target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
         if [[ "$target_time" < "$current_time" ]]; then
             target_time=$(($target_time + 24*60*60))
         fi
