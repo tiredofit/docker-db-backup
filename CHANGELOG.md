@@ -1,3 +1,9 @@
+## 2.9.5 2021-12-03 <alexbarcello@githuba>
+
+   ### Changed
+      - Fix for S3 Minio backup targets
+      - Fix for annoying output on certain target time print conditions
+
 ## 2.9.5 2021-12-07 <dave at tiredofit dot ca>
 
    ### Changed
