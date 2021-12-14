@@ -1,4 +1,4 @@
-## 2.9.5 2021-12-03 <alexbarcello@githuba>
+## 2.9.6 2021-12-03 <alexbarcello@githuba>
 
    ### Changed
       - Fix for S3 Minio backup targets
