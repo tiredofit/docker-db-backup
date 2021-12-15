@@ -1,3 +1,9 @@
+## 2.9.7 2021-12-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fixup for Zabbix Autoagent registration
+
+
 ## 2.9.6 2021-12-03 <alexbarcello@githuba>
 
    ### Changed
