@@ -504,7 +504,7 @@ print_debug "Backup routines Initialized on $(date)"
         esac
 
 ### Zabbix
-    if var_true "$CONTAINER_ENABLE_MONITORING}" ; then
+    if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
         print_notice "Sending Backup Statistics to Zabbix"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"

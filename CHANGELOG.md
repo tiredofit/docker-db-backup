@@ -1,3 +1,10 @@
+## 2.10.0 2021-12-22 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Revert back to Postgresql 14 from packages as its now in the repositories
+      - Fix for Zabbix Monitoring
+
+
 ## 2.9.7 2021-12-15 <dave at tiredofit dot ca>
 
    ### Changed
