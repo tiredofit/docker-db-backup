@@ -89,6 +89,7 @@ if [ "$BACKUP_TYPE" = "S3" ] || [ "$BACKUP_TYPE" = "s3" ] || [ "$BACKUP_TYPE" = 
     sanity_var S3_KEY_SECRET "S3 Key Secret"
     sanity_var S3_URI_STYLE "S3 URI Style (Virtualhost or Path)"
     sanity_var S3_PATH "S3 Path"
+    sanity_var S3_REGION "S3 Region"
     file_env 'S3_KEY_ID'
     file_env 'S3_KEY_SECRET'
 fi
@@ -419,7 +420,7 @@ move_backup() {
         "S3" | "s3" | "MINIO" | "minio" )
             export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
             export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
-            export AWS_DEFAULT_REGION=ap-northeast-2
+            export AWS_DEFAULT_REGION=${S3_REGION}
 
             [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 

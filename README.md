@@ -31,29 +31,40 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 ## Table of Contents
 
-- [About](#about)
-- [Maintainer](#maintainer)
-- [Table of Contents](#table-of-contents)
-- [Prerequisites and Assumptions](#prerequisites-and-assumptions)
-- [Installation](#installation)
-  - [Build from Source](#build-from-source)
-  - [Prebuilt Images](#prebuilt-images)
-- [Configuration](#configuration)
-  - [Quick Start](#quick-start)
-  - [Persistent Storage](#persistent-storage)
-  - [Environment Variables](#environment-variables)
-    - [Base Images used](#base-images-used)
-    - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
-- [Maintenance](#maintenance)
-  - [Shell Access](#shell-access)
-  - [Manual Backups](#manual-backups)
-  - [Custom Scripts](#custom-scripts)
-- [Support](#support)
-  - [Usage](#usage)
-  - [Bugfixes](#bugfixes)
-  - [Feature Requests](#feature-requests)
-  - [Updates](#updates)
-- [License](#license)
+- [github.com/tiredofit/docker-db-backup](#githubcomtiredofitdocker-db-backup)
+  - [About](#about)
+  - [Maintainer](#maintainer)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
+  - [Installation](#installation)
+    - [Build from Source](#build-from-source)
+    - [Prebuilt Images](#prebuilt-images)
+  - [Configuration](#configuration)
+    - [Quick Start](#quick-start)
+    - [Persistent Storage](#persistent-storage)
+    - [Environment Variables](#environment-variables)
+      - [Base Images used](#base-images-used)
+      - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
+  - [Maintenance](#maintenance)
+    - [Shell Access](#shell-access)
+    - [Manual Backups](#manual-backups)
+    - [Custom Scripts](#custom-scripts)
+- [#### Example Post Script](#-example-post-script)
+- [#### $1=EXIT_CODE (After running backup routine)](#-1exit_code-after-running-backup-routine)
+- [#### $2=DB_TYPE (Type of Backup)](#-2db_type-type-of-backup)
+- [#### $3=DB_HOST (Backup Host)](#-3db_host-backup-host)
+- [#### #4=DB_NAME (Name of Database backed up](#-4db_name-name-of-database-backed-up)
+- [#### $5=DATE (Date of Backup)](#-5date-date-of-backup)
+- [####  $6=TIME (Time of Backup)](#--6time-time-of-backup)
+- [####  $7=BACKUP_FILENAME (Filename of Backup)](#--7backup_filename-filename-of-backup)
+- [####  $8=FILESIZE (Filesize of backup)](#--8filesize-filesize-of-backup)
+- [####  $9=MD5_RESULT (MD5Sum if enabled)](#--9md5_result-md5sum-if-enabled)
+  - [Support](#support)
+    - [Usage](#usage)
+    - [Bugfixes](#bugfixes)
+    - [Feature Requests](#feature-requests)
+    - [Updates](#updates)
+  - [License](#license)
 
 ## Prerequisites and Assumptions
 
@@ -147,6 +158,7 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | `S3_KEY_SECRET` | S3 Key Secret                                                                           |
 | `S3_PATH`       | S3 Pathname to save to e.g. '`backup`'                                                  |
 | `S3_PROTOCOL`   | Use either `http` or `https` to access service - Default `https`                        |
+| `S3_REGION`     | Define region in which bucket is defined. Example: `ap-northeast-2`                     |
 
 
 ## Maintenance
