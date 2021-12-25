@@ -1,3 +1,8 @@
+## 2.10.1 2021-12-22 <milenkara@github>
+
+   ### Added
+     - Allow for choosing region when backing up to S3
+
 ## 2.10.0 2021-12-22 <dave at tiredofit dot ca>
 
    ### Changed
