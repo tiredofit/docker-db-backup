@@ -1,3 +1,9 @@
+## 2.10.2 2021-12-28 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove logrotate configuration for redis which shouldn't exist in the first place
+
+
 ## 2.10.1 2021-12-22 <milenkara@github>
 
    ### Added

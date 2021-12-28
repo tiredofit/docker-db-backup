@@ -61,6 +61,7 @@ RUN set -ex && \
 ### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \
+    rm -rf /etc/logrotate.d/redis && \
     rm -rf /root/.cache /tmp/* /var/cache/apk/*
 
 ### S6 Setup
