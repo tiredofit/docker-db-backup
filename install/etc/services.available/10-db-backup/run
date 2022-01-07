@@ -296,17 +296,10 @@ check_availability() {
         "mysql" )
             COUNTER=0
             export MYSQL_PWD=${dbpass}
-            while true; do
-                mysqlcmd='mysql -u'${dbuser}' -P '${dbport}' -h '${dbhost}
-                out="$($mysqlcmd -e "SELECT COUNT(*) FROM information_schema.FILES;" 2>&1)"
-                echo "$out" | grep -E "COUNT|Enter" 2>&1 > /dev/null
-                if [ $? -eq 0 ]; then
-                    :
-                    break
-                fi
-                print_warn "MySQL/MariaDB Server '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
-                sleep 5
-                (( COUNTER+=5 ))
+            while ! (mysql -u"${dbuser}" -P"${dbport}" -h"${dbhost}" -e "SHOW GRANTS FOR CURRENT_USER;" 2>&1 | grep -E "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`" > /dev/null 2>&1) ; do
+              sleep 5
+              (( COUNTER+=5 ))
+              print_warn "MySQL/MariaDB Server '${maria_host}' is not accessible, retrying.. ($counter seconds so far)"
             done
         ;;
         "mssql" )

@@ -1,3 +1,9 @@
+## 2.10.3 2022-01-07 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Change the way MariaD/MySQL connectivity check is performed to allow for better compatibility without requiring the DB_USER to have PROCESS privileges
+
+
 ## 2.10.2 2021-12-28 <dave at tiredofit dot ca>
 
    ### Changed
