@@ -39,7 +39,8 @@ case "$dbtype" in
         dbtype=mysql
         dbport=${DB_PORT:-3306}
         [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
-    ;;
+        MYSQL_MAX_ALLOWED_PACKET=${MYSQL_MAX_ALLOWED_PACKET:-"512M"}
+      ;;
     "mssql" | "MSSQL" | "microsoftsql" | "MICROSOFTSQL")
         apkArch="$(apk --print-arch)"; \
 	    case "$apkArch" in
@@ -66,20 +67,20 @@ esac
 
 ### Set Defaults
 BACKUP_LOCATION=${BACKUP_LOCATION:-"FILESYSTEM"}
-COMPRESSION=${COMPRESSION:-GZ}
+COMPRESSION=${COMPRESSION:-"GZ"}
 COMPRESSION_LEVEL=${COMPRESSION_LEVEL:-"3"}
 DB_DUMP_BEGIN=${DB_DUMP_BEGIN:-+0}
 DB_DUMP_FREQ=${DB_DUMP_FREQ:-1440}
-DB_DUMP_TARGET=${DB_DUMP_TARGET:-/backup}
+DB_DUMP_TARGET=${DB_DUMP_TARGET:-"/backup"}
 dbhost=${DB_HOST}
 dbname=${DB_NAME}
 dbpass=${DB_PASS}
 dbuser=${DB_USER}
 MD5=${MD5:-TRUE}
-PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-TRUE}
+PARALLEL_COMPRESSION=${PARALLEL_COMPRESSION:-"TRUE"}
 SIZE_VALUE=${SIZE_VALUE:-"bytes"}
-SPLIT_DB=${SPLIT_DB:-FALSE}
-tmpdir=/tmp/backups
+SPLIT_DB=${SPLIT_DB:-"FALSE"}
+TEMP_LOCATION=${TEMP_LOCATION:-"/tmp/backups"}
 
 if [ "$BACKUP_TYPE" = "S3" ] || [ "$BACKUP_TYPE" = "s3" ] || [ "$BACKUP_TYPE" = "MINIO" ] || [ "$BACKUP_TYPE" = "minio" ] ; then
     S3_PROTOCOL=${S3_PROTOCOL:-"https"}
@@ -100,7 +101,7 @@ if [ "$1" = "NOW" ]; then
 fi
 
 ### Set Compression Options
-if var_true "$PARALLEL_COMPRESSION" ; then
+if var_true "${PARALLEL_COMPRESSION}" ; then
     bzip="pbzip2 -${COMPRESSION_LEVEL}"
     gzip="pigz -${COMPRESSION_LEVEL}"
     xzip="pixz -${COMPRESSION_LEVEL}"
@@ -135,7 +136,7 @@ esac
 backup_couch() {
     target=couch_${dbname}_${dbhost}_${now}.txt
     compression
-    curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${dumpoutput} | $dumpoutput > ${tmpdir}/${target}
+    curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${dumpoutput} | $dumpoutput > ${TEMP_LOCATION}/${target}
     exit_code=$?
     generate_md5
     move_backup
@@ -148,9 +149,9 @@ backup_influx() {
         print_notice "Compressing InfluxDB backup with gzip"
         influx_compression="-portable"
     fi
-    for DB in $DB_NAME; do
+    for DB in ${DB_NAME}; do
         target=influx_${DB}_${dbhost}_${now}
-        influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${tmpdir}/${target}
+        influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${TEMP_LOCATION}/${target}
         exit_code=$?
         generate_md5
         move_backup
@@ -165,28 +166,28 @@ backup_mongo() {
         target=${dbtype}_${dbname}_${dbhost}_${now}.archivegz
         mongo_compression="--gzip"
     fi
-    mongodump --archive=${tmpdir}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
-    cd ${tmpdir}
+    cd ${TEMP_LOCATION}
     generate_md5
     move_backup
 }
 
 backup_mssql() {
     target=mssql_${dbname}_${dbhost}_${now}.bak
-    /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${tmpdir}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
 }
 
 backup_mysql() {
-    if var_true "$SPLIT_DB" ; then
-        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database|grep -v schema)
+    if var_true "${SPLIT_DB}" ; then
+        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema)
 
         for db in $DATABASES; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
                     print_notice "Dumping MariaDB database: $db"
                     target=mysql_${db}_${dbhost}_${now}.sql
                     compression
-                    mysqldump --max-allowed-packet=512M -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${tmpdir}/${target}
+                    mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} --databases $db | $dumpoutput > ${TEMP_LOCATION}/${target}
                     exit_code=$?
                     generate_md5
                     move_backup
@@ -194,7 +195,7 @@ backup_mysql() {
         done
     else
         compression
-        mysqldump --max-allowed-packet=512M -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -A -h $dbhost -P $dbport -u$dbuser  ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
         exit_code=$?
         generate_md5
         move_backup
@@ -202,7 +203,7 @@ backup_mysql() {
 }
 
 backup_pgsql() {
-  if var_true $SPLIT_DB ; then
+  if var_true "${SPLIT_DB}" ; then
       export PGPASSWORD=${dbpass}
       authdb=${DB_USER}
       [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
@@ -211,7 +212,7 @@ backup_pgsql() {
                 print_info "Dumping database: $db"
                 target=pgsql_${db}_${dbhost}_${now}.sql
                 compression
-                pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+                pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
                 exit_code=$?
                 generate_md5
                 move_backup
@@ -219,7 +220,7 @@ backup_pgsql() {
   else
       export PGPASSWORD=${dbpass}
       compression
-      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${tmpdir}/${target}
+      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
       exit_code=$?
       generate_md5
       move_backup
@@ -228,7 +229,7 @@ backup_pgsql() {
 
 backup_redis() {
     target=redis_${db}_${dbhost}_${now}.rdb
-    echo bgsave | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} --rdb ${tmpdir}/${target} ${EXTRA_OPTS}
+    echo bgsave | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
     print_info "Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
@@ -245,7 +246,7 @@ backup_redis() {
     done
     target_original=${target}
     compression
-    $dumpoutput "${tmpdir}/${target_original}"
+    $dumpoutput "${TEMP_LOCATION}/${target_original}"
     generate_md5
     move_backup
 }
@@ -257,10 +258,10 @@ backup_sqlite3() {
     compression
 
     print_info "Dumping sqlite3 database: ${dbhost}"
-    sqlite3 "${dbhost}" ".backup '${tmpdir}/backup.sqlite3'"
+    sqlite3 "${dbhost}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
 
-    cat "${tmpdir}/backup.sqlite3" | $dumpoutput > "${tmpdir}/${target}"
+    cat "${TEMP_LOCATION}/backup.sqlite3" | $dumpoutput > "${TEMP_LOCATION}/${target}"
 
     generate_md5
     move_backup
@@ -296,10 +297,10 @@ check_availability() {
         "mysql" )
             COUNTER=0
             export MYSQL_PWD=${dbpass}
-            while ! (mysql -u"${dbuser}" -P"${dbport}" -h"${dbhost}" -e "SHOW GRANTS FOR CURRENT_USER;" 2>&1 | grep -E "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`" > /dev/null 2>&1) ; do
+            while ! (mysqladmin -u"${dbuser}" -P"${dbport}" -h"${dbhost}" status > /dev/null 2>&1) ; do
               sleep 5
               (( COUNTER+=5 ))
-              print_warn "MySQL/MariaDB Server '${maria_host}' is not accessible, retrying.. ($counter seconds so far)"
+              print_warn "MySQL/MariaDB Server '${dbhost}' is not accessible, retrying.. (${COUNTER} seconds so far)"
             done
         ;;
         "mssql" )
@@ -377,7 +378,7 @@ compression() {
 generate_md5() {
 if var_true "$MD5" ; then
     print_notice "Generating MD5 for ${target}"
-    cd $tmpdir
+    cd ${TEMP_LOCATION}
     md5sum "${target}" > "${target}".md5
     MD5VALUE=$(md5sum "${target}" | awk '{ print $1}')
 fi
@@ -397,18 +398,18 @@ move_backup() {
         ;;
     esac
     if [ "$SIZE_VALUE" = "1" ] ; then
-        FILESIZE=$(stat -c%s "${tmpdir}/${target}")
+        FILESIZE=$(stat -c%s "${TEMP_LOCATION}/${target}")
         print_notice "Backup of ${target} created with the size of ${FILESIZE} bytes"
     else
-        FILESIZE=$(du -h "${tmpdir}/${target}" | awk '{ print $1}')
+        FILESIZE=$(du -h "${TEMP_LOCATION}/${target}" | awk '{ print $1}')
         print_notice "Backup of ${target} created with the size of ${FILESIZE}"
     fi
 
     case "${BACKUP_LOCATION}" in
         "FILE" | "file" | "filesystem" | "FILESYSTEM" )
             mkdir -p "${DB_DUMP_TARGET}"
-            mv ${tmpdir}/*.md5 "${DB_DUMP_TARGET}"/
-            mv ${tmpdir}/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+            mv ${TEMP_LOCATION}/*.md5 "${DB_DUMP_TARGET}"/
+            mv ${TEMP_LOCATION}/"${target}" "${DB_DUMP_TARGET}"/"${target}"
         ;;
         "S3" | "s3" | "MINIO" | "minio" )
             export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
@@ -417,10 +418,10 @@ move_backup() {
 
             [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
-            aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${tmpdir}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target}
+            aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target}
 
-            rm -rf ${tmpdir}/*.md5
-            rm -rf ${tmpdir}/"${target}"
+            rm -rf ${TEMP_LOCATION}/*.md5
+            rm -rf ${TEMP_LOCATION}/"${target}"
         ;;
     esac
 }
@@ -453,7 +454,7 @@ print_debug "Backup routines Initialized on $(date)"
 ### Commence Backup
   while true; do
     # make sure the directory exists
-    mkdir -p $tmpdir
+    mkdir -p $TEMP_LOCATION
 
 ### Define Target name
     now=$(date +"%Y%m%d-%H%M%S")

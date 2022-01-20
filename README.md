@@ -31,40 +31,29 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 ## Table of Contents
 
-- [github.com/tiredofit/docker-db-backup](#githubcomtiredofitdocker-db-backup)
-  - [About](#about)
-  - [Maintainer](#maintainer)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
-  - [Installation](#installation)
-    - [Build from Source](#build-from-source)
-    - [Prebuilt Images](#prebuilt-images)
-  - [Configuration](#configuration)
-    - [Quick Start](#quick-start)
-    - [Persistent Storage](#persistent-storage)
-    - [Environment Variables](#environment-variables)
-      - [Base Images used](#base-images-used)
-      - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
-  - [Maintenance](#maintenance)
-    - [Shell Access](#shell-access)
-    - [Manual Backups](#manual-backups)
-    - [Custom Scripts](#custom-scripts)
-- [#### Example Post Script](#-example-post-script)
-- [#### $1=EXIT_CODE (After running backup routine)](#-1exit_code-after-running-backup-routine)
-- [#### $2=DB_TYPE (Type of Backup)](#-2db_type-type-of-backup)
-- [#### $3=DB_HOST (Backup Host)](#-3db_host-backup-host)
-- [#### #4=DB_NAME (Name of Database backed up](#-4db_name-name-of-database-backed-up)
-- [#### $5=DATE (Date of Backup)](#-5date-date-of-backup)
-- [####  $6=TIME (Time of Backup)](#--6time-time-of-backup)
-- [####  $7=BACKUP_FILENAME (Filename of Backup)](#--7backup_filename-filename-of-backup)
-- [####  $8=FILESIZE (Filesize of backup)](#--8filesize-filesize-of-backup)
-- [####  $9=MD5_RESULT (MD5Sum if enabled)](#--9md5_result-md5sum-if-enabled)
-  - [Support](#support)
-    - [Usage](#usage)
-    - [Bugfixes](#bugfixes)
-    - [Feature Requests](#feature-requests)
-    - [Updates](#updates)
-  - [License](#license)
+- [About](#about)
+- [Maintainer](#maintainer)
+- [Table of Contents](#table-of-contents)
+- [Prerequisites and Assumptions](#prerequisites-and-assumptions)
+- [Installation](#installation)
+  - [Build from Source](#build-from-source)
+  - [Prebuilt Images](#prebuilt-images)
+- [Configuration](#configuration)
+  - [Quick Start](#quick-start)
+  - [Persistent Storage](#persistent-storage)
+  - [Environment Variables](#environment-variables)
+    - [Base Images used](#base-images-used)
+    - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
+- [Maintenance](#maintenance)
+  - [Shell Access](#shell-access)
+  - [Manual Backups](#manual-backups)
+  - [Custom Scripts](#custom-scripts)
+- [Support](#support)
+  - [Usage](#usage)
+  - [Bugfixes](#bugfixes)
+  - [Feature Requests](#feature-requests)
+  - [Updates](#updates)
+- [License](#license)
 
 ## Prerequisites and Assumptions
 
@@ -120,29 +109,31 @@ Be sure to view the following repositories to understand all the customizable op
 | [OS Base](https://github.com/tiredofit/docker-alpine/) | Customized Image based on Alpine Linux |
 
 
-| Parameter              | Description                                                                                                                                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BACKUP_LOCATION`      | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi - Default `FILESYSTEM`                                                                                                   |
-| `COMPRESSION`          | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE` - Default `GZ`                                                                                                             |
-| `COMPRESSION_LEVEL`    | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - Default `3`                                                           |
-| `DB_AUTH`              | (Mongo Only - Optional) Authentication Database |
-| `DB_TYPE`              | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                                             |
-| `DB_HOST`              | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                                      |
-| `DB_NAME`              | Schema Name e.g. `database`                                                                                                                                                                        |
-| `DB_USER`              | username for the database - use `root` to backup all MySQL of them.                                                                                                                                |
-| `DB_PASS`              | (optional if DB doesn't require it) password for the database                                                                                                                                      |
-| `DB_PORT`              | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                                   |
-| `DB_DUMP_FREQ`         | How often to do a dump, in minutes. Defaults to 1440 minutes, or once per day.                                                                                                                     |
-| `DB_DUMP_BEGIN`        | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |
-|                        | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |
-|                        | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |
-| `DB_CLEANUP_TIME`      | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. |
-| `DEBUG_MODE`           | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.                                                                             |
-| `EXTRA_OPTS`           | If you need to pass extra arguments to the backup command, add them here e.g. "--extra-command"                                                                                                    |
-| `MD5`                  | Generate MD5 Sum in Directory, `TRUE` or `FALSE` - Default `TRUE`                                                                                                                                  |
-| `PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE` - Default `TRUE`                                                                                                                     |
-| `POST_SCRIPT`          | Fill this variable in with a command to execute post the script backing up                                                                                                                         |  |
-| `SPLIT_DB`             | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one. - Default `FALSE`                                                           |
+| Parameter                  | Description                                                                                                                                                                                        | Default         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `BACKUP_LOCATION`          | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                                                                                          | `FILESYSTEM`    |
+| `COMPRESSION`              | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                                                                                            | `GZ`            |
+| `COMPRESSION_LEVEL`        | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` -                                                                       | `3`             |
+| `DB_AUTH`                  | (Mongo Only - Optional) Authentication Database                                                                                                                                                    |                 |
+| `DB_TYPE`                  | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                                             |                 |
+| `DB_HOST`                  | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                                      |                 |
+| `DB_NAME`                  | Schema Name e.g. `database`                                                                                                                                                                        |                 |
+| `DB_USER`                  | username for the database - use `root` to backup all MySQL of them.                                                                                                                                |                 |
+| `DB_PASS`                  | (optional if DB doesn't require it) password for the database                                                                                                                                      |                 |
+| `DB_PORT`                  | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                                   | varies          |
+| `DB_DUMP_FREQ`             | How often to do a dump, in minutes. Defaults to 1440 minutes, or once per day.                                                                                                                     | `1440`          |
+| `DB_DUMP_BEGIN`            | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |                 |
+|                            | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |                 |
+|                            | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |                 |
+| `DB_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`         |
+| `DEBUG_MODE`               | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.                                                                             |                 |
+| `EXTRA_OPTS`               | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                                                                                                    |                 |
+| `MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet if backing up MySQL / MariaDB                                                                                                                                                   | `512M`          |
+| `MD5`                      | Generate MD5 Sum in Directory, `TRUE` or `FALSE`                                                                                                                                                   | `TRUE`          |
+| `PARALLEL_COMPRESSION`     | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                                                                                      | `TRUE`          |
+| `POST_SCRIPT`              | Fill this variable in with a command to execute post the script backing up                                                                                                                         |                 |
+| `SPLIT_DB`                 | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one.                                                                             | `FALSE`         |
+| `TEMP_LOCATION`            | Perform Backups and Compression in this temporary directory                                                                                                                                        | `/tmp/backups/` |
 
 When using compression with MongoDB, only `GZ` compression is possible.
 

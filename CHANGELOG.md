@@ -1,3 +1,13 @@
+## 2.11.0 2022-01-20 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add capability to select `TEMP_LOCATION` for initial backup and compression before backup completes to avoid filling system memory
+
+   ### Changed
+      - Cleanup for MariaDB/MySQL DB ready routines that half worked in 2.10.3
+      - Code cleanup
+
+
 ## 2.10.3 2022-01-07 <dave at tiredofit dot ca>
 
    ### Changed
