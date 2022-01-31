@@ -135,7 +135,10 @@ Be sure to view the following repositories to understand all the customizable op
 | `SPLIT_DB`                 | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one.                                                                             | `FALSE`         |
 | `TEMP_LOCATION`            | Perform Backups and Compression in this temporary directory                                                                                                                                        | `/tmp/backups/` |
 
-When using compression with MongoDB, only `GZ` compression is possible.
+- When using compression with MongoDB, only `GZ` compression is possible.
+- You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
+
+
 
 #### Backing Up to S3 Compatible Services
 
