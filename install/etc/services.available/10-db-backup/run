@@ -82,13 +82,12 @@ SIZE_VALUE=${SIZE_VALUE:-"bytes"}
 SPLIT_DB=${SPLIT_DB:-"FALSE"}
 TEMP_LOCATION=${TEMP_LOCATION:-"/tmp/backups"}
 
-if [ "$BACKUP_TYPE" = "S3" ] || [ "$BACKUP_TYPE" = "s3" ] || [ "$BACKUP_TYPE" = "MINIO" ] || [ "$BACKUP_TYPE" = "minio" ] ; then
+if [ "$BACKUP_LOCATION" = "S3" ] || [ "$BACKUP_LOCATION" = "s3" ] || [ "$BACKUP_LOCATION" = "MINIO" ] || [ "$BACKUP_LOCATION" = "minio" ] ; then
     S3_PROTOCOL=${S3_PROTOCOL:-"https"}
-    sanity_var S3_HOST "S3 Host"
+    sanity_var S3_ENDPOINT "S3 Endpoint URL"
     sanity_var S3_BUCKET "S3 Bucket"
     sanity_var S3_KEY_ID "S3 Key ID"
     sanity_var S3_KEY_SECRET "S3 Key Secret"
-    sanity_var S3_URI_STYLE "S3 URI Style (Virtualhost or Path)"
     sanity_var S3_PATH "S3 Path"
     sanity_var S3_REGION "S3 Region"
     file_env 'S3_KEY_ID'
