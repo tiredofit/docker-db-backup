@@ -1,3 +1,10 @@
+## 2.11.1 2022-01-20 <jacksgt@github>
+
+   ### Changed
+      - Modernized S3 variables and sanity checks
+      - Change exit code to 0 when executing a manual backup
+
+
 ## 2.11.0 2022-01-20 <dave at tiredofit dot ca>
 
    ### Added
