@@ -147,12 +147,12 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | Parameter       | Description                                                                             |
 | --------------- | --------------------------------------------------------------------------------------- |
 | `S3_BUCKET`     | S3 Bucket name e.g. `mybucket`                                                          |
-| `S3_ENDPOINT`   | URL of S3-compatible endpoint, e.g. `http://minio:8080`                                 |
 | `S3_KEY_ID`     | S3 Key ID                                                                               |
 | `S3_KEY_SECRET` | S3 Key Secret                                                                           |
 | `S3_PATH`       | S3 Pathname to save to e.g. '`backup`'                                                  |
-| `S3_PROTOCOL`   | Use either `http` or `https` to access service - Default `https`                        |
 | `S3_REGION`     | Define region in which bucket is defined. Example: `ap-northeast-2`                     |
+| `S3_HOST`       | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.       |
+| `S3_PROTOCOL`   | Protocol to connect to `S3_HOST`. Either `http` or `https`. Defaults to `https`.        |
 
 
 ## Maintenance
