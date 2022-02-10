@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 
 source /assets/functions/00-container
 prepare_service single
@@ -6,12 +6,6 @@ prepare_service 03-monitoring
 PROCESS_NAME="db-backup"
 output_off
 
-if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
-    cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}.d"/tiredofit_dbbackup.conf
-# Zabbix DB Backup Configuration - Automatically Generated
-# Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-dbbackup
-# Autoregister=dbbackup
-EOF
-fi
+create_zabbix dbbackup
 
 liftoff
