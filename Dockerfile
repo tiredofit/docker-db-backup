@@ -3,7 +3,9 @@ FROM docker.io/tiredofit/alpine:3.15
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.8.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
-    CONTAINER_ENABLE_MONITORING=TRUE
+    CONTAINER_ENABLE_MONITORING=TRUE \
+    IMAGE_NAME="tiredofit/db-backup" \
+    IMAGE_REPO_URL="https://github.com/tiredofit/docker-db-backup/"
 
 ### Dependencies
 RUN set -ex && \
