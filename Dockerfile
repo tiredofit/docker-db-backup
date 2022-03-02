@@ -1,4 +1,5 @@
 FROM docker.io/tiredofit/alpine:3.15
+LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 ### Set Environment Variables
 ENV MSSQL_VERSION=17.8.1.1-1 \
@@ -67,4 +68,4 @@ RUN set -ex && \
     rm -rf /root/.cache /tmp/* /var/cache/apk/*
 
 ### S6 Setup
-    ADD install  /
+ADD install  /
