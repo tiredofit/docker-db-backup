@@ -1,3 +1,9 @@
+## 2.11.4 2022-03-15 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add debug statement around the scheduling component
+
+
 ## 2.11.3 2022-02-09 <dave at tiredofit dot ca>
 
    ### Changed

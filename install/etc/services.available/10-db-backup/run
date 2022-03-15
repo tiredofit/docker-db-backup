@@ -443,7 +443,7 @@ print_debug "Backup routines Initialized on $(date)"
         fi
         waittime=$(($target_time - $current_time))
     fi
-
+        print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
         print_notice "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
         sleep $waittime
   fi
