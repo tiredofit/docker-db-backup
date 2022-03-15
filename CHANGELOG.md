@@ -1,3 +1,9 @@
+## 2.11.5 2022-03-15 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add additional debug statements
+
+
 ## 2.11.4 2022-03-15 <dave at tiredofit dot ca>
 
    ### Added

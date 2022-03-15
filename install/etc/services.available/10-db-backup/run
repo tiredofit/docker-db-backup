@@ -529,6 +529,7 @@ print_debug "Backup routines Initialized on $(date)"
     if var_true $MANUAL ; then
         exit 0;
     else
+        print_debug "Sleeping until $(($DB_DUMP_FREQ*60))"
         sleep $(($DB_DUMP_FREQ*60))
     fi
 
