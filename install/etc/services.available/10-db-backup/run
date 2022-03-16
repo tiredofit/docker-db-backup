@@ -455,6 +455,8 @@ print_debug "Backup routines Initialized on $(date)"
     mkdir -p $TEMP_LOCATION
 
 ### Define Target name
+    backup_start_time=$(date +"%s")
+    print_debug "Backup start time: ${backup_start_time} - $(date -d @${backup_start_time} +"%Y-%m-%d %T %Z")"
     now=$(date +"%Y%m%d-%H%M%S")
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
@@ -529,9 +531,12 @@ print_debug "Backup routines Initialized on $(date)"
     if var_true $MANUAL ; then
         exit 0;
     else
-        print_debug "Sleeping until $(($DB_DUMP_FREQ*60))"
-        sleep $(($DB_DUMP_FREQ*60))
+        backup_finish_time=$(date +"%s")
+        backup_total_time=$(echo $((backup_finish_time-backup_start_time)))
+        print_debug "Backup finish time: ${backup_finish_time} - $(date -d @${backup_start_time} +"%Y-%m-%d %T %Z")"
+        print_debug "Backup time elapsed: $(echo ${backup_total_time} | awk '{printf "Hours: *%d* Minutes: *%02d* Seconds: *%02d*", $1/3600, ($1/60)%60, $1%60}')"
+        sleep $(($DB_DUMP_FREQ*60-backup_total_time))
     fi
-
   done
-fi
+
+

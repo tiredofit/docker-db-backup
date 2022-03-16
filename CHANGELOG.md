@@ -1,3 +1,10 @@
+## 2.12.0 2022-03-16 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Last release of 2.x series
+      - Fix timer for backups that take excessively long time, and allow it to start repetitively at the same time daily. What was happening is that if a backup took 30 minutes, time would shift by 30 minutes daily eventually taking backups mid day.
+
+
 ## 2.11.5 2022-03-15 <dave at tiredofit dot ca>
 
    ### Added
