@@ -5,6 +5,7 @@ LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 ENV MSSQL_VERSION=17.8.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE \
+    CONTAINER_PROCESS_RUNAWAY_PROTECTOR=FALSE \
     IMAGE_NAME="tiredofit/db-backup" \
     IMAGE_REPO_URL="https://github.com/tiredofit/docker-db-backup/"
 
@@ -32,6 +33,7 @@ RUN set -ex && \
                pigz \
                postgresql \
                postgresql-client \
+               pv \
                redis \
                sqlite \
                xz \

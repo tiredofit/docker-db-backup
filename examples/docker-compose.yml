@@ -30,7 +30,7 @@ services:
       - DB_DUMP_FREQ=1440
       - DB_DUMP_BEGIN=0000
       - DB_CLEANUP_TIME=8640
-      - MD5=TRUE
+      - CHECKSUM=MD5
       - COMPRESSION=XZ
       - SPLIT_DB=FALSE
     restart: always

@@ -1,0 +1,933 @@
+#!/command/with-contenv /bin/bash
+
+source /assets/functions/00-container
+source /assets/defaults/10-db-backup
+source /assets/functions/10-db-backup
+PROCESS_NAME="db-backup-restore"
+
+oldcolumns=$COLUMNS
+
+########################################################################################
+### System Functions                                                                 ###
+########################################################################################
+### Colours
+# Foreground (Text) Colors
+cdgy="\e[90m"      # Color Dark Gray
+clg="\e[92m"       # Color Light Green
+clm="\e[95m"       # Color Light Magenta
+cwh="\e[97m"       # Color White
+
+# Turns off all formatting
+coff="\e[0m"       # Color Off
+
+# Background Colors
+bdr="\e[41m"       # Background Color Dark Red
+bdg="\e[42m"       # Background Color Dark Green
+bdb="\e[44m"       # Background Color Dark Blue
+bdm="\e[45m"       # Background Color Dark Magenta
+bdgy="\e[100m"     # Background Color Dark Gray
+blr="\e[101m"      # Background Color Light Red
+boff="\e[49m"      # Background Color Off
+
+bootstrap_variables
+
+if [ -z "${1}" ] ; then
+    interactive_mode=true
+else
+    case "$1" in
+        "-h" )
+            cat <<EOF
+${IMAGE_NAME} Restore Tool
+(c) 2022 Dave Conroy (https://github.com/tiredofit)
+
+This script will assist you in recovering databases taken by the Docker image.
+You will be presented with a series of menus allowing you to choose:
+   - What file to restore
+   - What type of DB Backup
+   - What Host to restore to
+   - What Database Name to restore to
+   - What Database User to use
+   - What Database Password to use
+   - What Database Port to use
+
+The image will try to do autodetection based on the filename for the type, hostname, and database name.
+The image will also allow you to use environment variables or Docker secrets used to backup the images
+
+The script can also be executed skipping the interactive mode by using the following syntax/
+
+    $(basename $0) <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>
+
+If you only enter some of the arguments you will be prompted to fill them in.
+
+Other arguments
+    -h This help screen
+
+EOF
+        exit 0
+        ;;
+        "-i" )
+            echo "interactive mode"
+            interactive_mode=true
+        ;;
+        * )
+        interactive_mode=false
+        ;;
+    esac
+fi
+
+get_filename() {
+    COLUMNS=12
+    prompt="Please select a file to restore:"
+    options=( $(find ${DB_DUMP_TARGET} -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
+    PS3="$prompt "
+    select opt in "${options[@]}" "Custom" "Quit" ; do
+        if (( REPLY == 2 + ${#options[@]} )) ; then
+            echo "Bye!"
+            exit 2
+        elif (( REPLY == 1 + ${#options[@]} )) ; then
+            while [ ! -f "${opt}" ] ; do
+                read -p "What path and filename to restore: " opt
+                if [ ! -f "${opt}" ] ; then
+                print_error "File not found. Please retry.."
+                fi
+            done
+            break
+        elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+            break
+        else
+            echo "Invalid option. Try another one."
+        fi
+    done
+    COLUMNS=$oldcolumns
+    r_filename=${opt}
+}
+
+get_dbhost() {
+    p_dbhost=$(basename -- "${r_filename}" | cut -d _ -f 3)
+
+    if [ -n "${p_dbhost}" ]; then
+        parsed_host=true
+        print_debug "Parsed DBHost: ${p_dbhost}"
+    fi
+
+    if [ -z "${dbhost}" ] && [ -z "${parsed_host}" ]; then
+        print_debug "Parsed DBHost Variant: 1 - No Env, No Parsed Filename"
+        q_dbhost_variant=1
+        q_dbhost_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbhost}" ] && [ -z "${parsed_host}" ]; then
+        print_debug "Parsed DBHost Variant: 2 - Env, No Parsed Filename"
+        q_dbhost_variant=2
+        q_dbhost_menu=$(cat <<EOF
+
+    C ) Custom Entered Hostname
+    E ) Environment Variable DB_HOST: '${DB_HOST}'
+EOF
+                        )
+    fi
+
+    if [ -z "${dbhost}" ] && [ -n "${parsed_host}" ]; then
+        print_debug "Parsed DBHostpho Variant: 3 - No Env, Parsed Filename"
+        q_dbhost_variant=3
+        q_dbhost_menu=$(cat <<EOF
+
+    C ) Custom Entered Hostname
+    F ) Parsed Filename Host: '${p_dbhost}'
+EOF
+                        )
+    fi
+
+    if [ -n "${dbhost}" ] && [ -n "${parsed_host}" ]; then
+        print_debug "Parsed DBHost Variant: 4 - Env, Parsed Filename"
+        q_dbhost_variant=4
+        q_dbhost_menu=$(cat <<EOF
+
+    C ) Custom Entered Hostname
+    E ) Environment Variable DB_HOST: '${DB_HOST}'
+    F ) Parsed Filename Host: '${p_dbhost}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What Hostname do you wish to restore to:
+${q_dbhost_menu}
+    Q ) Quit
+
+EOF
+
+    case "${q_dbhost_variant}" in
+        1 )
+            counter=1
+            q_dbhost=" "
+            while [[ $q_dbhost = *" "* ]];  do
+                if [ $counter -gt 1 ] ; then print_error "Hostnames can't have spaces in them, please re-enter." ; fi ;
+                read -e -p "$(echo -e ${clg}** ${cdgy}What DB Host do you want to restore to:\ ${coff})" q_dbhost
+                (( counter+=1 ))
+            done
+            r_dbhost=${q_dbhost}
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbhost_menu
+                case "${q_dbhost_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbhost=" "
+                        while [[ $q_dbhost = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "Hostnames can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Host do you want to restore to:\ ${coff})" q_dbhost
+                            (( counter+=1 ))
+                        done
+                        r_dbhost=${q_dbhost}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbhost=${dbhost}
+                        break
+                    ;;
+                    q*  )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+        3 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}F${cdgy}\) : ${cwh}${coff}) " q_dbhost_menu
+                case "${q_dbhost_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbhost=" "
+                        while [[ $q_dbhost = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "Hostnames can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Host do you want to restore to:\ ${coff})" q_dbhost
+                            (( counter+=1 ))
+                        done
+                        r_dbhost=${q_dbhost}
+                        break
+                    ;;
+                    f* | "" )
+                        r_dbhost=${p_dbhost}
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+
+        4 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) : ${cwh}${coff}) " q_dbhost_menu
+                case "${q_dbhost_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbhost=" "
+                        while [[ $q_dbhost = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "Hostnames can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Host do you want to restore to:\ ${coff})" q_dbhost
+                            (( counter+=1 ))
+                        done
+                        r_dbhost=${q_dbhost}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbhost=${dbhost}
+                        break
+                    ;;
+                    f* )
+                        r_dbhost=${p_dbhost}
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+
+get_dbtype() {
+    p_dbtype=$(basename -- "${r_filename}" | cut -d _ -f 1)
+
+    case "${p_dbtype}" in
+        mariadb | mysql )
+            parsed_type=true
+            print_debug "Parsed DBType: MariaDB/MySQL"
+        ;;
+        psql | postgres* )
+            parsed_type=true
+            print_debug "Parsed DBType: Postgresql"
+        ;;
+        * )
+            print_debug "Parsed DBType: UNKNOWN"
+        ;;
+    esac
+
+    if [ -z "${dbtype}" ] && [ -z "${parsed_type}" ]; then
+        print_debug "Parsed DBType Variant: 1 - No Env, No Parsed Filename"
+        q_dbtype_variant=1
+        q_dbtype_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbtype}" ] && [ -z "${parsed_type}" ]; then
+        print_debug "Parsed DBType Variant: 2 - Env, No Parsed Filename"
+        q_dbtype_variant=2
+        q_dbtype_menu=$(cat <<EOF
+
+    E ) Environment Variable DB_TYPE: '${DB_TYPE}'
+EOF
+                        )
+    fi
+
+    if [ -z "${dbtype}" ] && [ -n "${parsed_type}" ]; then
+        print_debug "Parsed DBType Variant: 3 - No Env, Parsed Filename"
+        q_dbtype_variant=3
+        q_dbtype_menu=$(cat <<EOF
+
+    F ) Parsed Filename Type: '${p_dbtype}'
+EOF
+                        )
+    fi
+
+    if [ -n "${dbtype}" ] && [ -n "${parsed_type}" ]; then
+        print_debug "Parsed DBType Variant: 4 - Env, Parsed Filename"
+        q_dbtype_variant=4
+        q_dbtype_menu=$(cat <<EOF
+
+    E ) Environment Variable DB_NAME: '${DB_NAME}'
+    F ) Parsed Filename Type: '${p_dbtype}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What Database Type are you looking to restore?
+${q_dbtype_menu}
+    M ) MySQL / MariaDB
+    P ) Postgresql
+    Q ) Quit
+
+EOF
+
+    case "${q_dbtype_variant}" in
+        1 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}M${cdgy}\) | \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                case "${q_dbtype,,}" in
+                    m* )
+                        r_dbtype=mysql
+                        break
+                    ;;
+                    p* )
+                        r_dbtype=postgresql
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                case "${q_dbtype,,}" in
+                    e* | "" )
+                        r_dbtype=${db_name}
+                        break
+                    ;;
+                    m* )
+                        r_dbtype=mysql
+                        break
+                    ;;
+                    p* )
+                        r_dbtype=postgresql
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+        3 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                case "${q_dbtype,,}" in
+                    f* | "" )
+                        r_dbtype=${p_dbtype}
+                        break
+                    ;;
+                    m* )
+                        r_dbtype=mysql
+                        break
+                    ;;
+                    p* )
+                        r_dbtype=postgresql
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+
+        4 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                case "${q_dbtype,,}" in
+                    e* | "" )
+                        r_dbtype=${dbtype}
+                        break
+                    ;;
+                    f* )
+                        r_dbtype=${p_dbtype}
+                        break
+                    ;;
+                    m* )
+                        r_dbtype=mysql
+                        break
+                    ;;
+                    p* )
+                        r_dbtype=postgresql
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+get_dbname() {
+    p_dbname=$(basename -- "${r_filename}" | cut -d _ -f 2)
+
+    if [ -n "${p_dbname}" ]; then
+        parsed_name=true
+        print_debug "Parsed DBName: ${p_dbhost}"
+    fi
+
+    if [ -z "${dbname}" ] && [ -z "${parsed_name}" ]; then
+        print_debug "Parsed DBName Variant: 1 - No Env, No Parsed Filename"
+        q_dbname_variant=1
+        q_dbname_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbname}" ] && [ -z "${parsed_name}" ]; then
+        print_debug "Parsed DBName Variant: 2 - Env, No Parsed Filename"
+        q_dbname_variant=2
+        q_dbname_menu=$(cat <<EOF
+
+    C ) Custom Entered Database Name
+    E ) Environment Variable DB_NAME: '${DB_NAME}'
+EOF
+                        )
+    fi
+
+    if [ -z "${dbname}" ] && [ -n "${parsed_name}" ]; then
+        print_debug "Parsed DBName Variant: 3 - No Env, Parsed Filename"
+        q_dbname_variant=3
+        q_dbname_menu=$(cat <<EOF
+
+    C ) Custom Entered Database Name
+    F ) Parsed Filename DB Name: '${p_dbname}'
+EOF
+                        )
+    fi
+
+    if [ -n "${dbname}" ] && [ -n "${parsed_name}" ]; then
+        print_debug "Parsed DBname Variant: 4 - Env, Parsed Filename"
+        q_dbname_variant=4
+        q_dbname_menu=$(cat <<EOF
+
+    C ) Custom Entered Database Name
+    E ) Environment Variable DB_NAME: '${DB_NAME}'
+    F ) Parsed Filename DB Name: '${p_dbname}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What Database Name do you want to restore to?
+${q_dbname_menu}
+    Q ) Quit
+
+EOF
+
+    case "${q_dbname_variant}" in
+        1 )
+            counter=1
+            q_dbname=" "
+            while [[ $q_dbname = *" "* ]];  do
+                if [ $counter -gt 1 ] ; then print_error "DB names can't have spaces in them, please re-enter." ; fi ;
+                read -e -p "$(echo -e ${clg}** ${cdgy}What DB Name do you want to restore to:\ ${coff})" q_dbname
+                (( counter+=1 ))
+            done
+            r_dbname=${q_dbname}
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbname_menu
+                case "${q_dbname_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbname=" "
+                        while [[ $q_dbname = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "DB Names can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB name do you want to restore to:\ ${coff})" q_dbname
+                            (( counter+=1 ))
+                        done
+                        r_dbname=${q_dbname}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbname=${dbname}
+                        break
+                    ;;
+                    q*  )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+        3 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}F${cdgy}\) : ${cwh}${coff}) " q_dbname_menu
+                case "${q_dbname_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbname=" "
+                        while [[ $q_dbname = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "DB names can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB name do you want to restore to:\ ${coff})" q_dbname
+                            (( counter+=1 ))
+                        done
+                        r_dbname=${q_dbname}
+                        break
+                    ;;
+                    f* | "" )
+                        r_dbname=${p_dbname}
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+
+        4 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) : ${cwh}${coff}) " q_dbname_menu
+                case "${q_dbname_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbname=" "
+                        while [[ $q_dbname = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "DB names can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB name do you want to restore to:\ ${coff})" q_dbname
+                            (( counter+=1 ))
+                        done
+                        r_dbname=${q_dbname}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbname=${dbname}
+                        break
+                    ;;
+                    f* )
+                        r_dbname=${p_dbname}
+                        break
+                    ;;
+                    q* )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+get_dbport() {
+    if [ -z "${dbport}" ] ; then
+        print_debug "Parsed DBPort Variant: 1 - No Env"
+        q_dbport_variant=1
+        q_dbport_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbport}" ] ; then
+        print_debug "Parsed DBPort Variant: 2 - Env"
+        q_dbport_variant=2
+        q_dbport_menu=$(cat <<EOF
+
+    C ) Custom Entered Database Port
+    E ) Environment Variable DB_PORT: '${dbport}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What Database Port do you wish to use?
+${q_dbport_menu}
+    Q ) Quit
+
+EOF
+
+    case "${q_dbport_variant}" in
+        1 )
+            counter=1
+            q_dbport=" "
+            q_dbportre='^[0-9]+$'
+            while ! [[ $q_dbport =~ ${q_dbportre} ]];  do
+                if [ $counter -gt 1 ] ; then print_error "Must be a port number, please re-enter." ; fi ;
+                    read -e -p "$(echo -e ${clg}** ${cdgy}What DB Port do you want to use:\ ${coff})" q_dbport
+                    (( counter+=1 ))
+            done
+            r_dbport=${q_dbport}
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
+                case "${q_dbname_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbport=" "
+                        q_dbportre='^[0-9]+$'
+                        while ! [[ $q_dbport =~ ${q_dbportre} ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "Must be a port number, please re-enter." ; fi ;
+                                read -e -p "$(echo -e ${clg}** ${cdgy}What DB Port do you want to use:\ ${coff})" q_dbport
+                                (( counter+=1 ))
+                        done
+                        r_dbport=${q_dbport}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbport=${dbport}
+                        break
+                    ;;
+                    q*  )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+get_dbuser() {
+    if [ -z "${dbuser}" ] ; then
+        print_debug "Parsed DBUser Variant: 1 - No Env"
+        q_dbuser_variant=1
+        q_dbuser_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbuser}" ] ; then
+        print_debug "Parsed DBUser Variant: 2 - Env"
+        q_dbuser_variant=2
+        q_dbuser_menu=$(cat <<EOF
+
+    C ) Custom Entered Database User
+    E ) Environment Variable DB_USER: '${DB_USER}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What database user will be used for restore:
+${q_dbuser_menu}
+    Q ) Quit
+
+EOF
+
+    case "${q_dbuser_variant}" in
+        1 )
+            counter=1
+            q_dbuser=" "
+            while [[ $q_dbuser = *" "* ]];  do
+                if [ $counter -gt 1 ] ; then print_error "DB Usernames can't have spaces in them, please re-enter." ; fi ;
+                read -e -p "$(echo -e ${clg}** ${cdgy}What DB User do you wish to use:\ ${coff})" q_dbuser
+                (( counter+=1 ))
+            done
+            r_dbuser=${q_dbuser}
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbuser_menu
+                case "${q_dbuser_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbuser=" "
+                        while [[ $q_dbname = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "DB Usernames can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB User do you wish to use:\ ${coff})" q_dbname
+                            (( counter+=1 ))
+                        done
+                        r_dbuser=${q_dbuser}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbuser=${dbuser}
+                        break
+                    ;;
+                    q*  )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+get_dbpass() {
+    if [ -z "${dbpass}" ] ; then
+        print_debug "Parsed DBPass Variant: 1 - No Env"
+        q_dbpass_variant=1
+        q_dbpass_menu=$(cat <<EOF
+
+EOF
+                        )
+    fi
+
+    if [ -n "${dbpass}" ] ; then
+        print_debug "Parsed DBPass Variant: 2 - Env"
+        q_dbpass_variant=2
+        q_dbpass_menu=$(cat <<EOF
+
+    C ) Custom Entered Database Password
+    E ) Environment Variable DB_PASS: '${DB_PASS}'
+EOF
+                        )
+    fi
+
+    cat << EOF
+
+What Database Password will be used to restore?
+${q_dbpass_menu}
+    Q ) Quit
+
+EOF
+
+    case "${q_dbpass_variant}" in
+        1 )
+            counter=1
+            q_dbpass=" "
+            while [[ $q_dbpass = *" "* ]];  do
+                if [ $counter -gt 1 ] ; then print_error "DB Passwords can't have spaces in them, please re-enter." ; fi ;
+                read -e -p "$(echo -e ${clg}** ${cdgy}What DB Password do you wish to use:\ ${coff})" q_dbpass
+                (( counter+=1 ))
+            done
+            r_dbpass=${q_dbpass}
+        ;;
+        2 )
+            while true; do
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbpass_menu
+                case "${q_dbpass_menu,,}" in
+                    c* )
+                        counter=1
+                        q_dbpass=" "
+                        while [[ $q_dbname = *" "* ]];  do
+                            if [ $counter -gt 1 ] ; then print_error "DB Passwords can't have spaces in them, please re-enter." ; fi ;
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Password do you wish to use:\ ${coff})" q_dbname
+                            (( counter+=1 ))
+                        done
+                        r_dbpass=${q_dbpass}
+                        break
+                    ;;
+                    e* | "" )
+                        r_dbpass=${dbpass}
+                        break
+                    ;;
+                    q*  )
+                        print_info "Quitting Script"
+                        exit 1
+                    ;;
+                esac
+            done
+        ;;
+    esac
+}
+
+#### SCRIPT START
+cat << EOF
+
+## ${IMAGE_NAME} Restore Script Version 1.0.0
+## Visit ${IMAGE_REPO_URL}
+## ####################################################
+
+EOF
+## Question Filename
+if [ -n "${1}" ]; then
+    if [ ! -f "${1}" ]; then
+        get_filename
+    else
+        r_filename="${1}"
+    fi
+else
+    get_filename
+fi
+
+print_debug "Filename to recover '${r_filename}'"
+
+## Question Database Type
+if [ -n "${2}" ]; then
+    if [ ! -f "${2}" ]; then
+        get_dbtype
+    else
+        r_dbtype="${2}"
+    fi
+else
+    get_dbtype
+fi
+print_debug "Database type '${r_dbtype}'"
+
+## Question Database Host
+if [ -n "${3}" ]; then
+    if [ ! -f "${3}" ]; then
+        get_dbhost
+    else
+        r_dbtype="${3}"
+    fi
+else
+    get_dbhost
+fi
+print_debug "Database Host '${r_dbhost}'"
+
+## Question Database Name
+if [ -n "${3}" ]; then
+    if [ ! -f "${3}" ]; then
+        get_dbname
+    else
+        r_dbname="${3}"
+    fi
+else
+    get_dbname
+fi
+print_debug "Database Name '${r_dbname}'"
+
+## Question Database User
+if [ -n "${4}" ]; then
+    if [ ! -f "${4}" ]; then
+        get_dbuser
+    else
+        r_dbuser="${4}"
+    fi
+else
+    get_dbuser
+fi
+print_debug "Database User '${r_dbuser}'"
+
+## Question Database Password
+if [ -n "${5}" ]; then
+    if [ ! -f "${5}" ]; then
+        get_dbpass
+    else
+        r_dbpass="${5}"
+    fi
+else
+    get_dbpass
+fi
+print_debug "Database Pass '${r_dbpass}'"
+
+## Question Database Port
+if [ -n "${6}" ]; then
+    if [ ! -f "${6}" ]; then
+        get_dbport
+    else
+        r_dbport="${6}"
+    fi
+else
+    get_dbport
+fi
+print_debug "Database Port '${r_dbport}'"
+
+## Parse Extension
+case "${r_filename##*.}" in
+          bz* )
+                 decompress_cmd='bz'
+                 print_debug "Detected 'bzip2' compression"
+          ;;
+          gz* )
+                 decompress_cmd="z"
+                 print_debug "Detected 'gzip' compression"
+          ;;
+          xz* )
+                 decompress_cmd="xz"
+                 print_debug "Detected 'xzip' compression"
+          ;;
+          zst* )
+                 decompress_cmd='zstd'
+                 print_debug "Detected 'zstd' compression"
+          ;;
+          sql )
+                 print_debug "Detected No compression"
+          ;;
+          *  )
+                 print_debug "Cannot tell what the extension is for compression"
+          ;;
+esac
+
+## Perform a restore
+case "${r_dbtype}" in
+    mariadb | mysql )
+        print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
+        pv ${r_filename} | ${decompress_cmd}cat | mysql -u${r_dbuser} -p${r_dbpass} -P${r_dbport} -h${r_dbhost} ${r_dbname}
+        exit_code=$?
+    ;;
+    psql | postgres* )
+        print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
+        export PGPASSWORD=${r_dbpass}
+        pv ${r_filename} | ${decompress_cmd}cat | psql  -d ${r_dbname} -h ${r_dbhost} -p ${r_dbport} -U ${r_dbuser}
+        exit_code=$?
+    ;;
+    * )
+        exit 3
+    ;;
+esac
+
+print_debug "Exit code: ${exit_code}"
+if [ "${exit_code}" = 0 ] ; then
+    print_info "Restore complete!"
+else
+    print_error "Restore reported errors"
+fi

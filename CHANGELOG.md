@@ -1,3 +1,21 @@
+## 3.0.0 2022-03-17 <dave at tiredofit dot ca>
+
+   ### Added
+      - Rewrote entire image
+      - Ability to choose which file hash after backup (MD5 or SHA1)
+      - Restore Script (execute 'restore' in container)
+      - Allow to map custom CA certs for S3 backups
+      - Allow to skip certificate certification for S3 Backups
+      - Revamped Logging and parameters - File logs also exist in /var/log/container/container.log
+      - Added more functionality to send to zabbix to track start, end, duration and status
+      - Ability to backup stored procedures for MySQL / MariaDB
+      - Ability to backup as a single transaction for MySQL / MariaDB
+      - Ability to execute "manually" and still allow container to execute to accommodate for Kubernetes cron usage
+
+   ### Changed
+      - Environment variables have changed! Specifically relating to COMPRESSION, PARALLEL COMPRESSION, CHECKSUMs
+
+
 ## 2.12.0 2022-03-16 <dave at tiredofit dot ca>
 
    ### Changed

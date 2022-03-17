@@ -1,0 +1,475 @@
+#!/command/with-contenv bash
+
+bootstrap_compression() {
+    ### Set Compression Options
+    if var_true "${ENABLE_PARALLEL_COMPRESSION}" ; then
+        bzip="pbzip2 -${COMPRESSION_LEVEL}"
+        gzip="pigz -${COMPRESSION_LEVEL}"
+        xzip="pixz -${COMPRESSION_LEVEL}"
+        zstd="zstd --rm -${COMPRESSION_LEVEL}"
+    else
+        bzip="bzip2 -${COMPRESSION_LEVEL}"
+        gzip="gzip -${COMPRESSION_LEVEL}"
+        xzip="xz -${COMPRESSION_LEVEL} "
+        zstd="zstd --rm -${COMPRESSION_LEVEL}"
+    fi
+}
+
+bootstrap_variables() {
+    case "${dbtype,,}" in
+        couch* )
+            dbtype=couch
+            dbport=${DB_PORT:-5984}
+            file_env 'DB_USER'
+            file_env 'DB_PASS'
+        ;;
+        influx* )
+            dbtype=influx
+            dbport=${DB_PORT:-8088}
+            file_env 'DB_USER'
+            file_env 'DB_PASS'
+        ;;
+        mongo* )
+            dbtype=mongo
+            dbport=${DB_PORT:-27017}
+            [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
+            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+        ;;
+        "mysql" | "mariadb" )
+            dbtype=mysql
+            dbport=${DB_PORT:-3306}
+            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+        ;;
+        "mssql" | "microsoftsql" )
+            apkArch="$(apk --print-arch)"; \
+            case "$apkArch" in
+                x86_64) mssql=true ;;
+                *) print_error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
+            esac
+            dbtype=mssql
+            dbport=${DB_PORT:-1433}
+        ;;
+        postgres* | "pgsql" )
+            dbtype=pgsql
+            dbport=${DB_PORT:-5432}
+            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+        ;;
+        "redis" )
+            dbtype=redis
+            dbport=${DB_PORT:-6379}
+            [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
+        ;;
+        sqlite* )
+            dbtype=sqlite3
+        ;;
+    esac
+
+    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
+        file_env 'S3_KEY_ID'
+        file_env 'S3_KEY_SECRET'
+    fi
+
+    ### Set the Database Authentication Details
+    case "$dbtype" in
+        "mongo" )
+            [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${dbuser}"
+            [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${dbpass}"
+            [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${dbname}"
+            [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+        ;;
+        "mysql" )
+            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${dbpass}
+        ;;
+        "postgres" )
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${dbpass}"
+        ;;
+        "redis" )
+            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${dbpass}"
+        ;;
+    esac
+}
+
+backup_couch() {
+    target=couch_${dbname}_${dbhost}_${now}.txt
+    compression
+    print_notice "Dumping CouchDB database: '${dbname}'"
+    curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${dumpoutput} | $dumpoutput > ${TEMP_LOCATION}/${target}
+    exit_code=$?
+    check_exit_code
+    generate_checksum
+    move_backup
+}
+
+backup_influx() {
+    if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
+        :
+    else
+        print_notice "Compressing InfluxDB backup with gzip"
+        influx_compression="-portable"
+    fi
+    for DB in ${DB_NAME}; do
+        print_notice "Dumping Influx database: '${DB}'"
+        target=influx_${DB}_${dbhost}_${now}
+        influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${TEMP_LOCATION}/${target}
+        exit_code=$?
+        check_exit_code
+        generate_checksum
+        move_backup
+    done
+}
+
+backup_mongo() {
+    if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
+        target=${dbtype}_${dbname}_${dbhost}_${now}.archive
+    else
+        print_notice "Compressing MongoDB backup with gzip"
+        target=${dbtype}_${dbname}_${dbhost}_${now}.archive.gz
+        mongo_compression="--gzip"
+    fi
+    print_notice "Dumping MongoDB database: '${DB_NAME}'"
+    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    exit_code=$?
+    check_exit_code
+    cd "${TEMP_LOCATION}"
+    generate_checksum
+    move_backup
+}
+
+backup_mssql() {
+    target=mssql_${dbname}_${dbhost}_${now}.bak
+    print_notice "Dumping MSSQL database: '${dbname}'"
+    /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    exit_code=$?
+    check_exit_code
+    generate_checksum
+    move_backup
+}
+
+backup_mysql() {
+    if var_true "${MYSQL_SINGLE_TRANSACTION}" ; then
+        single_transaction="--single-transaction"
+    fi
+    if var_true "${MYSQL_STORED_PROCEDURES}" ; then
+        stored_procedures="--routines"
+    fi
+    if var_true "${SPLIT_DB}" ; then
+        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema)
+        for db in "${DATABASES}" ; do
+                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
+                    print_debug "Backing up everything except for information_schema and _* prefixes"
+                    print_notice "Dumping MySQL/MariaDB database: '${db}'"
+                    target=mysql_${db}_${dbhost}_${now}.sql
+                    compression
+                    mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $dumpoutput > ${TEMP_LOCATION}/${target}
+                    exit_code=$?
+                    check_exit_code
+                    generate_checksum
+                    move_backup
+                fi
+        done
+    else
+        compression
+        print_notice "Dumping MySQL/MariaDB database: '${DB_NAME}'"
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -A -h $dbhost -P $dbport -u$dbuser  ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+        exit_code=$?
+        check_exit_code
+        generate_checksum
+        move_backup
+    fi
+}
+
+backup_pgsql() {
+  export PGPASSWORD=${dbpass}
+  if var_true "${SPLIT_DB}" ; then
+
+      authdb=${DB_USER}
+      [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
+      DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+            for db in "${DATABASES}"; do
+                print_notice "Dumping Postgresql database: $db"
+                target=pgsql_${db}_${dbhost}_${now}.sql
+                compression
+                pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+                exit_code=$?
+                check_exit_code
+                generate_checksum
+                move_backup
+            done
+  else
+      compression
+      print_notice "Dumping PostgreSQL: '${DB_NAME}'"
+      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+      exit_code=$?
+      check_exit_code
+      generate_checksum
+      move_backup
+  fi
+}
+
+backup_redis() {
+    target=redis_${db}_${dbhost}_${now}.rdb
+    echo bgsave | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
+    print_notice "Dumping Redis - Flushing Redis Cache First"
+    sleep 10
+    try=5
+    while [ $try -gt 0 ] ; do
+        saved=$(echo 'info Persistence' | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
+        ok=$(echo 'info Persistence' | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
+        if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
+            print_notice "Redis Backup Complete"
+            break
+        fi
+        try=$((try - 1))
+        print_warn "Redis Busy - Waiting and retrying in 5 seconds"
+        sleep 5
+    done
+    target_original=${target}
+    compression
+    $dumpoutput "${TEMP_LOCATION}/${target_original}"
+    generate_checksum
+    move_backup
+}
+
+backup_sqlite3() {
+    db=$(basename "$dbhost")
+    db="${db%.*}"
+    target=sqlite3_${db}_${now}.sqlite3
+    compression
+
+    print_notice "Dumping sqlite3 database: '${dbhost}'"
+    sqlite3 "${dbhost}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
+    exit_code=$?
+    check_exit_code
+    cat "${TEMP_LOCATION}"/backup.sqlite3 | $dumpoutput > "${TEMP_LOCATION}/${target}"
+    generate_checksum
+    move_backup
+}
+
+check_availability() {
+### Set the Database Type
+   case "$dbtype" in
+        "couch" )
+            COUNTER=0
+            while ! (nc -z ${dbhost} ${dbport}) ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "CouchDB Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "influx" )
+            COUNTER=0
+            while ! (nc -z ${dbhost} ${dbport}) ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "InfluxDB Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "mongo" )
+            COUNTER=0
+            while ! (nc -z ${dbhost} ${dbport}) ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "Mongo Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "mysql" )
+            COUNTER=0
+            export MYSQL_PWD=${dbpass}
+            while ! (mysqladmin -u"${dbuser}" -P"${dbport}" -h"${dbhost}" status > /dev/null 2>&1) ; do
+              sleep 5
+              (( COUNTER+=5 ))
+              print_warn "MySQL/MariaDB Server '${dbhost}' is not accessible, retrying.. (${COUNTER} seconds so far)"
+            done
+        ;;
+        "mssql" )
+            COUNTER=0
+            while ! (nc -z ${dbhost} ${dbport}) ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "MSSQL Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "pgsql" )
+            COUNTER=0
+            export PGPASSWORD=${dbpass}
+            until pg_isready --dbname=${dbname} --host=${dbhost} --port=${dbport} --username=${dbuser} -q
+            do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "Postgres Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "redis" )
+            COUNTER=0
+            while ! (nc -z "${dbhost}" "${dbport}") ; do
+                sleep 5
+                (( COUNTER+=5 ))
+                print_warn "Redis Host '${dbhost}' is not accessible, retrying.. ($COUNTER seconds so far)"
+            done
+        ;;
+        "sqlite3" )
+            if [[ ! -e "${dbhost}" ]]; then
+                print_error "File '${dbhost}' does not exist."
+                exit_code=2
+                exit $exit_code
+            elif [[ ! -f "${dbhost}" ]]; then
+                print_error "File '${dbhost}' is not a file."
+                exit_code=2
+                exit $exit_code
+            elif [[ ! -r "${dbhost}" ]]; then
+                print_error "File '${dbhost}' is not readable."
+                exit_code=2
+                exit $exit_code
+            fi
+        ;;
+    esac
+}
+
+check_exit_code() {
+    print_debug "Exit Code is ${exit_code}"
+    case "${exit_code}" in
+        0 )
+            print_info "Backup completed successfully"
+        ;;
+        * )
+            print_error "Backup reported errors - Aborting"
+            exit 1
+        ;;
+    esac
+}
+
+compression() {
+   case "${ENABLE_COMPRESSION,,}" in
+        gz* )
+            print_notice "Compressing backup with gzip"
+            target=${target}.gz
+            dumpoutput="$gzip "
+        ;;
+        bz* )
+            print_notice "Compressing backup with bzip2"
+            target=${target}.bz2
+            dumpoutput="$bzip "
+        ;;
+        xz* )
+            print_notice "Compressing backup with xzip"
+            target=${target}.xz
+            dumpoutput="$xzip "
+        ;;
+        zst* )
+            print_notice "Compressing backup with zstd"
+            target=${target}.zst
+            dumpoutput="$zstd "
+        ;;
+        "none" | "false")
+            print_notice "Not compressing backups"
+            dumpoutput="cat "
+        ;;
+    esac
+}
+
+generate_checksum() {
+    if var_true "${ENABLE_CHECKSUM}" ; then
+        case "${CHECKSUM,,}" in
+            "md5" )
+                checksum_command="md5sum"
+                checksum_extension="md5"
+            ;;
+            "sha1" )
+                checksum_command="sha1sum"
+                checksum_extension="sha1"
+            ;;
+        esac
+
+        print_notice "Generating ${checksum_extension^^} for '${target}'"
+        cd "${TEMP_LOCATION}"
+        ${checksum_command} "${target}" > "${target}"."${checksum_extension}"
+        checksum_value=$(${checksum_command} "${target}" | awk ' { print $1}')
+        print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+    fi
+}
+
+move_backup() {
+    case "$SIZE_VALUE" in
+        "b" | "bytes" )
+            SIZE_VALUE=1
+        ;;
+        "[kK]" | "[kK][bB]" | "kilobytes" | "[mM]" | "[mM][bB]" | "megabytes" )
+            SIZE_VALUE="-h"
+        ;;
+        *)
+            SIZE_VALUE=1
+        ;;
+    esac
+    if [ "$SIZE_VALUE" = "1" ] ; then
+        FILESIZE=$(stat -c%s "${TEMP_LOCATION}"/"${target}")
+        print_notice "Backup of ${target} created with the size of ${FILESIZE} bytes"
+    else
+        FILESIZE=$(du -h "${TEMP_LOCATION}"/"${target}" | awk '{ print $1}')
+        print_notice "Backup of ${target} created with the size of ${FILESIZE}"
+    fi
+
+    case "${BACKUP_LOCATION,,}" in
+        "file" | "filesystem" )
+            print_debug "Moving backup to filesystem"
+            mkdir -p "${DB_DUMP_TARGET}"
+            mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+            mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+        ;;
+        "s3" | "minio" )
+            print_debug "Moving backup to S3 Bucket"
+            export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
+            export AWS_DEFAULT_REGION=${S3_REGION}
+            if [ -f "${S3_CERT_CA_FILE}" ] ; then
+                print_debug "Using Custom CA for S3 Backups"
+                s3_ssl=" --ca-bundle ${S3_CERT_CA_FILE}"
+            fi
+            if var_true "${S3_CERT_SKIP_VERIFY}" ; then
+                print_debug "Skipping SSL verification for HTTPS S3 Hosts"
+                s3_ssl="${s3_ssl} --no-verify-ssl"
+            fi
+
+            [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
+
+            aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${S3_EXTRA_OPTS}
+
+            rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+            rm -rf "${TEMP_LOCATION}"/"${target}"
+        ;;
+    esac
+}
+
+sanity_test() {
+    sanity_var DB_TYPE "Database Type"
+    sanity_var DB_HOST "Database Host"
+    file_env 'DB_USER'
+    file_env 'DB_PASS'
+
+    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
+        sanity_var S3_BUCKET "S3 Bucket"
+        sanity_var S3_PATH "S3 Path"
+        sanity_var S3_REGION "S3 Region"
+        file_env 'S3_KEY_ID'
+        file_env 'S3_KEY_SECRET'
+    fi
+}
+
+setup_mode() {
+    if [ "${MODE,,}" = "auto" ] || [ ${MODE,,} = "default" ] ; then
+        print_debug "Running in Auto / Default Mode - Letting Image control scheduling"
+    else
+        print_info "Running in Manual mode - Execute 'backup_now' to run a manual backup"
+        service_stop 10-db-backup
+        if var_true "${MANUAL_RUN_FOREVER}" ; then
+            mkdir -p /etc/services.d/99-run_forever
+            cat <<EOF > /etc/services.d/99-run_forever/run
+#!/bin/bash
+while true
+do
+	sleep 86400
+done
+EOF
+            chmod +x /etc/services.d/99-run_forever/run
+        fi
+    fi
+}
