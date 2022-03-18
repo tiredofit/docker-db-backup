@@ -102,7 +102,7 @@ while true; do
         print_notice "Sending Backup Statistics to Zabbix"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "${exit_code}"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.backup_duration -o "$(echo $((backup_finish_time-backup_start_time)))"
     fi
 
