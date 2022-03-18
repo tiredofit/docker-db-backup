@@ -116,7 +116,7 @@ while true; do
     ### Post Script Support
     if [ -n "${POST_SCRIPT}" ] ; then
         print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
     fi
 
     ### Post Backup Custom Script Support
