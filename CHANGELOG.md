@@ -1,3 +1,9 @@
+## 3.0.1 2022-03-17 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Environment variable not reading correctly for restore script for DB TYPE
+
+
 ## 3.0.0 2022-03-17 <dave at tiredofit dot ca>
 
    ### Added

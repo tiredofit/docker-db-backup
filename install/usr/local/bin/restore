@@ -310,7 +310,7 @@ EOF
         q_dbtype_variant=4
         q_dbtype_menu=$(cat <<EOF
 
-    E ) Environment Variable DB_NAME: '${DB_NAME}'
+    E ) Environment Variable DB_TYPE: '${DB_TYPE}'
     F ) Parsed Filename Type: '${p_dbtype}'
 EOF
                         )
@@ -791,7 +791,7 @@ EOF
 #### SCRIPT START
 cat << EOF
 
-## ${IMAGE_NAME} Restore Script Version 1.0.0
+## ${IMAGE_NAME} Restore Script Version 1.0.1
 ## Visit ${IMAGE_REPO_URL}
 ## ####################################################
 
