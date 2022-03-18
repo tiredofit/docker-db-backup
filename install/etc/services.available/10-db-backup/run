@@ -5,6 +5,9 @@ source /assets/functions/10-db-backup
 source /assets/defaults/10-db-backup
 PROCESS_NAME="db-backup"
 
+bootstrap_compression
+bootstrap_variables
+
 case "${1,,}" in
     "now" | "manual" )
         DB_DUMP_BEGIN=+0
@@ -14,9 +17,6 @@ case "${1,,}" in
         sleep 5
     ;;
 esac
-
-bootstrap_compression
-bootstrap_variables
 
 ### Container Startup
 print_debug "Backup routines Initialized on $(date)"

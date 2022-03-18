@@ -332,8 +332,7 @@ check_exit_code() {
             print_info "Backup completed successfully"
         ;;
         * )
-            print_error "Backup reported errors - Aborting"
-            exit 1
+            print_error "Backup reported errors"
         ;;
     esac
 }
@@ -422,17 +421,18 @@ move_backup() {
             export AWS_DEFAULT_REGION=${S3_REGION}
             if [ -f "${S3_CERT_CA_FILE}" ] ; then
                 print_debug "Using Custom CA for S3 Backups"
-                s3_ssl=" --ca-bundle ${S3_CERT_CA_FILE}"
+                s3_ca_cert="--ca-bundle ${S3_CERT_CA_FILE}"
             fi
             if var_true "${S3_CERT_SKIP_VERIFY}" ; then
                 print_debug "Skipping SSL verification for HTTPS S3 Hosts"
-                s3_ssl="${s3_ssl} --no-verify-ssl"
+                s3_ssl="--no-verify-ssl"
             fi
 
             [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
-            aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${S3_EXTRA_OPTS}
-
+            aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+            unset s3_ssl
+            unset s3_ca_cert
             rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
             rm -rf "${TEMP_LOCATION}"/"${target}"
         ;;
