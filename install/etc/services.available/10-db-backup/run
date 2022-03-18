@@ -125,7 +125,7 @@ while true; do
     for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
       print_notice "Running Script: '${f}'"
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
     done
     fi
 

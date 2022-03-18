@@ -1,3 +1,14 @@
+## 3.0.2 2022-03-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Cleanup of Zabbix Agent options
+      - Updated Zabbix template
+      - Split apart S3 options for better debugging and also cleaned up their variables
+      - Fixed issue with post scripts not outputting proper backup start time
+      - Cleaned up some notifications
+      - Rearranged code
+
+
 ## 3.0.1 2022-03-17 <dave at tiredofit dot ca>
 
    ### Changed
