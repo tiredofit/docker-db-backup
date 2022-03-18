@@ -1,0 +1,249 @@
+{
+    "zabbix_export": {
+        "version": "6.0",
+        "date": "2022-03-18T13:32:12Z",
+        "groups": [
+            {
+                "uuid": "fa56524b5dbb4ec09d9777a6f7ccfbe4",
+                "name": "DB/Backup"
+            },
+            {
+                "uuid": "748ad4d098d447d492bb935c907f652f",
+                "name": "Templates/Databases"
+            }
+        ],
+        "templates": [
+            {
+                "uuid": "5fc64d517afb4cc5bc09a3ef58b43ef7",
+                "template": "DB Backup",
+                "name": "DB Backup",
+                "description": "Template for Docker DB Backup Image\n\nMeant for use specifically with https://github.com/tiredofit/docker-db-backup\nLast tested with version 3.0.2",
+                "groups": [
+                    {
+                        "name": "DB/Backup"
+                    },
+                    {
+                        "name": "Templates/Databases"
+                    }
+                ],
+                "items": [
+                    {
+                        "uuid": "72fd00fa2dd24e479f5affe03e8711d8",
+                        "name": "DB Backup: Backup Duration",
+                        "type": "TRAP",
+                        "key": "dbbackup.backup_duration",
+                        "delay": "0",
+                        "history": "7d",
+                        "units": "uptime",
+                        "description": "How long the backup took",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "DB Backup"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "3549a2c9d56849babc6dc3c855484c1e",
+                        "name": "DB Backup: Backup Time",
+                        "type": "TRAP",
+                        "key": "dbbackup.datetime",
+                        "delay": "0",
+                        "history": "7d",
+                        "units": "unixtime",
+                        "request_method": "POST",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "DB Backup"
+                            }
+                        ],
+                        "triggers": [
+                            {
+                                "uuid": "3ac1e074ffea46eb8002c9c08a85e7b4",
+                                "expression": "nodata(/DB Backup/dbbackup.datetime,2d)=1",
+                                "name": "DB-Backup: No backups detected in 2 days",
+                                "priority": "DISASTER",
+                                "manual_close": "YES"
+                            },
+                            {
+                                "uuid": "b8b5933dfa1a488c9c37dd7f4784c1ff",
+                                "expression": "fuzzytime(/DB Backup/dbbackup.datetime,172800s)=0 and fuzzytime(/DB Backup/dbbackup.datetime,259200s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,345600s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,432800s)<>0",
+                                "name": "DB Backup: No Backups occurred in 2 days",
+                                "priority": "AVERAGE"
+                            },
+                            {
+                                "uuid": "35c5f420d0e142cc9601bae38decdc40",
+                                "expression": "fuzzytime(/DB Backup/dbbackup.datetime,172800s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,259200s)=0 and fuzzytime(/DB Backup/dbbackup.datetime,345600s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,432800s)<>0",
+                                "name": "DB Backup: No Backups occurred in 3 days",
+                                "priority": "AVERAGE"
+                            },
+                            {
+                                "uuid": "03c3719d82c241e886a0383c7d908a77",
+                                "expression": "fuzzytime(/DB Backup/dbbackup.datetime,172800s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,259200s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,345600s)=0 and fuzzytime(/DB Backup/dbbackup.datetime,432800s)<>0",
+                                "name": "DB Backup: No Backups occurred in 4 days",
+                                "priority": "AVERAGE"
+                            },
+                            {
+                                "uuid": "1634a03e44964e42b7e0101f5f68499c",
+                                "expression": "fuzzytime(/DB Backup/dbbackup.datetime,172800s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,259200s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,345600s)<>0 and fuzzytime(/DB Backup/dbbackup.datetime,432800s)=0",
+                                "name": "DB Backup: No Backups occurred in 5 days or more",
+                                "priority": "HIGH"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "467dfec952b34f5aa4cc890b4351b62d",
+                        "name": "DB Backup: Backup Size",
+                        "type": "TRAP",
+                        "key": "dbbackup.size",
+                        "delay": "0",
+                        "history": "7d",
+                        "units": "B",
+                        "request_method": "POST",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "DB Backup"
+                            }
+                        ],
+                        "triggers": [
+                            {
+                                "uuid": "a41eb49b8a3541afb6de247dca750e38",
+                                "expression": "last(/DB Backup/dbbackup.size)/last(/DB Backup/dbbackup.size,#2)>1.2",
+                                "name": "DB Backup: 20% Greater in Size",
+                                "priority": "WARNING",
+                                "manual_close": "YES"
+                            },
+                            {
+                                "uuid": "422f66be5049403293f3d96fc53f20cd",
+                                "expression": "last(/DB Backup/dbbackup.size)/last(/DB Backup/dbbackup.size,#2)<0.2",
+                                "name": "DB Backup: 20% Smaller in Size",
+                                "priority": "WARNING",
+                                "manual_close": "YES"
+                            },
+                            {
+                                "uuid": "d6d9d875b92f4d799d4bc89aabd4e90e",
+                                "expression": "last(/DB Backup/dbbackup.size)<1K",
+                                "name": "DB Backup: empty",
+                                "priority": "HIGH"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "a6b13e8b46a64abab64a4d44d620d272",
+                        "name": "DB Backup: Last Backup Status",
+                        "type": "TRAP",
+                        "key": "dbbackup.status",
+                        "delay": "0",
+                        "history": "7d",
+                        "description": "Maps Exit Codes received by backup applications",
+                        "valuemap": {
+                            "name": "DB Backup Status"
+                        },
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "DB Backup"
+                            }
+                        ],
+                        "triggers": [
+                            {
+                                "uuid": "23d71e356f96493180f02d4b84a79fd6",
+                                "expression": "last(/DB Backup/dbbackup.status)=1",
+                                "name": "DB Backup: Failed Backup Detected",
+                                "priority": "HIGH",
+                                "manual_close": "YES"
+                            }
+                        ]
+                    }
+                ],
+                "tags": [
+                    {
+                        "tag": "Service",
+                        "value": "Backup"
+                    },
+                    {
+                        "tag": "Service",
+                        "value": "Database"
+                    }
+                ],
+                "dashboards": [
+                    {
+                        "uuid": "90c81bb47184401ca9663626784a6f30",
+                        "name": "DB Backup",
+                        "pages": [
+                            {
+                                "widgets": [
+                                    {
+                                        "type": "GRAPH_CLASSIC",
+                                        "name": "Backup Size",
+                                        "width": "23",
+                                        "height": "5",
+                                        "fields": [
+                                            {
+                                                "type": "GRAPH",
+                                                "name": "graphid",
+                                                "value": {
+                                                    "name": "DB Backup: Backup Size",
+                                                    "host": "DB Backup"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "valuemaps": [
+                    {
+                        "uuid": "82f3a3d01b3c42b8942b59d2363724e0",
+                        "name": "DB Backup Status",
+                        "mappings": [
+                            {
+                                "value": "0",
+                                "newvalue": "OK"
+                            },
+                            {
+                                "type": "GREATER_OR_EQUAL",
+                                "value": "1",
+                                "newvalue": "FAIL"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "graphs": [
+            {
+                "uuid": "6e02c200b76046bab76062cd1ab086b2",
+                "name": "DB Backup: Backup Duration",
+                "graph_items": [
+                    {
+                        "color": "199C0D",
+                        "item": {
+                            "host": "DB Backup",
+                            "key": "dbbackup.backup_duration"
+                        }
+                    }
+                ]
+            },
+            {
+                "uuid": "b881ee18f05c4f4c835982c9dfbb55d6",
+                "name": "DB Backup: Backup Size",
+                "type": "STACKED",
+                "graph_items": [
+                    {
+                        "sortorder": "1",
+                        "color": "1A7C11",
+                        "item": {
+                            "host": "DB Backup",
+                            "key": "dbbackup.size"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
