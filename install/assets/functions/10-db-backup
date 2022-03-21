@@ -3,10 +3,10 @@
 bootstrap_compression() {
     ### Set Compression Options
     if var_true "${ENABLE_PARALLEL_COMPRESSION}" ; then
-        bzip="pbzip2 -${COMPRESSION_LEVEL}"
-        gzip="pigz -${COMPRESSION_LEVEL}"
-        xzip="pixz -${COMPRESSION_LEVEL}"
-        zstd="zstd --rm -${COMPRESSION_LEVEL}"
+        bzip="pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS}"
+        gzip="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
+        xzip="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
+        zstd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
     else
         bzip="bzip2 -${COMPRESSION_LEVEL}"
         gzip="gzip -${COMPRESSION_LEVEL}"

@@ -157,6 +157,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `COMPRESSION`                 | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`    |
 | `COMPRESSION_LEVEL`           | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`     |
 | `ENABLE_PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`  |
+| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8` | `autodetected` |
 | `ENABLE_CHECKSUM`             | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`  |
 | `CHECKSUM`                    | Either `MD5` or `SHA1`                                                                                                       | `MD5`   |
 | `EXTRA_OPTS`                  | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |         |

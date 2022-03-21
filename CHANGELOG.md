@@ -1,3 +1,9 @@
+## 3.0.8 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add PARALLEL_COMPRESSION_THREADS environment variable to limit amount of threads when compressing - Currently autodetects however many processors are avaialable to the container
+
+
 ## 3.0.7 2022-03-21 <dave at tiredofit dot ca>
 
    ### Reverted
