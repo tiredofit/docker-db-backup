@@ -1,3 +1,9 @@
+## 3.0.4 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for 3.0.3
+
+
 ## 3.0.3 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed

@@ -32,7 +32,7 @@ case "${1,,}" in
         :
     ;;
     * )
-        if [ "${manual,,}" = "true" ];
+        if [ "${manual,,}" = "true" ]; then
             current_time=$(date +"%s")
             today=$(date +"%Y%m%d")
 
