@@ -460,7 +460,7 @@ setup_mode() {
     if [ "${MODE,,}" = "auto" ] || [ ${MODE,,} = "default" ] ; then
         print_debug "Running in Auto / Default Mode - Letting Image control scheduling"
     else
-        print_info "Running in Manual mode - Execute 'backup_now' to run a manual backup"
+        print_info "Running in Manual mode - Execute 'backup_now' or '/etc/services.available/10-db-backup/run' to perform a manual backup"
         service_stop 10-db-backup
         if var_true "${MANUAL_RUN_FOREVER}" ; then
             mkdir -p /etc/services.d/99-run_forever
@@ -472,6 +472,19 @@ do
 done
 EOF
             chmod +x /etc/services.d/99-run_forever/run
+        else
+            if var_true "${CONTAINER_ENABLE_SCHEDULING}" ; then
+                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_SCHEDULING=TRUE'"
+                exit 1
+            fi
+            if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
+                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_MONITORING=TRUE'"
+                exit 1
+            fi
+            if var_true "${CONTAINER_ENABLE_LOGSHIPPING}" ; then
+                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_LOGSHIPPING=TRUE'"
+                exit 1
+            fi
         fi
     fi
 }

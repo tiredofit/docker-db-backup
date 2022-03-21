@@ -1,3 +1,9 @@
+## 3.0.12 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Throw Errors for MANUAL mode when certain other CONTAINER_* services are enabled
+
+
 ## 3.0.11 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed

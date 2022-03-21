@@ -11,6 +11,7 @@ bootstrap_variables
 if [ "${MODE,,}" = "manual" ] ; then
     DB_DUMP_BEGIN=+0
     manual=TRUE
+    print_debug "Detected Manual Mode"
 fi
 
 case "${1,,}" in
@@ -32,7 +33,7 @@ case "${1,,}" in
         :
     ;;
     * )
-        if [ "${manual,,}" = "true" ]; then
+        if [ "${manual,,}" != "true" ]; then
             current_time=$(date +"%s")
             today=$(date +"%Y%m%d")
 
