@@ -1,3 +1,9 @@
+## 3.0.9 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Switch to using parallel versions of compression tools all the time, yet explicitly state the threads in use (1 or ++)
+
+
 ## 3.0.8 2022-03-21 <dave at tiredofit dot ca>
 
    ### Added

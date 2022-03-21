@@ -3,15 +3,17 @@
 bootstrap_compression() {
     ### Set Compression Options
     if var_true "${ENABLE_PARALLEL_COMPRESSION}" ; then
-        bzip="pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS}"
+        print_debug "Utilizing '${PARALLEL_COMPRESSION_THREADS}' compression threads"
+        bzip="pbzip2 -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
         gzip="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
         xzip="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
         zstd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
     else
-        bzip="bzip2 -${COMPRESSION_LEVEL}"
-        gzip="gzip -${COMPRESSION_LEVEL}"
-        xzip="xz -${COMPRESSION_LEVEL} "
-        zstd="zstd --rm -${COMPRESSION_LEVEL}"
+        print_debug "Utilizing single compression thread"
+        bzip="pbzip2 -${COMPRESSION_LEVEL} -p 1"
+        gzip="pigz -${COMPRESSION_LEVEL} -p 1"
+        xzip="pixz -${COMPRESSION_LEVEL} -p 1"
+        zstd="zstd --rm -${COMPRESSION_LEVEL} -T1"
     fi
 }
 
