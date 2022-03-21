@@ -697,9 +697,9 @@ EOF
                     c* )
                         counter=1
                         q_dbuser=" "
-                        while [[ $q_dbname = *" "* ]];  do
+                        while [[ $q_dbuser = *" "* ]];  do
                             if [ $counter -gt 1 ] ; then print_error "DB Usernames can't have spaces in them, please re-enter." ; fi ;
-                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB User do you wish to use:\ ${coff})" q_dbname
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB User do you wish to use:\ ${coff})" q_dbuser
                             (( counter+=1 ))
                         done
                         r_dbuser=${q_dbuser}
@@ -766,9 +766,9 @@ EOF
                     c* )
                         counter=1
                         q_dbpass=" "
-                        while [[ $q_dbname = *" "* ]];  do
+                        while [[ $q_dbpass = *" "* ]];  do
                             if [ $counter -gt 1 ] ; then print_error "DB Passwords can't have spaces in them, please re-enter." ; fi ;
-                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Password do you wish to use:\ ${coff})" q_dbname
+                            read -e -p "$(echo -e ${clg}** ${cdgy}What DB Password do you wish to use:\ ${coff})" q_dbpass
                             (( counter+=1 ))
                         done
                         r_dbpass=${q_dbpass}

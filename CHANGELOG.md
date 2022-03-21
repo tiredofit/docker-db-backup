@@ -1,3 +1,9 @@
+## 3.0.10 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for restore script not taking "custom" usernames or passwords
+
+
 ## 3.0.9 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed
