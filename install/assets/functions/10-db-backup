@@ -338,7 +338,7 @@ check_exit_code() {
 }
 
 compression() {
-   case "${ENABLE_COMPRESSION,,}" in
+   case "${COMPRESSION,,}" in
         gz* )
             print_notice "Compressing backup with gzip"
             target=${target}.gz

@@ -47,10 +47,15 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
   - [Persistent Storage](#persistent-storage-1)
   - [Environment Variables](#environment-variables)
     - [Base Images used](#base-images-used)
+    - [Container Options](#container-options)
+  - [Database Specific Options](#database-specific-options)
+  - [Scheduling Options](#scheduling-options)
+  - [Backup Options](#backup-options)
     - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
 - [Maintenance](#maintenance)
   - [Shell Access](#shell-access)
   - [Manual Backups](#manual-backups)
+  - [Restoring Databases](#restoring-databases)
   - [Custom Scripts](#custom-scripts)
 - [Support](#support)
   - [Usage](#usage)
@@ -120,6 +125,7 @@ Be sure to view the following repositories to understand all the customizable op
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | `BACKUP_LOCATION` | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
 | `MODE`            | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
+| `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup | `TRUE` |
 | `TEMP_LOCATION`   | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 | `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                  |                 |
 | `DEBUG_MODE`      | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
@@ -148,15 +154,16 @@ Be sure to view the following repositories to understand all the customizable op
 ### Backup Options
 | Parameter                     | Description                                                                                                                  | Default |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `ENABLE_COMPRESSION`          | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`    |
-| `ENABLE_PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`  |
+| `COMPRESSION`                 | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`    |
 | `COMPRESSION_LEVEL`           | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`     |
+| `ENABLE_PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`  |
 | `ENABLE_CHECKSUM`             | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`  |
 | `CHECKSUM`                    | Either `MD5` or `SHA1`                                                                                                       | `MD5`   |
 | `EXTRA_OPTS`                  | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |         |
 | `MYSQL_MAX_ALLOWED_PACKET`    | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`  |
 | `MYSQL_SINGLE_TRANSACTION`    | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`  |
 | `MYSQL_STORED_PROCEDURES`     | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`  |
+
 - When using compression with MongoDB, only `GZ` compression is possible.
 
 #### Backing Up to S3 Compatible Services
@@ -189,6 +196,8 @@ docker exec -it (whatever your container name is) bash
 ``
 ### Manual Backups
 Manual Backups can be performed by entering the container and typing `backup-now`
+
+- Recently there was a request to have the container work with Kukbernetes cron scheduling. This can theoretically be accomplished by setting the container `MODE=MANUAL` and then setting `MANUAL_RUN_FOREVER=FALSE` - You would also want to disable a few features from the upstream base images specifically `CONTAINER_ENABLE_SCHEDULING` and `CONTAINER_ENABLE_MONITORING`. This should allow the container to start, execute a backup and then exit cleanly.
 
 ### Restoring Databases
 Entering in the container and executing `restore` will execute a menu based script to restore your backups.

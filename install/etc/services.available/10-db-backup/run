@@ -8,6 +8,11 @@ PROCESS_NAME="db-backup"
 bootstrap_compression
 bootstrap_variables
 
+if [ "${MODE,,}" = "manual" ] ; then
+    DB_DUMP_BEGIN=+0
+    manual=TRUE
+fi
+
 case "${1,,}" in
     "now" | "manual" )
         DB_DUMP_BEGIN=+0
@@ -27,22 +32,24 @@ case "${1,,}" in
         :
     ;;
     * )
-        current_time=$(date +"%s")
-        today=$(date +"%Y%m%d")
+        if [ "${manual,,}" = "true" ];
+            current_time=$(date +"%s")
+            today=$(date +"%Y%m%d")
 
-        if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
-            waittime=$(( ${BASH_REMATCH[1]} * 60 ))
-            target_time=$(($current_time + $waittime))
-        else
-            target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
-            if [[ "$target_time" < "$current_time" ]]; then
-                target_time=$(($target_time + 24*60*60))
+            if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
+                waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+                target_time=$(($current_time + $waittime))
+            else
+                target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
+                if [[ "$target_time" < "$current_time" ]]; then
+                    target_time=$(($target_time + 24*60*60))
+                fi
+                waittime=$(($target_time - $current_time))
             fi
-            waittime=$(($target_time - $current_time))
+                print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
+                print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
+                sleep $waittime
         fi
-            print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
-            print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
-            sleep $waittime
     ;;
 esac
 
@@ -94,7 +101,7 @@ while true; do
     backup_finish_time=$(date +"%s")
     backup_total_time=$(echo $((backup_finish_time-backup_start_time)))
 
-    print_info "Backup finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z")"
+    print_info "Backup finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z") with exit code ${exit_code}"
     print_notice "Backup time elapsed: $(echo ${backup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
 
     ### Zabbix / Monitoring stats

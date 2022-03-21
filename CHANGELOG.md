@@ -1,3 +1,10 @@
+## 3.0.3 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Add documentation for Manual mode
+      - Revert Compression variables
+
+
 ## 3.0.2 2022-03-18 <dave at tiredofit dot ca>
 
    ### Changed
