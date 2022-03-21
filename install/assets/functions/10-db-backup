@@ -343,21 +343,25 @@ compression() {
    case "${COMPRESSION,,}" in
         gz* )
             print_notice "Compressing backup with gzip"
+            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.gz
             dumpoutput="$gzip "
         ;;
         bz* )
             print_notice "Compressing backup with bzip2"
+            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.bz2
             dumpoutput="$bzip "
         ;;
         xz* )
             print_notice "Compressing backup with xzip"
+            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.xz
             dumpoutput="$xzip "
         ;;
         zst* )
             print_notice "Compressing backup with zstd"
+            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.zst
             dumpoutput="$zstd "
         ;;

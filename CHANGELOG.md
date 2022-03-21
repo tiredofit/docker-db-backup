@@ -1,3 +1,9 @@
+## 3.0.13 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add compression levels to debug mode
+
+
 ## 3.0.12 2022-03-21 <dave at tiredofit dot ca>
 
    ### Added
