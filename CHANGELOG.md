@@ -1,3 +1,9 @@
+## 3.0.5 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Add more detail regarding manual modes
+
+
 ## 3.0.4 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed

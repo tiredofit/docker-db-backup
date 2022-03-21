@@ -11,6 +11,7 @@ bootstrap_variables
 if [ "${MODE,,}" = "manual" ] ; then
     DB_DUMP_BEGIN=+0
     manual=TRUE
+    silent s6-svc -d /var/run/legacy-services/10-db-backup
 fi
 
 case "${1,,}" in
