@@ -1,3 +1,9 @@
+## 3.0.11 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Parallel Compression
+
+
 ## 3.0.10 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed

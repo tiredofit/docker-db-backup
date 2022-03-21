@@ -121,16 +121,16 @@ Be sure to view the following repositories to understand all the customizable op
 
 #### Container Options
 
-| Parameter         | Description                                                                                                                      | Default         |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `BACKUP_LOCATION` | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
-| `MODE`            | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
-| `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup | `TRUE` |
-| `TEMP_LOCATION`   | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
-| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                  |                 |
-| `DEBUG_MODE`      | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
-| `POST_SCRIPT`     | Fill this variable in with a command to execute post the script backing up                                                       |                 |
-| `SPLIT_DB`        | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one.           | `FALSE`         |
+| Parameter            | Description                                                                                                                      | Default         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `BACKUP_LOCATION`    | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
+| `MODE`               | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
+| `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
+| `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
+| `DB_AUTH`            | (Mongo Only - Optional) Authentication Database                                                                                  |                 |
+| `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
+| `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
+| `SPLIT_DB`           | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one.           | `FALSE`         |
 
 ### Database Specific Options
 | Parameter | Description                                                                                   | Default |
@@ -152,18 +152,18 @@ Be sure to view the following repositories to understand all the customizable op
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 ### Backup Options
-| Parameter                     | Description                                                                                                                  | Default |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `COMPRESSION`                 | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`    |
-| `COMPRESSION_LEVEL`           | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`     |
-| `ENABLE_PARALLEL_COMPRESSION` | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`  |
-| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8` | `autodetected` |
-| `ENABLE_CHECKSUM`             | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`  |
-| `CHECKSUM`                    | Either `MD5` or `SHA1`                                                                                                       | `MD5`   |
-| `EXTRA_OPTS`                  | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |         |
-| `MYSQL_MAX_ALLOWED_PACKET`    | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`  |
-| `MYSQL_SINGLE_TRANSACTION`    | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`  |
-| `MYSQL_STORED_PROCEDURES`     | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`  |
+| Parameter                      | Description                                                                                                                  | Default        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`           |
+| `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`            |
+| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`         |
+| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected` |
+| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`         |
+| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`          |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                |
+| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`         |
+| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`         |
+| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`         |
 
 - When using compression with MongoDB, only `GZ` compression is possible.
 
