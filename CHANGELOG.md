@@ -1,3 +1,9 @@
+## 3.0.7 2022-03-21 <dave at tiredofit dot ca>
+
+   ### Reverted
+      - Strip unused LOG directives
+
+
 ## 3.0.6 2022-03-21 <dave at tiredofit dot ca>
 
    ### Changed
