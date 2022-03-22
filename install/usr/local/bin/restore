@@ -826,7 +826,7 @@ if [ -n "${3}" ]; then
     if [ ! -f "${3}" ]; then
         get_dbhost
     else
-        r_dbtype="${3}"
+        r_dbhost="${3}"
     fi
 else
     get_dbhost
