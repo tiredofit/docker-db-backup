@@ -1,3 +1,9 @@
+## 3.0.14 2022-03-22 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Rearrange Notice stating when next backup is going to start
+
+
 ## 3.0.13 2022-03-21 <dave at tiredofit dot ca>
 
    ### Added

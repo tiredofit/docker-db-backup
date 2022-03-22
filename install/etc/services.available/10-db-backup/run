@@ -142,7 +142,7 @@ while true; do
         exit ${exit_code};
     else
         ### Go back to sleep until next backup time
-        sleep $(($DB_DUMP_FREQ*60-backup_total_time))
         print_notice "Sleeping for another $(($DB_DUMP_FREQ*60-backup_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($DB_DUMP_FREQ*60-backup_total_time))))" +"%Y-%m-%d %T %Z") "
+        sleep $(($DB_DUMP_FREQ*60-backup_total_time))
     fi
 done
