@@ -20,7 +20,7 @@ services:
      - example-db
     volumes:
       - ./backups:/backup
-      - ./post-script.sh:/assets/custom-scripts/post-script.sh
+      #- ./post-script.sh:/assets/custom-scripts/post-script.sh
     environment:
       - DB_TYPE=mariadb
       - DB_HOST=example-db
@@ -30,8 +30,8 @@ services:
       - DB_DUMP_FREQ=1440
       - DB_DUMP_BEGIN=0000
       - DB_CLEANUP_TIME=8640
-      - CHECKSUM=MD5
-      - COMPRESSION=XZ
+      - CHECKSUM=SHA1
+      - COMPRESSION=ZSTD
       - SPLIT_DB=FALSE
     restart: always
 
