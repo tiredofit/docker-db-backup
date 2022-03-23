@@ -1,3 +1,10 @@
+## 3.0.15 2022-03-22 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Rework compression function
+      - Fix for Bzip compression failing
+
+
 ## 3.0.14 2022-03-22 <dave at tiredofit dot ca>
 
    ### Changed

@@ -1,22 +1,5 @@
 #!/command/with-contenv bash
 
-bootstrap_compression() {
-    ### Set Compression Options
-    if var_true "${ENABLE_PARALLEL_COMPRESSION}" ; then
-        print_debug "Utilizing '${PARALLEL_COMPRESSION_THREADS}' compression threads"
-        bzip="pbzip2 -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
-        gzip="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
-        xzip="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS}"
-        zstd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
-    else
-        print_debug "Utilizing single compression thread"
-        bzip="pbzip2 -${COMPRESSION_LEVEL} -p 1"
-        gzip="pigz -${COMPRESSION_LEVEL} -p 1"
-        xzip="pixz -${COMPRESSION_LEVEL} -p 1"
-        zstd="zstd --rm -${COMPRESSION_LEVEL} -T1"
-    fi
-}
-
 bootstrap_variables() {
     case "${dbtype,,}" in
         couch* )
@@ -95,7 +78,7 @@ backup_couch() {
     target=couch_${dbname}_${dbhost}_${now}.txt
     compression
     print_notice "Dumping CouchDB database: '${dbname}'"
-    curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${dumpoutput} | $dumpoutput > ${TEMP_LOCATION}/${target}
+    curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > ${TEMP_LOCATION}/${target}
     exit_code=$?
     check_exit_code
     generate_checksum
@@ -162,8 +145,10 @@ backup_mysql() {
                     print_notice "Dumping MySQL/MariaDB database: '${db}'"
                     target=mysql_${db}_${dbhost}_${now}.sql
                     compression
-                    mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $dumpoutput > ${TEMP_LOCATION}/${target}
+                    set -x
+                    mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                     exit_code=$?
+                    set +x
                     check_exit_code
                     generate_checksum
                     move_backup
@@ -172,7 +157,7 @@ backup_mysql() {
     else
         compression
         print_notice "Dumping MySQL/MariaDB database: '${DB_NAME}'"
-        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -A -h $dbhost -P $dbport -u$dbuser  ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -A -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
         check_exit_code
         generate_checksum
@@ -191,7 +176,7 @@ backup_pgsql() {
                 print_notice "Dumping Postgresql database: $db"
                 target=pgsql_${db}_${dbhost}_${now}.sql
                 compression
-                pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+                pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
                 check_exit_code
                 generate_checksum
@@ -200,7 +185,7 @@ backup_pgsql() {
   else
       compression
       print_notice "Dumping PostgreSQL: '${DB_NAME}'"
-      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $dumpoutput > ${TEMP_LOCATION}/${target}
+      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
       exit_code=$?
       check_exit_code
       generate_checksum
@@ -227,7 +212,7 @@ backup_redis() {
     done
     target_original=${target}
     compression
-    $dumpoutput "${TEMP_LOCATION}/${target_original}"
+    $compress_cmd "${TEMP_LOCATION}/${target_original}"
     generate_checksum
     move_backup
 }
@@ -242,7 +227,7 @@ backup_sqlite3() {
     sqlite3 "${dbhost}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
     check_exit_code
-    cat "${TEMP_LOCATION}"/backup.sqlite3 | $dumpoutput > "${TEMP_LOCATION}/${target}"
+    cat "${TEMP_LOCATION}"/backup.sqlite3 | $compress_cmd > "${TEMP_LOCATION}/${target}"
     generate_checksum
     move_backup
 }
@@ -340,34 +325,38 @@ check_exit_code() {
 }
 
 compression() {
+   if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
+       PARALLEL_COMPRESSION_THREADS=1
+   fi
+
    case "${COMPRESSION,,}" in
         gz* )
             print_notice "Compressing backup with gzip"
             print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.gz
-            dumpoutput="$gzip "
+            compress_cmd="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
         ;;
         bz* )
             print_notice "Compressing backup with bzip2"
             print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.bz2
-            dumpoutput="$bzip "
+            compress_cmd="pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
         ;;
         xz* )
             print_notice "Compressing backup with xzip"
             print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.xz
-            dumpoutput="$xzip "
+            compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
         ;;
         zst* )
             print_notice "Compressing backup with zstd"
             print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
             target=${target}.zst
-            dumpoutput="$zstd "
+            compress_cmd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
         ;;
         "none" | "false")
             print_notice "Not compressing backups"
-            dumpoutput="cat "
+            compress_cmd="cat "
         ;;
     esac
 }

@@ -4,8 +4,8 @@ source /assets/functions/00-container
 source /assets/functions/10-db-backup
 source /assets/defaults/10-db-backup
 PROCESS_NAME="db-backup"
+CONTAINER_LOG_LEVEL=DEBUG
 
-bootstrap_compression
 bootstrap_variables
 
 if [ "${MODE,,}" = "manual" ] ; then
@@ -25,7 +25,7 @@ case "${1,,}" in
 esac
 
 ### Container Startup
-print_debug "Backup routines Initialized on $(date)"
+print_debug "Backup routines Initialized on $(date +'%Y-%m-%d %H:%M:%S')"
 
 ### Wait for Next time to start backup
 case "${1,,}" in
