@@ -139,16 +139,15 @@ backup_mysql() {
     fi
     if var_true "${SPLIT_DB}" ; then
         DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema)
-        for db in "${DATABASES}" ; do
+        print_debug "Backing up everything except for information_schema and _* prefixes"
+        print_debug "Databases Found: ${DATABASES}"
+        for db in ${DATABASES} ; do
                 if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
-                    print_debug "Backing up everything except for information_schema and _* prefixes"
                     print_notice "Dumping MySQL/MariaDB database: '${db}'"
                     target=mysql_${db}_${dbhost}_${now}.sql
                     compression
-                    set -x
                     mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                     exit_code=$?
-                    set +x
                     check_exit_code
                     generate_checksum
                     move_backup
@@ -168,11 +167,11 @@ backup_mysql() {
 backup_pgsql() {
   export PGPASSWORD=${dbpass}
   if var_true "${SPLIT_DB}" ; then
-
       authdb=${DB_USER}
       [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
-      DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
-            for db in "${DATABASES}"; do
+            DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+            print_debug "Databases Found: ${DATABASES}"
+            for db in $DATABASES ; do
                 print_notice "Dumping Postgresql database: $db"
                 target=pgsql_${db}_${dbhost}_${now}.sql
                 compression
@@ -184,7 +183,7 @@ backup_pgsql() {
             done
   else
       compression
-      print_notice "Dumping PostgreSQL: '${DB_NAME}'"
+      print_notice "Dumping PostgreSQL database: '${DB_NAME}'"
       pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
       exit_code=$?
       check_exit_code

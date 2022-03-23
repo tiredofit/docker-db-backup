@@ -1,3 +1,9 @@
+## 3.0.16 2022-03-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for SPLIT_DB not looping through all databse names properly
+
+
 ## 3.0.15 2022-03-22 <dave at tiredofit dot ca>
 
    ### Changed
