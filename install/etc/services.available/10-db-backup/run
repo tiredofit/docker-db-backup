@@ -8,62 +8,34 @@ CONTAINER_LOG_LEVEL=DEBUG
 
 bootstrap_variables
 
-if [ "${MODE,,}" = "manual" ] ; then
+if [ "${MODE,,}" = "manual" ] || [ "${1,,}" = "manual" ] || [ "${1,,}" = "now" ]; then
     DB_DUMP_BEGIN=+0
     manual=TRUE
     print_debug "Detected Manual Mode"
+else
+    sleep 5
+    current_time=$(date +"%s")
+    today=$(date +"%Y%m%d")
+
+    if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
+        waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+        target_time=$(($current_time + $waittime))
+    else
+        target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
+        if [[ "$target_time" < "$current_time" ]]; then
+            target_time=$(($target_time + 24*60*60))
+        fi
+        waittime=$(($target_time - $current_time))
+    fi
+    print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
+    print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
+    sleep $waittime
 fi
 
-case "${1,,}" in
-    "now" | "manual" )
-        DB_DUMP_BEGIN=+0
-        manual=TRUE
-    ;;
-    * )
-        sleep 5
-    ;;
-esac
-
-### Container Startup
-print_debug "Backup routines Initialized on $(date +'%Y-%m-%d %H:%M:%S')"
-
-### Wait for Next time to start backup
-case "${1,,}" in
-    "now" | "manual" )
-        :
-    ;;
-    * )
-        if [ "${manual,,}" != "true" ]; then
-            current_time=$(date +"%s")
-            today=$(date +"%Y%m%d")
-
-            if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
-                waittime=$(( ${BASH_REMATCH[1]} * 60 ))
-                target_time=$(($current_time + $waittime))
-            else
-                target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
-                if [[ "$target_time" < "$current_time" ]]; then
-                    target_time=$(($target_time + 24*60*60))
-                fi
-                waittime=$(($target_time - $current_time))
-            fi
-                print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
-                print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
-                sleep $waittime
-        fi
-    ;;
-esac
-
-### Commence Backup
 while true; do
     mkdir -p "${TEMP_LOCATION}"
     backup_start_time=$(date +"%s")
-    now=$(date +"%Y%m%d-%H%M%S")
-    now_time=$(date +"%H:%M:%S")
-    now_date=$(date +"%Y-%m-%d")
-    target=${dbtype}_${dbname}_${dbhost}_${now}.sql
-
-    ### Take a Dump
+    print_debug "Backup routines started time: $(date +'%Y-%m-%d %T %Z')"
     case "${dbtype,,}" in
         "couch" )
             check_availability
@@ -101,47 +73,16 @@ while true; do
 
     backup_finish_time=$(date +"%s")
     backup_total_time=$(echo $((backup_finish_time-backup_start_time)))
+    if [ -z "$master_exit_code" ] ; then master_exit_code="0" ; fi
+    print_info "Backup routines finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z") with overall exit code ${master_exit_code}"
+    print_notice "Backup routines time taken: $(echo ${backup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
 
-    print_info "Backup finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z") with exit code ${exit_code}"
-    print_notice "Backup time elapsed: $(echo ${backup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
-
-    ### Zabbix / Monitoring stats
-    if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
-        print_notice "Sending Backup Statistics to Zabbix"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "${exit_code}"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.backup_duration -o "$(echo $((backup_finish_time-backup_start_time)))"
-    fi
-
-    ### Automatic Cleanup
-    if [ -n "${DB_CLEANUP_TIME}" ]; then
-        print_info "Cleaning up old backups"
-        mkdir -p "${DB_DUMP_TARGET}"
-        find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
-    fi
-
-    ### Post Script Support
-    if [ -n "${POST_SCRIPT}" ] ; then
-        print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
-    fi
-
-    ### Post Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/" ] ; then
-    print_notice "Found Post Backup Custom Script to execute"
-    for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
-      print_notice "Running Script: '${f}'"
-      ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
-    done
-    fi
+    cleanup_old_data
 
     if var_true "${manual}" ; then
         print_debug "Exitting due to manual mode"
-        exit ${exit_code};
+        exit ${master_exit_code};
     else
-        ### Go back to sleep until next backup time
         print_notice "Sleeping for another $(($DB_DUMP_FREQ*60-backup_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($DB_DUMP_FREQ*60-backup_total_time))))" +"%Y-%m-%d %T %Z") "
         sleep $(($DB_DUMP_FREQ*60-backup_total_time))
     fi

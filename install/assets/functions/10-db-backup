@@ -24,6 +24,7 @@ bootstrap_variables() {
             dbtype=mysql
             dbport=${DB_PORT:-3306}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "mssql" | "microsoftsql" )
             apkArch="$(apk --print-arch)"; \
@@ -38,6 +39,7 @@ bootstrap_variables() {
             dbtype=pgsql
             dbport=${DB_PORT:-5432}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "redis" )
             dbtype=redis
@@ -80,9 +82,11 @@ backup_couch() {
     print_notice "Dumping CouchDB database: '${dbname}'"
     curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > ${TEMP_LOCATION}/${target}
     exit_code=$?
-    check_exit_code
+    check_exit_code $target
     generate_checksum
-    move_backup
+    move_dbbackup
+    post_dbbackup_hooks
+    send_statistics
 }
 
 backup_influx() {
@@ -92,14 +96,16 @@ backup_influx() {
         print_notice "Compressing InfluxDB backup with gzip"
         influx_compression="-portable"
     fi
-    for DB in ${DB_NAME}; do
-        print_notice "Dumping Influx database: '${DB}'"
-        target=influx_${DB}_${dbhost}_${now}
-        influxd backup ${influx_compression} -database $DB -host ${dbhost}:${dbport} ${TEMP_LOCATION}/${target}
+    for db in ${DB_NAME}; do
+        print_notice "Dumping Influx database: '${db}'"
+        target=influx_${db}_${dbhost}_${now}
+        influxd backup ${influx_compression} -database $db -host ${dbhost}:${dbport} ${TEMP_LOCATION}/${target}
         exit_code=$?
-        check_exit_code
+        check_exit_code $target
         generate_checksum
-        move_backup
+        move_dbbackup
+        send_statistics
+        post_dbbackup_hooks
     done
 }
 
@@ -114,10 +120,12 @@ backup_mongo() {
     print_notice "Dumping MongoDB database: '${DB_NAME}'"
     mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
-    check_exit_code
+    check_exit_code $target
     cd "${TEMP_LOCATION}"
     generate_checksum
-    move_backup
+    move_dbbackup
+    send_statistics
+    post_dbbackup_hooks
 }
 
 backup_mssql() {
@@ -125,9 +133,11 @@ backup_mssql() {
     print_notice "Dumping MSSQL database: '${dbname}'"
     /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
-    check_exit_code
+    check_exit_code $target
     generate_checksum
-    move_backup
+    move_dbbackup
+    send_statistics
+    post_dbbackup_hooks
 }
 
 backup_mysql() {
@@ -137,65 +147,111 @@ backup_mysql() {
     if var_true "${MYSQL_STORED_PROCEDURES}" ; then
         stored_procedures="--routines"
     fi
+
+    if [ "${dbname,,}" = "all" ] ; then
+        print_debug "Preparing to back up everything except for information_schema and _* prefixes"
+        db_names=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        if [ -n "${DB_NAME_EXCLUDE}" ] ; then
+            db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
+            for db_exclude in ${db_names_exclusions} ; do
+                print_debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
+                db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
+            done
+        fi
+    else
+        db_names=$(echo "${dbname}" | tr ',' '\n')
+    fi
+
+    print_debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
+
     if var_true "${SPLIT_DB}" ; then
-        DATABASES=$(mysql -h ${dbhost} -P $dbport -u$dbuser --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema)
-        print_debug "Backing up everything except for information_schema and _* prefixes"
-        print_debug "Databases Found: ${DATABASES}"
-        for db in ${DATABASES} ; do
-                if [[ "$db" != "information_schema" ]] && [[ "$db" != _* ]] ; then
-                    print_notice "Dumping MySQL/MariaDB database: '${db}'"
-                    target=mysql_${db}_${dbhost}_${now}.sql
-                    compression
-                    mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
-                    exit_code=$?
-                    check_exit_code
-                    generate_checksum
-                    move_backup
-                fi
+        for db in ${db_names} ; do
+                pre_dbbackup
+                target=mysql_${db}_${dbhost}_${now}.sql
+                compression
+                print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
+                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+                exit_code=$?
+                check_exit_code $target
+                generate_checksum
+                move_dbbackup
+                post_dbbackup
         done
     else
+        print_debug "Not splitting database dumps into their own files"
+        pre_dbbackup
+        target=mysql_all_${dbhost}_${now}.sql
         compression
-        print_notice "Dumping MySQL/MariaDB database: '${DB_NAME}'"
-        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -A -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+        print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h $dbhost -P $dbport -u$dbuser ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
-        check_exit_code
+        check_exit_code $target
         generate_checksum
-        move_backup
+        move_dbbackup
+        post_dbbackup
     fi
 }
 
 backup_pgsql() {
   export PGPASSWORD=${dbpass}
-  if var_true "${SPLIT_DB}" ; then
-      authdb=${DB_USER}
-      [ -n "${DB_NAME}" ] && authdb=${DB_NAME}
-            DATABASES=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
-            print_debug "Databases Found: ${DATABASES}"
-            for db in $DATABASES ; do
-                print_notice "Dumping Postgresql database: $db"
+  authdb=${DB_USER}
+    if [ "${dbname,,}" = "all" ] ; then
+        print_debug "Preparing to back up all databases"
+        db_names=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        if [ -n "${DB_NAME_EXCLUDE}" ] ; then
+            db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
+            for db_exclude in ${db_names_exclusions} ; do
+                print_debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
+                db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
+            done
+        fi
+    else
+        db_names=$(echo "${dbname}" | tr ',' '\n')
+    fi
+
+    print_debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
+
+    if var_true "${SPLIT_DB}" ; then
+        for db in ${db_names} ; do
+                pre_dbbackup
                 target=pgsql_${db}_${dbhost}_${now}.sql
                 compression
+                print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 pg_dump -h ${dbhost} -p ${dbport} -U ${dbuser} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
-                check_exit_code
+                check_exit_code $target
                 generate_checksum
-                move_backup
-            done
-  else
-      compression
-      print_notice "Dumping PostgreSQL database: '${DB_NAME}'"
-      pg_dump -h ${dbhost} -U ${dbuser} -p ${dbport} ${dbname} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
-      exit_code=$?
-      check_exit_code
-      generate_checksum
-      move_backup
-  fi
+                move_dbbackup
+                post_dbbackup
+        done
+    else
+        print_debug "Not splitting database dumps into their own files"
+        pre_dbbackup
+        target=pgsql_all_${dbhost}_${now}.sql
+        compression
+        print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
+        tmp_db_names=$(psql -h $dbhost -U $dbuser -p ${dbport} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        for r_db_name in $(echo $db_names  | xargs); do
+            tmp_db_names=$(echo "$tmp_db_names" | xargs | sed "s|${r_db_name}||g"  )
+        done
+        sleep 5
+        for x_db_name in ${tmp_db_names} ; do
+            pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
+        done
+        pg_dumpall -h ${dbhost} -U ${dbuser} -p ${dbport} ${pgexclude_arg} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
+        exit_code=$?
+        check_exit_code $target
+        generate_checksum
+        move_dbbackup
+        post_dbbackup
+    fi
 }
 
 backup_redis() {
+    pre_dbbackup
+    print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_${db}_${dbhost}_${now}.rdb
     echo bgsave | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
-    print_notice "Dumping Redis - Flushing Redis Cache First"
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
@@ -213,22 +269,24 @@ backup_redis() {
     compression
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
     generate_checksum
-    move_backup
+    move_dbbackup
+    post_dbbackup
 }
 
 backup_sqlite3() {
+    pre_dbbackup
     db=$(basename "$dbhost")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
     compression
-
-    print_notice "Dumping sqlite3 database: '${dbhost}'"
+    print_notice "Dumping sqlite3 database: '${dbhost}' ${compression_string}"
     sqlite3 "${dbhost}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
-    check_exit_code
+    check_exit_code $target
     cat "${TEMP_LOCATION}"/backup.sqlite3 | $compress_cmd > "${TEMP_LOCATION}/${target}"
     generate_checksum
-    move_backup
+    move_dbbackup
+    post_dbbackup
 }
 
 check_availability() {
@@ -312,16 +370,30 @@ check_availability() {
 }
 
 check_exit_code() {
-    print_debug "Exit Code is ${exit_code}"
+    print_debug "DB Backup Exit Code is ${exit_code}"
     case "${exit_code}" in
         0 )
-            print_info "Backup completed successfully"
+            print_info "DB Backup of '${1}' completed successfully"
         ;;
         * )
-            print_error "Backup reported errors"
+            print_error "DB Backup of '${1}' reported errors"
+            master_exit_code=1
         ;;
     esac
 }
+
+cleanup_old_data() {
+    if [ -n "${DB_CLEANUP_TIME}" ]; then
+        if [ "${master_exit_code}" != 1 ]; then
+            print_info "Cleaning up old backups"
+            mkdir -p "${DB_DUMP_TARGET}"
+            find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+        else
+            print_info "Skipping Cleaning up old backups because there were errors in backing up"
+        fi
+    fi
+}
+
 
 compression() {
    if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
@@ -330,58 +402,73 @@ compression() {
 
    case "${COMPRESSION,,}" in
         gz* )
-            print_notice "Compressing backup with gzip"
-            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
-            target=${target}.gz
             compress_cmd="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compression_type="gzip"
+            target=${target}.gz
         ;;
         bz* )
-            print_notice "Compressing backup with bzip2"
-            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
-            target=${target}.bz2
             compress_cmd="pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
+            compression_type="bzip2"
+            target=${target}.bz2
         ;;
         xz* )
-            print_notice "Compressing backup with xzip"
-            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
-            target=${target}.xz
             compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compression_type="xzip"
+            target=${target}.xz
         ;;
         zst* )
-            print_notice "Compressing backup with zstd"
-            print_debug "Compression Level: '${COMPRESSION_LEVEL}'"
-            target=${target}.zst
             compress_cmd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
+            compression_type="zstd"
+            target=${target}.zst
         ;;
         "none" | "false")
-            print_notice "Not compressing backups"
             compress_cmd="cat "
+            compression_type="none"
+        ;;
+    esac
+
+    case "${CONTAINER_LOG_LEVEL,,}" in
+        "debug" )
+            if [ "${compression_type}" = "none" ] ; then
+                compression_string="with '${PARALLEL_COMPRESSION_THREADS}' threads"
+            else
+                compression_string="and compressing with '${compression_type}:${COMPRESSION_LEVEL}' with '${PARALLEL_COMPRESSION_THREADS}' threads"
+            fi
+        ;;
+        * )
+            if [ "${compression_type}" != "none" ] ; then
+                compression_string="and compressing with '${compression_type}'"
+            fi
         ;;
     esac
 }
 
 generate_checksum() {
-    if var_true "${ENABLE_CHECKSUM}" ; then
-        case "${CHECKSUM,,}" in
-            "md5" )
-                checksum_command="md5sum"
-                checksum_extension="md5"
-            ;;
-            "sha1" )
-                checksum_command="sha1sum"
-                checksum_extension="sha1"
-            ;;
-        esac
+    if var_true "${ENABLE_CHECKSUM}" ;then
+        if [ "${exit_code}" = "0" ] ; then
+            case "${CHECKSUM,,}" in
+                "md5" )
+                    checksum_command="md5sum"
+                    checksum_extension="md5"
+                ;;
+                "sha1" )
+                    checksum_command="sha1sum"
+                    checksum_extension="sha1"
+                ;;
+            esac
 
-        print_notice "Generating ${checksum_extension^^} for '${target}'"
-        cd "${TEMP_LOCATION}"
-        ${checksum_command} "${target}" > "${target}"."${checksum_extension}"
-        checksum_value=$(${checksum_command} "${target}" | awk ' { print $1}')
-        print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+            print_notice "Generating ${checksum_extension^^} for '${target}'"
+            cd "${TEMP_LOCATION}"
+            ${checksum_command} "${target}" > "${target}"."${checksum_extension}"
+            checksum_value=$(${checksum_command} "${target}" | awk ' { print $1}')
+            print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+        else
+            print_warn "Skipping Checksum creation because backup did not complete successfully"
+        fi
     fi
 }
 
-move_backup() {
+move_dbbackup() {
     case "$SIZE_VALUE" in
         "b" | "bytes" )
             SIZE_VALUE=1
@@ -433,11 +520,59 @@ move_backup() {
     esac
 }
 
+pre_dbbackup() {
+    dbbackup_start_time=$(date +"%s")
+    now=$(date +"%Y%m%d-%H%M%S")
+    now_time=$(date +"%H:%M:%S")
+    now_date=$(date +"%Y-%m-%d")
+    target=${dbtype}_${dbname}_${dbhost}_${now}.sql
+}
+
+post_dbbackup() {
+    dbbackup_finish_time=$(date +"%s")
+    dbbackup_total_time=$(echo $((dbbackup_finish_time-dbbackup_start_time)))
+
+    if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
+        print_notice "Sending Backup Statistics to Zabbix"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "${exit_code}"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.backup_duration -o "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+    fi
+
+    ### Post Script Support
+    if [ -n "${POST_SCRIPT}" ] ; then
+        print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
+        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+    fi
+
+    ### Post Backup Custom Script Support
+    if [ -d "/assets/custom-scripts/" ] ; then
+        print_notice "Found Post Backup Custom Script to execute"
+        for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
+            print_notice "Running Script: '${f}'"
+            ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
+            ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+        done
+    fi
+
+    print_notice "DB Backup for '${db}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+}
+
 sanity_test() {
     sanity_var DB_TYPE "Database Type"
     sanity_var DB_HOST "Database Host"
     file_env 'DB_USER'
     file_env 'DB_PASS'
+
+    case "${dbtype,,}" in
+        "mysql" | "mariadb" )
+            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
+        ;;
+        postgres* | "pgsql" )
+            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
+        ;;
+    esac
 
     if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
         sanity_var S3_BUCKET "S3 Bucket"
@@ -480,3 +615,4 @@ EOF
         fi
     fi
 }
+

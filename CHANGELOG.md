@@ -1,3 +1,20 @@
+## 3.1.0 2022-03-23 <dave at tiredofit dot ca>
+
+   ### Added
+      - Backup multiple databases by seperating with comma e.g. db1,db2
+      - Backup ALL databases bu setting DB_NAME to ALL
+      - Exclude databases from being backed up comma seperated when DB_NAME is all eg DB_NAME_EXCLUDE=db3,db4
+      - Backup timers execute per database, not per the whole script run
+      - Post scripts run after each database backup
+      - Checksum does not occur when database backup failed
+      - Database cleanup does not occur when any databases backups fail throughout session
+      - MongoDB now supported with 'restore' script - Credit to piemonkey@github
+      - Lots of reshuffling, optimizations with script due to botched 3.0 release
+
+   ### Changed
+      - ZSTD replaces GZ as default compression type
+      - Output is cleaner when backups are occurring
+
 ## 3.0.16 2022-03-23 <dave at tiredofit dot ca>
 
    ### Changed

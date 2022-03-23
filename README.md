@@ -127,24 +127,25 @@ Be sure to view the following repositories to understand all the customizable op
 | `MODE`               | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
 | `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
-| `DB_AUTH`            | (Mongo Only - Optional) Authentication Database                                                                                  |                 |
 | `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
 | `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
-| `SPLIT_DB`           | If using root as username and multiple DBs on system, set to TRUE to create Seperate DB Backups instead of all in one.           | `FALSE`         |
+| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only) | `TRUE`
 
 ### Database Specific Options
-| Parameter | Description                                                                                   | Default |
-| --------- | --------------------------------------------------------------------------------------------- | ------- |
-| `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`        |         |
-| `DB_HOST` | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3` |         |
-| `DB_NAME` | Schema Name e.g. `database`                                                                   |         |
-| `DB_USER` | username for the database - use `root` to backup all MySQL of them.                           |         |
-| `DB_PASS` | (optional if DB doesn't require it) password for the database                                 |         |
-| `DB_PORT` | (optional) Set port to connect to DB_HOST. Defaults are provided                              | varies  |
+| Parameter         | Description                                                                                                                                 | Default |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                             |         |
+| `DB_TYPE`         | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                      |         |
+| `DB_HOST`         | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                               |         |
+| `DB_NAME`         | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2` |         |
+| `DB_NAME_EXCLUDE` | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                 |         |
+| `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |         |
+| `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |         |
+| `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies  |
 ### Scheduling Options
 | Parameter         | Description                                                                                                                                                                                        | Default |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `DB_DUMP_FREQ`    | How often to do a dump, in minutes. Defaults to 1440 minutes, or once per day.                                                                                                                     | `1440`  |
+| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`  |
 | `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |         |
 |                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |         |
 |                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |         |
@@ -154,7 +155,7 @@ Be sure to view the following repositories to understand all the customizable op
 ### Backup Options
 | Parameter                      | Description                                                                                                                  | Default        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `GZ`           |
+| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`         |
 | `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`            |
 | `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`         |
 | `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected` |
@@ -187,7 +188,6 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 
 ## Maintenance
 
-
 ### Shell Access
 
 For debugging and maintenance purposes you may want access the containers shell.
@@ -201,7 +201,7 @@ Manual Backups can be performed by entering the container and typing `backup-now
 - Recently there was a request to have the container work with Kukbernetes cron scheduling. This can theoretically be accomplished by setting the container `MODE=MANUAL` and then setting `MANUAL_RUN_FOREVER=FALSE` - You would also want to disable a few features from the upstream base images specifically `CONTAINER_ENABLE_SCHEDULING` and `CONTAINER_ENABLE_MONITORING`. This should allow the container to start, execute a backup by executing and then exit cleanly. An alternative way to running the script is to execute `/etc/services.available/10-db-backup/run`.
 
 ### Restoring Databases
-Entering in the container and executing `restore` will execute a menu based script to restore your backups.
+Entering in the container and executing `restore` will execute a menu based script to restore your backups - MariaDB, Postgres, and Mongo supported.
 
 You will be presented with a series of menus allowing you to choose:
    - What file to restore

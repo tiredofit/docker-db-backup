@@ -263,6 +263,10 @@ get_dbtype() {
     p_dbtype=$(basename -- "${r_filename}" | cut -d _ -f 1)
 
     case "${p_dbtype}" in
+        mongo* )
+            parsed_type=true
+            print_debug "Parsed DBType: MongoDB"
+        ;;
         mariadb | mysql )
             parsed_type=true
             print_debug "Parsed DBType: MariaDB/MySQL"
@@ -320,7 +324,9 @@ EOF
 
 What Database Type are you looking to restore?
 ${q_dbtype_menu}
+
     M ) MySQL / MariaDB
+    O ) MongoDB
     P ) Postgresql
     Q ) Quit
 
@@ -333,6 +339,10 @@ EOF
                 case "${q_dbtype,,}" in
                     m* )
                         r_dbtype=mysql
+                        break
+                    ;;
+                    o* )
+                        r_dbtype=mongo
                         break
                     ;;
                     p* )
@@ -358,6 +368,10 @@ EOF
                         r_dbtype=mysql
                         break
                     ;;
+                    o* )
+                        r_dbtype=mongo
+                        break
+                    ;;
                     p* )
                         r_dbtype=postgresql
                         break
@@ -379,6 +393,10 @@ EOF
                     ;;
                     m* )
                         r_dbtype=mysql
+                        break
+                    ;;
+                    o* )
+                        r_dbtype=mongo
                         break
                     ;;
                     p* )
@@ -735,7 +753,7 @@ EOF
         q_dbpass_menu=$(cat <<EOF
 
     C ) Custom Entered Database Password
-    E ) Environment Variable DB_PASS: '${DB_PASS}'
+    E ) Environment Variable DB_PASS
 EOF
                         )
     fi
