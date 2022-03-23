@@ -351,7 +351,7 @@ EOF
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     e* | "" )
-                        r_dbtype=${db_name}
+                        r_dbtype=${DB_TYPE}
                         break
                     ;;
                     m* )
@@ -398,7 +398,7 @@ EOF
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     e* | "" )
-                        r_dbtype=${dbtype}
+                        r_dbtype=${DB_TYPE}
                         break
                     ;;
                     f* )
@@ -826,7 +826,7 @@ if [ -n "${3}" ]; then
     if [ ! -f "${3}" ]; then
         get_dbhost
     else
-        r_dbtype="${3}"
+        r_dbhost="${3}"
     fi
 else
     get_dbhost
@@ -920,8 +920,23 @@ case "${r_dbtype}" in
         pv ${r_filename} | ${decompress_cmd}cat | psql  -d ${r_dbname} -h ${r_dbhost} -p ${r_dbport} -U ${r_dbuser}
         exit_code=$?
     ;;
+    mongo )
+        print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
+        if [ "${ENABLE_COMPRESSION,,}" != "none" ] && [ "${ENABLE_COMPRESSION,,}" != "false" ] ; then
+            mongo_compression="--gzip"
+        fi
+        if [ -n "${r_dbuser}" ] ; then
+            mongo_user="-u ${r_dbuser}"
+        fi
+        if [ -n "${r_dbpass}" ] ; then
+            mongo_pass="-u ${r_dbpass}"
+        fi
+        mongorestore ${mongo_compression} -d ${r_dbname} -h ${r_dbhost} --port ${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
+        exit_code=$?
+    ;;
     * )
-        exit 3
+        print_info "Unable to restore DB of type '${r_dbtype}'"
+        exit_code=3
     ;;
 esac
 
