@@ -16,7 +16,8 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
 * dump to local filesystem or backup to S3 Compatible services
 * select database user and password
-* backup all databases
+* backup all databases, single, or multiple databases
+* backup all to seperate files or one singular file
 * choose to have an MD5 or SHA1 sum after backup for verification
 * delete old backups after specific amount of time
 * choose compression type (none, gz, bz, xz, zstd)
