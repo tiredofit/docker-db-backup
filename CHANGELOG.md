@@ -1,3 +1,9 @@
+## 3.1.1 2022-03-28 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve some issues with backups of Mongo and others not saving the proper timestamp
+
+
 ## 3.1.0 2022-03-23 <dave at tiredofit dot ca>
 
    ### Added

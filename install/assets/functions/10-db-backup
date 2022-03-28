@@ -77,58 +77,60 @@ bootstrap_variables() {
 }
 
 backup_couch() {
+    pre_dbbackup
     target=couch_${dbname}_${dbhost}_${now}.txt
     compression
-    print_notice "Dumping CouchDB database: '${dbname}'"
+    print_notice "Dumping CouchDB database: '${dbname}' ${compression_string}"
     curl -X GET http://${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > ${TEMP_LOCATION}/${target}
     exit_code=$?
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    post_dbbackup_hooks
-    send_statistics
+    post_dbbackup
 }
 
 backup_influx() {
+
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
         :
     else
-        print_notice "Compressing InfluxDB backup with gzip"
         influx_compression="-portable"
+        compression_string=" and compressing with gzip"
     fi
     for db in ${DB_NAME}; do
-        print_notice "Dumping Influx database: '${db}'"
+        pre_dbbackup
         target=influx_${db}_${dbhost}_${now}
+        print_notice "Dumping Influx database: '${db}' ${compression_string}"
         influxd backup ${influx_compression} -database $db -host ${dbhost}:${dbport} ${TEMP_LOCATION}/${target}
         exit_code=$?
         check_exit_code $target
         generate_checksum
         move_dbbackup
-        send_statistics
-        post_dbbackup_hooks
+        post_dbbackup
     done
 }
 
 backup_mongo() {
+    pre_dbbackup
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
         target=${dbtype}_${dbname}_${dbhost}_${now}.archive
     else
-        print_notice "Compressing MongoDB backup with gzip"
         target=${dbtype}_${dbname}_${dbhost}_${now}.archive.gz
         mongo_compression="--gzip"
+        compression_string="and compressing with gzip"
     fi
-    print_notice "Dumping MongoDB database: '${DB_NAME}'"
+    print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
     mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${dbhost} --port ${dbport} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
     check_exit_code $target
     cd "${TEMP_LOCATION}"
     generate_checksum
     move_dbbackup
-    send_statistics
-    post_dbbackup_hooks
+    post_dbbackup
 }
 
 backup_mssql() {
+    pre_dbbackup
     target=mssql_${dbname}_${dbhost}_${now}.bak
     print_notice "Dumping MSSQL database: '${dbname}'"
     /opt/mssql-tools/bin/sqlcmd -E -C -S ${dbhost}\,${dbport} -U ${dbuser} -P ${dbpass} –Q "BACKUP DATABASE \[${dbname}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${dbname}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
@@ -136,8 +138,7 @@ backup_mssql() {
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    send_statistics
-    post_dbbackup_hooks
+    post_dbbackup
 }
 
 backup_mysql() {
