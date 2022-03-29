@@ -86,7 +86,7 @@ backup_couch() {
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup $dbname
 }
 
 backup_influx() {
@@ -106,7 +106,7 @@ backup_influx() {
         check_exit_code $target
         generate_checksum
         move_dbbackup
-        post_dbbackup
+        post_dbbackup $db
     done
 }
 
@@ -138,7 +138,7 @@ backup_mssql() {
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup $dbname
 }
 
 backup_mysql() {
@@ -189,7 +189,7 @@ backup_mysql() {
         check_exit_code $target
         generate_checksum
         move_dbbackup
-        post_dbbackup
+        post_dbbackup all
     fi
 }
 
@@ -223,7 +223,7 @@ backup_pgsql() {
                 check_exit_code $target
                 generate_checksum
                 move_dbbackup
-                post_dbbackup
+                post_dbbackup $db
         done
     else
         print_debug "Not splitting database dumps into their own files"
@@ -244,14 +244,14 @@ backup_pgsql() {
         check_exit_code $target
         generate_checksum
         move_dbbackup
-        post_dbbackup
+        post_dbbackup all
     fi
 }
 
 backup_redis() {
     pre_dbbackup
     print_notice "Dumping Redis - Flushing Redis Cache First"
-    target=redis_${db}_${dbhost}_${now}.rdb
+    target=redis_all_${dbhost}_${now}.rdb
     echo bgsave | redis-cli -h ${dbhost} -p ${dbport} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
     sleep 10
     try=5
@@ -271,7 +271,7 @@ backup_redis() {
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup all
 }
 
 backup_sqlite3() {
@@ -287,7 +287,7 @@ backup_sqlite3() {
     cat "${TEMP_LOCATION}"/backup.sqlite3 | $compress_cmd > "${TEMP_LOCATION}/${target}"
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup $db
 }
 
 check_availability() {
@@ -544,7 +544,7 @@ post_dbbackup() {
     ### Post Script Support
     if [ -n "${POST_SCRIPT}" ] ; then
         print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+        eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${dbhost}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
     fi
 
     ### Post Backup Custom Script Support
@@ -553,11 +553,11 @@ post_dbbackup() {
         for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
             print_notice "Running Script: '${f}'"
             ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-            ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+            ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
         done
     fi
 
-    print_notice "DB Backup for '${db}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+    print_notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
 }
 
 sanity_test() {

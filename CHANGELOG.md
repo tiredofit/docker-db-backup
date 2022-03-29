@@ -1,3 +1,9 @@
+## 3.1.2 2022-03-29 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for blank Notice when individual backup is completed (time taken)
+
+
 ## 3.1.1 2022-03-28 <dave at tiredofit dot ca>
 
    ### Changed
