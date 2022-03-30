@@ -1,3 +1,11 @@
+## 3.1.3 2022-03-30 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for MariaDB not sending database name to post script
+      - Check for executible bit on post scripts both via environment variable and /assets/custom
+      - SPLIT_DB defaulted to TRUE
+
+
 ## 3.1.2 2022-03-29 <dave at tiredofit dot ca>
 
    ### Changed
