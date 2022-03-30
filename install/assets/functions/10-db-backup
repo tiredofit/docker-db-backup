@@ -176,7 +176,7 @@ backup_mysql() {
                 check_exit_code $target
                 generate_checksum
                 move_dbbackup
-                post_dbbackup
+                post_dbbackup $db
         done
     else
         print_debug "Not splitting database dumps into their own files"
