@@ -79,10 +79,10 @@ bootstrap_variables() {
 
 backup_couch() {
     pre_dbbackup
-    target=couch_${dbname}_${dbhost}_${now}.txt
+    target=couch_${dbname}_${dbhost#*//}_${now}.txt
     compression
     print_notice "Dumping CouchDB database: '${dbname}' ${compression_string}"
-    curl -sSL -X GET ${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > ${TEMP_LOCATION}/${target}
+    curl -sSL -X GET ${dbhost}:${dbport}/${dbname}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -103,7 +103,7 @@ backup_influx() {
             for db in ${db_names}; do
                 pre_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-bucket $db" ; else db=all ; fi
-                target=influx_${db}_${dbhost}_${now}
+                target=influx_${db}_${dbhost#*//}_${now}
                 compression
                 print_notice "Dumping Influx database: '${db}'"
                 influxd backup ${influx_compression} ${bucket} -host ${dbhost}:${dbport} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
@@ -111,7 +111,7 @@ backup_influx() {
                 check_exit_code $target_dir
                 print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
-                target=influx_${db}_${dbhost}_${now}.tar${extension}
+                target=influx_${db}_${dbhost#*//}_${now}.tar${extension}
                 generate_checksum
                 move_dbbackup
                 post_dbbackup $db
@@ -121,29 +121,20 @@ backup_influx() {
             for db in ${db_names}; do
                 pre_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="--bucket $db" ; else db=all ; fi
-                target=influx2_${db}_${dbhost}_${now}
+                target=influx2_${db}_${dbhost#*//}_${now}
                 compression
                 print_notice "Dumping Influx2 database: '${db}'"
                 influx backup --org ${dbuser} ${bucket} --host ${dbhost}:${dbport} --token ${dbpass} ${EXTRA_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code $target_dir
                 create_archive
-                target=influx2_${db}_${dbhost}_${now}.tar${extension}
+                target=influx2_${db}_${dbhost#*//}_${now}.tar${extension}
                 generate_checksum
                 move_dbbackup
                 post_dbbackup $db
             done
         ;;
     esac
-}
-
-create_archive() {
-    if [ "${exit_code}" = "0" ] ; then
-        print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
-        tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
-    else
-        print_warn "Skipping creating archive file because backup did not complete successfully"
-    fi
 }
 
 backup_mongo() {
@@ -437,7 +428,6 @@ cleanup_old_data() {
     fi
 }
 
-
 compression() {
    if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
        PARALLEL_COMPRESSION_THREADS=1
@@ -497,6 +487,15 @@ compression() {
             fi
         ;;
     esac
+}
+
+create_archive() {
+    if [ "${exit_code}" = "0" ] ; then
+        print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
+        tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
+    else
+        print_warn "Skipping creating archive file because backup did not complete successfully"
+    fi
 }
 
 generate_checksum() {
