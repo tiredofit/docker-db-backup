@@ -1,3 +1,15 @@
+## 3.2.0 2022-03-31 <dave at tiredofit dot ca>
+
+   ### Added
+      - Install InfluxDB2 Client alongside version 1 (amd64 and arm64)
+      - Introduce InfluxDB 2 backup support
+      - Introduce multiple compression types other than Gzip for Influx 1/2
+      - Introduce compression for MSSQL backups
+
+   ### Changed
+      - Testing for Host availability for CouchDB and InfluxDB
+
+
 ## 3.1.3 2022-03-30 <dave at tiredofit dot ca>
 
    ### Changed
@@ -259,7 +271,7 @@
 
 
 ## 2.9.2 2021-10-22 <teenigma@github>
-   
+
    ### Fixed
       - Fix compression failing on Redis backup
 

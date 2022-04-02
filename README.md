@@ -50,6 +50,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
     - [Base Images used](#base-images-used)
     - [Container Options](#container-options)
   - [Database Specific Options](#database-specific-options)
+    - [For Influx DB2:](#for-influx-db2)
   - [Scheduling Options](#scheduling-options)
   - [Backup Options](#backup-options)
     - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
@@ -143,6 +144,11 @@ Be sure to view the following repositories to understand all the customizable op
 | `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |         |
 | `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |         |
 | `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies  |
+| `INFLUX_VERSION`  | What Version of Influx are you backing up from `1`.x or `2.x` series - AMD64 and ARM64 only for `2`                                         |         |
+
+#### For Influx DB2:
+Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
+
 ### Scheduling Options
 | Parameter         | Description                                                                                                                                                                                        | Default |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
