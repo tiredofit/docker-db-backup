@@ -1,3 +1,9 @@
+## 3.2.1 2022-04-03 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix a variety of issues iwth 3.2.0 relating to InfluxDB
+
+
 ## 3.2.0 2022-03-31 <dave at tiredofit dot ca>
 
    ### Added
