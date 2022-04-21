@@ -470,7 +470,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS}"
+            compress_cmd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
@@ -478,9 +478,9 @@ compression() {
             target=${target}.zst
         ;;
         "none" | "false")
-            compress_cmd="cat"
+            compress_cmd="cat "
             compression_type="none"
-            dir_compress_cmd="cat"
+            dir_compress_cmd="cat "
             target_dir=${target}
         ;;
     esac
