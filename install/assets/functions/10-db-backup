@@ -333,14 +333,25 @@ check_availability() {
         ;;
         "influx" )
             counter=0
-            code_received=0
-            while [ "${code_received}" != "200" ]; do
-                code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
-                if [ "${code_received}" = "200" ] ; then break ; fi
-                sleep 5
-                (( counter+=5 ))
-                print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
+            case "${INFLUX_VERSION,,}" in
+                1 )
+                    while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+                        sleep 5
+                        (( counter+=5 ))
+                        print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                    done
+                ;;
+                2 )
+                    code_received=0
+                    while [ "${code_received}" != "200" ]; do
+                        code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
+                        if [ "${code_received}" = "200" ] ; then break ; fi
+                        sleep 5
+                        (( counter+=5 ))
+                        print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    done
+                ;;
+            esac
         ;;
         "mongo" )
             counter=0
