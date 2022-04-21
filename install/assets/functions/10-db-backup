@@ -106,7 +106,7 @@ backup_influx() {
                 target=influx_${db}_${DB_HOST#*//}_${now}
                 compression
                 print_notice "Dumping Influx database: '${db}'"
-                influxd backup ${influx_compression} ${bucket} -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
+                influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code $target_dir
                 print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"

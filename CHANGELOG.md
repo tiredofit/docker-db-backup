@@ -1,3 +1,9 @@
+## 3.2.4 2022-04-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Add -portable flag when backing up Influx
+
+
 ## 3.2.3 2022-04-21 <dave at tiredofit dot ca>
 
    ### Changed
