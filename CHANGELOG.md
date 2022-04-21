@@ -1,3 +1,11 @@
+## 3.2.2 2022-04-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Restore script properly parses DB_PORT entry
+      - Influx Database ready performs different checks dependent on V1/V2
+      - Stop using weird database lowercase variables unneccessarily breaking Docker Secrets
+
+
 ## 3.2.1 2022-04-03 <dave at tiredofit dot ca>
 
    ### Changed
