@@ -1,3 +1,10 @@
+## 3.2.3 2022-04-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for bucket / db name InfluxDB 1.xx
+      - Minor aesthetics, spacing, spelling
+
+
 ## 3.2.2 2022-04-21 <dave at tiredofit dot ca>
 
    ### Changed

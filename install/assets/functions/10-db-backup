@@ -102,7 +102,7 @@ backup_influx() {
         1 )
             for db in ${db_names}; do
                 pre_dbbackup
-                if [ "${db}" != "justbackupeverything" ] ; then bucket="-bucket $db" ; else db=all ; fi
+                if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
                 target=influx_${db}_${DB_HOST#*//}_${now}
                 compression
                 print_notice "Dumping Influx database: '${db}'"
