@@ -110,7 +110,7 @@ get_dbhost() {
         print_debug "Parsed DBHost: ${p_dbhost}"
     fi
 
-    if [ -z "${dbhost}" ] && [ -z "${parsed_host}" ]; then
+    if [ -z "${DB_HOST}" ] && [ -z "${parsed_host}" ]; then
         print_debug "Parsed DBHost Variant: 1 - No Env, No Parsed Filename"
         q_dbhost_variant=1
         q_dbhost_menu=$(cat <<EOF
@@ -119,7 +119,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbhost}" ] && [ -z "${parsed_host}" ]; then
+    if [ -n "${DB_HOST}" ] && [ -z "${parsed_host}" ]; then
         print_debug "Parsed DBHost Variant: 2 - Env, No Parsed Filename"
         q_dbhost_variant=2
         q_dbhost_menu=$(cat <<EOF
@@ -130,7 +130,7 @@ EOF
                         )
     fi
 
-    if [ -z "${dbhost}" ] && [ -n "${parsed_host}" ]; then
+    if [ -z "${DB_HOST}" ] && [ -n "${parsed_host}" ]; then
         print_debug "Parsed DBHostpho Variant: 3 - No Env, Parsed Filename"
         q_dbhost_variant=3
         q_dbhost_menu=$(cat <<EOF
@@ -141,7 +141,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbhost}" ] && [ -n "${parsed_host}" ]; then
+    if [ -n "${DB_HOST}" ] && [ -n "${parsed_host}" ]; then
         print_debug "Parsed DBHost Variant: 4 - Env, Parsed Filename"
         q_dbhost_variant=4
         q_dbhost_menu=$(cat <<EOF
@@ -188,7 +188,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbhost=${dbhost}
+                        r_dbhost=${DB_HOST}
                         break
                     ;;
                     q*  )
@@ -241,7 +241,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbhost=${dbhost}
+                        r_dbhost=${DB_HOST}
                         break
                     ;;
                     f* )
@@ -280,7 +280,7 @@ get_dbtype() {
         ;;
     esac
 
-    if [ -z "${dbtype}" ] && [ -z "${parsed_type}" ]; then
+    if [ -z "${DB_TYPE}" ] && [ -z "${parsed_type}" ]; then
         print_debug "Parsed DBType Variant: 1 - No Env, No Parsed Filename"
         q_dbtype_variant=1
         q_dbtype_menu=$(cat <<EOF
@@ -289,7 +289,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbtype}" ] && [ -z "${parsed_type}" ]; then
+    if [ -n "${DB_TYPE}" ] && [ -z "${parsed_type}" ]; then
         print_debug "Parsed DBType Variant: 2 - Env, No Parsed Filename"
         q_dbtype_variant=2
         q_dbtype_menu=$(cat <<EOF
@@ -299,7 +299,7 @@ EOF
                         )
     fi
 
-    if [ -z "${dbtype}" ] && [ -n "${parsed_type}" ]; then
+    if [ -z "${DB_TYPE}" ] && [ -n "${parsed_type}" ]; then
         print_debug "Parsed DBType Variant: 3 - No Env, Parsed Filename"
         q_dbtype_variant=3
         q_dbtype_menu=$(cat <<EOF
@@ -309,7 +309,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbtype}" ] && [ -n "${parsed_type}" ]; then
+    if [ -n "${DB_TYPE}" ] && [ -n "${parsed_type}" ]; then
         print_debug "Parsed DBType Variant: 4 - Env, Parsed Filename"
         q_dbtype_variant=4
         q_dbtype_menu=$(cat <<EOF
@@ -449,7 +449,7 @@ get_dbname() {
         print_debug "Parsed DBName: ${p_dbhost}"
     fi
 
-    if [ -z "${dbname}" ] && [ -z "${parsed_name}" ]; then
+    if [ -z "${DB_NAME}" ] && [ -z "${parsed_name}" ]; then
         print_debug "Parsed DBName Variant: 1 - No Env, No Parsed Filename"
         q_dbname_variant=1
         q_dbname_menu=$(cat <<EOF
@@ -458,7 +458,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbname}" ] && [ -z "${parsed_name}" ]; then
+    if [ -n "${DB_NAME}" ] && [ -z "${parsed_name}" ]; then
         print_debug "Parsed DBName Variant: 2 - Env, No Parsed Filename"
         q_dbname_variant=2
         q_dbname_menu=$(cat <<EOF
@@ -469,7 +469,7 @@ EOF
                         )
     fi
 
-    if [ -z "${dbname}" ] && [ -n "${parsed_name}" ]; then
+    if [ -z "${DB_NAME}" ] && [ -n "${parsed_name}" ]; then
         print_debug "Parsed DBName Variant: 3 - No Env, Parsed Filename"
         q_dbname_variant=3
         q_dbname_menu=$(cat <<EOF
@@ -480,7 +480,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbname}" ] && [ -n "${parsed_name}" ]; then
+    if [ -n "${DB_NAME}" ] && [ -n "${parsed_name}" ]; then
         print_debug "Parsed DBname Variant: 4 - Env, Parsed Filename"
         q_dbname_variant=4
         q_dbname_menu=$(cat <<EOF
@@ -527,7 +527,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbname=${dbname}
+                        r_dbname=${DB_NAME}
                         break
                     ;;
                     q*  )
@@ -580,7 +580,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbname=${dbname}
+                        r_dbname=${DB_NAME}
                         break
                     ;;
                     f* )
@@ -598,7 +598,7 @@ EOF
 }
 
 get_dbport() {
-    if [ -z "${dbport}" ] ; then
+    if [ -z "${DB_PORT}" ] ; then
         print_debug "Parsed DBPort Variant: 1 - No Env"
         q_dbport_variant=1
         q_dbport_menu=$(cat <<EOF
@@ -607,20 +607,20 @@ EOF
                         )
     fi
 
-    if [ -n "${dbport}" ] ; then
+    if [ -n "${DB_PORT}" ] ; then
         print_debug "Parsed DBPort Variant: 2 - Env"
         q_dbport_variant=2
         q_dbport_menu=$(cat <<EOF
 
     C ) Custom Entered Database Port
-    E ) Environment Variable DB_PORT: '${dbport}'
+    E ) Environment Variable DB_PORT: '${DB_PORT}'
 EOF
                         )
     fi
 
     cat << EOF
 
-What Database Port do you wish to use?
+What Database Port do you wish to use? MySQL/MariaDB typcially listens on port 3306. Postrgresql port 5432. MongoDB 27017
 ${q_dbport_menu}
     Q ) Quit
 
@@ -655,7 +655,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbport=${dbport}
+                        r_dbport=${DB_PORT}
                         break
                     ;;
                     q*  )
@@ -669,7 +669,7 @@ EOF
 }
 
 get_dbuser() {
-    if [ -z "${dbuser}" ] ; then
+    if [ -z "${DB_USER}" ] ; then
         print_debug "Parsed DBUser Variant: 1 - No Env"
         q_dbuser_variant=1
         q_dbuser_menu=$(cat <<EOF
@@ -678,7 +678,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbuser}" ] ; then
+    if [ -n "${DB_USER}" ] ; then
         print_debug "Parsed DBUser Variant: 2 - Env"
         q_dbuser_variant=2
         q_dbuser_menu=$(cat <<EOF
@@ -724,7 +724,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbuser=${dbuser}
+                        r_dbuser=${DB_USER}
                         break
                     ;;
                     q*  )
@@ -738,7 +738,7 @@ EOF
 }
 
 get_dbpass() {
-    if [ -z "${dbpass}" ] ; then
+    if [ -z "${DB_PASS}" ] ; then
         print_debug "Parsed DBPass Variant: 1 - No Env"
         q_dbpass_variant=1
         q_dbpass_menu=$(cat <<EOF
@@ -747,7 +747,7 @@ EOF
                         )
     fi
 
-    if [ -n "${dbpass}" ] ; then
+    if [ -n "${DB_PASS}" ] ; then
         print_debug "Parsed DBPass Variant: 2 - Env"
         q_dbpass_variant=2
         q_dbpass_menu=$(cat <<EOF
@@ -793,7 +793,7 @@ EOF
                         break
                     ;;
                     e* | "" )
-                        r_dbpass=${dbpass}
+                        r_dbpass=${DB_PASS}
                         break
                     ;;
                     q*  )
@@ -809,7 +809,7 @@ EOF
 #### SCRIPT START
 cat << EOF
 
-## ${IMAGE_NAME} Restore Script Version 1.0.1
+## ${IMAGE_NAME} Restore Script
 ## Visit ${IMAGE_REPO_URL}
 ## ####################################################
 
