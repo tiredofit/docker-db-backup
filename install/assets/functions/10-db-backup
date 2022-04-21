@@ -467,6 +467,7 @@ compression() {
             target=${target}.zst
         ;;
         "none" | "false")
+            compress_cmd="cat"
             compression_type="none"
             dir_compress_cmd="cat"
             target_dir=${target}
