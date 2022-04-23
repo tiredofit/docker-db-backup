@@ -1,3 +1,9 @@
+## 3.2.5 2022-04-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for restore still not working with DB_PORT variable
+
+
 ## 3.2.4 2022-04-21 <dave at tiredofit dot ca>
 
    ### Changed
