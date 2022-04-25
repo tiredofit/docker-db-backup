@@ -560,7 +560,9 @@ move_dbbackup() {
             "file" | "filesystem" )
                 print_debug "Moving backup to filesystem"
                 mkdir -p "${DB_DUMP_TARGET}"
-                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                if var_true "${ENABLE_CHECKSUM}" ;then
+                    mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                fi
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
             ;;
             "s3" | "minio" )
@@ -582,7 +584,9 @@ move_dbbackup() {
                 aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 unset s3_ssl
                 unset s3_ca_cert
-                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                if var_true "${ENABLE_CHECKSUM}" ;then
+                    rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                fi
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
         esac

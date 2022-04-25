@@ -1,3 +1,9 @@
+## 3.2.6 2022-04-25 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Stop throwing error trying to move blank file if checksums are not enabled
+
+
 ## 3.2.5 2022-04-23 <dave at tiredofit dot ca>
 
    ### Changed
