@@ -279,7 +279,7 @@ backup_redis() {
     pre_dbbackup
     print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
-    echo bgsave | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
+    echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
@@ -287,6 +287,7 @@ backup_redis() {
         ok=$(echo 'info Persistence' | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
             print_notice "Redis Backup Complete"
+            exit_code=0
             break
         fi
         try=$((try - 1))
@@ -296,6 +297,7 @@ backup_redis() {
     target_original=${target}
     compression
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
+    check_exit_code $target
     generate_checksum
     move_dbbackup
     post_dbbackup all
@@ -430,11 +432,31 @@ check_exit_code() {
 cleanup_old_data() {
     if [ -n "${DB_CLEANUP_TIME}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
-            print_info "Cleaning up old backups"
-            mkdir -p "${DB_DUMP_TARGET}"
-            find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+            case "${BACKUP_LOCATION,,}" in
+                "file" | "filesystem" )
+                    print_info "Cleaning up old backups"
+                    mkdir -p "${DB_DUMP_TARGET}"
+                    find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+                ;;
+                "s3" | "minio" )
+                    print_info "Cleaning up old backups"
+                    aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | while read -r s3_file; do
+                        s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
+                        s3_createdate=$(date -d "$s3_createdate" "+%s")
+                        s3_olderthan=$(echo $(( $(date +%s)-${DB_CLEANUP_TIME}*60 )))
+                        if [[ $s3_createdate -le $s3_olderthan ]] ; then
+                            s3_filename=$(echo $s3_file | awk {'print $4'})
+                            if [ $s3_filename != "" ] ; then
+                                print_debug "Deleting $s3_filename"
+                                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                            fi
+                        fi
+
+                    done
+                ;;
+            esac
         else
-            print_info "Skipping Cleaning up old backups because there were errors in backing up"
+            print_error "Skipping Cleaning up old backups because there were errors in backing up"
         fi
     fi
 }
@@ -446,7 +468,7 @@ compression() {
 
    case "${COMPRESSION,,}" in
         gz* )
-            compress_cmd="pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="silent pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
@@ -454,7 +476,7 @@ compression() {
             target=${target}.gz
         ;;
         bz* )
-            compress_cmd="pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="silent pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
             compression_type="bzip2"
             dir_compress_cmd=${compress_cmd}
             extension=".bz2"
@@ -462,7 +484,7 @@ compression() {
             target=${target}.bz2
         ;;
         xz* )
-            compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="silent pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
             compression_type="xzip"
             dir_compress_cmd=${compress_cmd}
             extension=".xz"
@@ -470,7 +492,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="silent zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
@@ -506,12 +528,12 @@ create_archive() {
         print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
         tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
     else
-        print_warn "Skipping creating archive file because backup did not complete successfully"
+        print_error "Skipping creating archive file because backup did not complete successfully"
     fi
 }
 
 generate_checksum() {
-    if var_true "${ENABLE_CHECKSUM}" ;then
+    if var_true "${ENABLE_CHECKSUM}" ; then
         if [ "${exit_code}" = "0" ] ; then
             case "${CHECKSUM,,}" in
                 "md5" )
@@ -530,13 +552,16 @@ generate_checksum() {
             checksum_value=$(${checksum_command} "${target}" | awk ' { print $1}')
             print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
         else
-            print_warn "Skipping Checksum creation because backup did not complete successfully"
+            print_error "Skipping Checksum creation because backup did not complete successfully"
         fi
     fi
 }
 
 move_dbbackup() {
     if [ "${exit_code}" = "0" ] ; then
+        dbbackup_size="$(stat -c%s "${TEMP_LOCATION}"/"${target}")"
+        dbbackup_date="$(date -r  "${TEMP_LOCATION}"/"${target}" +'%s')"
+
         case "${SIZE_VALUE,,}" in
             "b" | "bytes" )
                 SIZE_VALUE=1
@@ -560,9 +585,7 @@ move_dbbackup() {
             "file" | "filesystem" )
                 print_debug "Moving backup to filesystem"
                 mkdir -p "${DB_DUMP_TARGET}"
-                if var_true "${ENABLE_CHECKSUM}" ;then
-                    mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
-                fi
+                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
             ;;
             "s3" | "minio" )
@@ -581,17 +604,17 @@ move_dbbackup() {
 
                 [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
-                aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
-                unset s3_ssl
-                unset s3_ca_cert
-                if var_true "${ENABLE_CHECKSUM}" ;then
-                    rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                if var_true "${ENABLE_CHECKSUM}" ; then
+                    silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
+
+                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
         esac
     else
-        print_warn "Skipping moving DB Backup to final location because backup did not complete successfully"
+        print_error "Skipping moving DB Backup to final location because backup did not complete successfully"
     fi
 
     rm -rf "${TEMP_LOCATION}"/*
@@ -611,10 +634,11 @@ post_dbbackup() {
 
     if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
         print_notice "Sending Backup Statistics to Zabbix"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "$(stat -c%s "${DB_DUMP_TARGET}"/"${target}")"
-        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "$(date -r  "${DB_DUMP_TARGET}"/"${target}" +'%s')"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "${dbbackup_size}"
+        silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "${dbbackup_date}"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "${exit_code}"
         silent zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.backup_duration -o "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+        if [ "$?" != "0" ] ; then print_error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi
 
     ### Post Script Support
@@ -641,6 +665,8 @@ post_dbbackup() {
     fi
 
     print_notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+    unset s3_ssl
+    unset s3_ca_cert
 }
 
 sanity_test() {
