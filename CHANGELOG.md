@@ -1,3 +1,9 @@
+## 3.3.1 2022-04-30 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Compressing silently was causing 0 byte backups
+
+
 ## 3.3.0 2022-04-30 <dave at tiredofit dot ca>
 
    ### Added

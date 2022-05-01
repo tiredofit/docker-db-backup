@@ -468,7 +468,7 @@ compression() {
 
    case "${COMPRESSION,,}" in
         gz* )
-            compress_cmd="silent pigz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
@@ -476,7 +476,7 @@ compression() {
             target=${target}.gz
         ;;
         bz* )
-            compress_cmd="silent pbzip2 -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="pbzip2 -q -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
             compression_type="bzip2"
             dir_compress_cmd=${compress_cmd}
             extension=".bz2"
@@ -484,7 +484,7 @@ compression() {
             target=${target}.bz2
         ;;
         xz* )
-            compress_cmd="silent pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
             compression_type="xzip"
             dir_compress_cmd=${compress_cmd}
             extension=".xz"
@@ -492,7 +492,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="silent zstd --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="zstd -q -q --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
