@@ -1,3 +1,9 @@
+## 3.3.2 2022-05-02 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add POST_SCRIPT_SKIP_X_VERIFY environment variables to allow for more host compatibility for post scripts
+
+
 ## 3.3.1 2022-04-30 <dave at tiredofit dot ca>
 
    ### Changed
