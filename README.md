@@ -132,6 +132,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
 | `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
 | `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only) | `TRUE`
+| `USE_RESTIC`         | Whether to use restic for backup. `TRUE` or `FALSE` | `FALSE`
 
 ### Database Specific Options
 | Parameter         | Description                                                                                                                                 | Default |
