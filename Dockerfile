@@ -16,37 +16,38 @@ RUN set -ex && \
     apk update && \
     apk upgrade && \
     apk add -t .db-backup-build-deps \
-               build-base \
-               bzip2-dev \
-               git \
-               libarchive-dev \
-               xz-dev \
-               && \
+    build-base \
+    bzip2-dev \
+    git \
+    libarchive-dev \
+    xz-dev \
+    && \
     \
     apk add --no-cache -t .db-backup-run-deps \
-               aws-cli \
-               bzip2 \
-               influxdb \
-               libarchive \
-               mariadb-client \
-               mariadb-connector-c \
-               mongodb-tools \
-               libressl \
-               pigz \
-               postgresql \
-               postgresql-client \
-               pv \
-               redis \
-               sqlite \
-               xz \
-               zstd \
-               && \
+    aws-cli \
+    bzip2 \
+    influxdb \
+    libarchive \
+    mariadb-client \
+    mariadb-connector-c \
+    mongodb-tools \
+    libressl \
+    pigz \
+    postgresql \
+    postgresql-client \
+    pv \
+    redis \
+    restic \
+    sqlite \
+    xz \
+    zstd \
+    && \
     \
     cd /usr/src && \
     \
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
-	x86_64) mssql=true ; influx2=true ; influx_arch=amd64; ;; \
+    x86_64) mssql=true ; influx2=true ; influx_arch=amd64; ;; \
     aarch64 ) influx2=true ; influx_arch=arm64 ;; \
     *) sleep 0.1 ;; \
     esac; \
@@ -63,14 +64,14 @@ RUN set -ex && \
     curl -sSL https://github.com/vasi/pixz/releases/download/v1.0.7/pixz-1.0.7.tar.xz | tar xvfJ - --strip 1 -C /usr/src/pixz && \
     cd /usr/src/pixz && \
     ./configure \
-        --prefix=/usr \
-        --sysconfdir=/etc \
-        --localstatedir=/var \
-        && \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    && \
     make && \
     make install && \
     \
-### Cleanup
+    ### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \
     rm -rf /etc/logrotate.d/redis && \

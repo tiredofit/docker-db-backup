@@ -570,6 +570,7 @@ move_dbbackup() {
                 export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
                 export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
                 export AWS_DEFAULT_REGION=${S3_REGION}
+                export RESTIC_REPOSITORY=s3://${PARAM_AWS_ENDPOINT_URL}/${S3_BUCKET}
                 if [ -f "${S3_CERT_CA_FILE}" ] ; then
                     print_debug "Using Custom CA for S3 Backups"
                     s3_ca_cert="--ca-bundle ${S3_CERT_CA_FILE}"
@@ -581,7 +582,8 @@ move_dbbackup() {
 
                 [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
-                aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                # aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                restic --repo s3://${PARAM_AWS_ENDPOINT_URL}/${S3_BUCKET}/${S3_PATH}/${target} backup ${TEMP_LOCATION}/${target}
                 unset s3_ssl
                 unset s3_ca_cert
                 if var_true "${ENABLE_CHECKSUM}" ;then
