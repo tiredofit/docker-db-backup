@@ -605,7 +605,6 @@ move_dbbackup() {
 
                 [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
-<<<<<<< HEAD
                 if var_true "${USE_RESTIC}" ; then
                     export RESTIC_REPOSITORY=s3:${S3_HOST}/${S3_BUCKET}
                     restic backup ${TEMP_LOCATION}/${target}
@@ -618,9 +617,6 @@ move_dbbackup() {
                 if var_true "${ENABLE_CHECKSUM}" ;then
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
-=======     
->>>>>>> 7d7cb9587d1718bc37074d0abb084e0a7874723c
-                
 
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"
