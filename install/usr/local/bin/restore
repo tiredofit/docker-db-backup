@@ -66,6 +66,7 @@ EOF
         exit 0
         ;;
         "-i" )
+            echo "interactive mode"
             interactive_mode=true
         ;;
         * )
@@ -640,7 +641,7 @@ EOF
         2 )
             while true; do
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
-                case "${q_dbport_menu,,}" in
+                case "${q_dbname_menu,,}" in
                     c* )
                         counter=1
                         q_dbport=" "

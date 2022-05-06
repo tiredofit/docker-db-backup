@@ -1,13 +1,27 @@
-## 3.2.6 2022-04-25 <dave at tiredofit dot ca>
+## 3.3.2 2022-05-02 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add POST_SCRIPT_SKIP_X_VERIFY environment variables to allow for more host compatibility for post scripts
+
+
+## 3.3.1 2022-04-30 <dave at tiredofit dot ca>
 
    ### Changed
-      - Stop throwing error trying to move blank file if checksums are not enabled
+      - Compressing silently was causing 0 byte backups
 
 
-## 3.2.5 2022-04-23 <dave at tiredofit dot ca>
+## 3.3.0 2022-04-30 <dave at tiredofit dot ca>
 
+   ### Added
+      - Ability to auto clean old S3 / Minio Hosts like what occurs on filesysten
+      - Alert user how to turn off Zabbix Monitoring if fails
+      - Allow Zabbix Monitoring to work with S3
+      - Silence some more compression statements
    ### Changed
-      - Fix for restore still not working with DB_PORT variable
+      - Fix for Redis not backing up properly
+      - Start sending checksums for S3 Outputs
+      - Cleanup some code functions
+      - FIx Container Log Level always in DEBUG
 
 
 ## 3.2.4 2022-04-21 <dave at tiredofit dot ca>

@@ -262,6 +262,9 @@ Outputs the following on the console:
 
 If you wish to change the size value from bytes to megabytes set environment variable `SIZE_VALUE=megabytes`
 
+You must make your scripts executible otherwise there is an internal check that will skip trying to run it otherwise.
+If for some reason your filesystem or host is not detecting it right, use the environment variable `POST_SCRIPT_SKIP_X_VERIFY=TRUE` to bypass.
+
 ## Support
 
 These images were built to serve a specific need in a production environment and gradually have had more functionality added based on requests from the community.

@@ -4,7 +4,6 @@ source /assets/functions/00-container
 source /assets/functions/10-db-backup
 source /assets/defaults/10-db-backup
 PROCESS_NAME="db-backup"
-CONTAINER_LOG_LEVEL=DEBUG
 
 bootstrap_variables
 
