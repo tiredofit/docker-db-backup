@@ -8,8 +8,8 @@ ENV INFLUX2_VERSION=2.2.1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE \
     CONTAINER_PROCESS_RUNAWAY_PROTECTOR=FALSE \
-    IMAGE_NAME="tiredofit/db-backup" \
-    IMAGE_REPO_URL="https://github.com/tiredofit/docker-db-backup/"
+    IMAGE_NAME="theraymy/db-backup" \
+    IMAGE_REPO_URL="https://github.com/LeRaymy/docker-db-backup"
 
 ### Dependencies
 RUN set -ex && \
