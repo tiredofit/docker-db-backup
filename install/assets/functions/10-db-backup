@@ -607,7 +607,7 @@ move_dbbackup() {
 
                 if var_true "${USE_RESTIC}" ; then
                     export RESTIC_REPOSITORY=s3:${S3_HOST}/${S3_BUCKET}
-                    restic backup ${TEMP_LOCATION}/${target}
+                    restic backup ${TEMP_LOCATION}/${target} --host ${RESTIC_HOSTNAME}
                 else
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
