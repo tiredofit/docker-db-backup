@@ -606,7 +606,11 @@ move_dbbackup() {
 
 pre_dbbackup() {
     dbbackup_start_time=$(date +"%s")
-    now=$(date +"%Y%m%d-%H%M%S")
+    if var_true "${USE_RESTIC}" ; then
+        now="restic"
+    else
+        now=$(date +"%Y%m%d-%H%M%S")
+    fi
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
     target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.sql
