@@ -1,3 +1,9 @@
+## 3.3.4 2022-06-03 <rozdzynski@github>
+
+   ### Fixed
+      - S3 backups failing with special characters in filename
+
+
 ## 3.3.3 2022-05-24 <dave at tiredofit dot ca>
 
    ### Added
