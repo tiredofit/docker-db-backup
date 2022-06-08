@@ -55,7 +55,7 @@ The image will also allow you to use environment variables or Docker secrets use
 
 The script can also be executed skipping the interactive mode by using the following syntax/
 
-    $(basename $0) <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>
+    $(basename "$0") <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>
 
 If you only enter some of the arguments you will be prompted to fill them in.
 
@@ -70,7 +70,7 @@ EOF
             interactive_mode=true
         ;;
         * )
-        interactive_mode=false
+            interactive_mode=false
         ;;
     esac
 fi
@@ -78,7 +78,7 @@ fi
 get_filename() {
     COLUMNS=12
     prompt="Please select a file to restore:"
-    options=( $(find ${DB_DUMP_TARGET} -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
+    options=( $(find "${DB_DUMP_TARGET}" -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
     PS3="$prompt "
     select opt in "${options[@]}" "Custom" "Quit" ; do
         if (( REPLY == 2 + ${#options[@]} )) ; then
@@ -641,7 +641,7 @@ EOF
         2 )
             while true; do
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
-                case "${q_dbname_menu,,}" in
+                case "${q_port_menu,,}" in
                     c* )
                         counter=1
                         q_dbport=" "
@@ -944,12 +944,12 @@ case "${r_dbtype}" in
             mongo_compression="--gzip"
         fi
         if [ -n "${r_dbuser}" ] ; then
-            mongo_user="-u ${r_dbuser}"
+            mongo_user="-u=${r_dbuser}"
         fi
         if [ -n "${r_dbpass}" ] ; then
-            mongo_pass="-u ${r_dbpass}"
+            mongo_pass="-p=${r_dbpass}"
         fi
-        mongorestore ${mongo_compression} -d ${r_dbname} -h ${r_dbhost} --port ${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
+        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
         exit_code=$?
     ;;
     * )

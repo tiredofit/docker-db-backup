@@ -1,3 +1,10 @@
+## 3.3.5 2022-06-08 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix DB Port parameter not being able to be input in restore script
+      - Fix MongoDB restore questionnaire
+
+
 ## 3.3.4 2022-06-03 <rozdzynski@github>
 
    ### Fixed
