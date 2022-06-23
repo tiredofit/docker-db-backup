@@ -1,3 +1,9 @@
+## 3.3.7 2022-06-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Allow overrides to actually override with the restore script
+
+
 ## 3.3.6 2022-06-23 <dave at tiredofit dot ca>
 
    ### Changed
