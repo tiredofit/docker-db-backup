@@ -852,11 +852,11 @@ fi
 print_debug "Database Host '${r_dbhost}'"
 
 ## Question Database Name
-if [ -n "${3}" ]; then
-    if [ ! -f "${3}" ]; then
+if [ -n "${4}" ]; then
+    if [ ! -f "${4}" ]; then
         get_dbname
     else
-        r_dbname="${3}"
+        r_dbname="${4}"
     fi
 else
     get_dbname
@@ -864,11 +864,11 @@ fi
 print_debug "Database Name '${r_dbname}'"
 
 ## Question Database User
-if [ -n "${4}" ]; then
-    if [ ! -f "${4}" ]; then
+if [ -n "${5}" ]; then
+    if [ ! -f "${5}" ]; then
         get_dbuser
     else
-        r_dbuser="${4}"
+        r_dbuser="${5}"
     fi
 else
     get_dbuser
@@ -876,11 +876,11 @@ fi
 print_debug "Database User '${r_dbuser}'"
 
 ## Question Database Password
-if [ -n "${5}" ]; then
-    if [ ! -f "${5}" ]; then
+if [ -n "${6}" ]; then
+    if [ ! -f "${6}" ]; then
         get_dbpass
     else
-        r_dbpass="${5}"
+        r_dbpass="${6}"
     fi
 else
     get_dbpass
@@ -888,11 +888,11 @@ fi
 print_debug "Database Pass '${r_dbpass}'"
 
 ## Question Database Port
-if [ -n "${6}" ]; then
-    if [ ! -f "${6}" ]; then
+if [ -n "${7}" ]; then
+    if [ ! -f "${7}" ]; then
         get_dbport
     else
-        r_dbport="${6}"
+        r_dbport="${7}"
     fi
 else
     get_dbport

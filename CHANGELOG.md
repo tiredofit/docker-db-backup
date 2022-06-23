@@ -1,3 +1,9 @@
+## 3.3.6 2022-06-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for restore script when using all 7 arguments
+
+
 ## 3.3.5 2022-06-08 <dave at tiredofit dot ca>
 
    ### Changed
