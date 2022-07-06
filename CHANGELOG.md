@@ -1,3 +1,34 @@
+## 3.3.7 2022-06-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Allow overrides to actually override with the restore script
+
+
+## 3.3.6 2022-06-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for restore script when using all 7 arguments
+
+
+## 3.3.5 2022-06-08 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix DB Port parameter not being able to be input in restore script
+      - Fix MongoDB restore questionnaire
+
+
+## 3.3.4 2022-06-03 <rozdzynski@github>
+
+   ### Fixed
+      - S3 backups failing with special characters in filename
+
+
+## 3.3.3 2022-05-24 <dave at tiredofit dot ca>
+
+   ### Added
+      - Alpine 3.16 base
+
+
 ## 3.3.2 2022-05-02 <dave at tiredofit dot ca>
 
    ### Added

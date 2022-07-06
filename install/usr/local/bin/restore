@@ -55,7 +55,7 @@ The image will also allow you to use environment variables or Docker secrets use
 
 The script can also be executed skipping the interactive mode by using the following syntax/
 
-    $(basename $0) <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>
+    $(basename "$0") <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>
 
 If you only enter some of the arguments you will be prompted to fill them in.
 
@@ -70,7 +70,7 @@ EOF
             interactive_mode=true
         ;;
         * )
-        interactive_mode=false
+            interactive_mode=false
         ;;
     esac
 fi
@@ -78,7 +78,7 @@ fi
 get_filename() {
     COLUMNS=12
     prompt="Please select a file to restore:"
-    options=( $(find ${DB_DUMP_TARGET} -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
+    options=( $(find "${DB_DUMP_TARGET}" -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
     PS3="$prompt "
     select opt in "${options[@]}" "Custom" "Quit" ; do
         if (( REPLY == 2 + ${#options[@]} )) ; then
@@ -641,7 +641,7 @@ EOF
         2 )
             while true; do
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
-                case "${q_dbname_menu,,}" in
+                case "${q_port_menu,,}" in
                     c* )
                         counter=1
                         q_dbport=" "
@@ -829,11 +829,7 @@ print_debug "Filename to recover '${r_filename}'"
 
 ## Question Database Type
 if [ -n "${2}" ]; then
-    if [ ! -f "${2}" ]; then
-        get_dbtype
-    else
-        r_dbtype="${2}"
-    fi
+    r_dbtype="${2}"
 else
     get_dbtype
 fi
@@ -841,59 +837,39 @@ print_debug "Database type '${r_dbtype}'"
 
 ## Question Database Host
 if [ -n "${3}" ]; then
-    if [ ! -f "${3}" ]; then
-        get_dbhost
-    else
-        r_dbhost="${3}"
-    fi
+    r_dbhost="${3}"
 else
     get_dbhost
 fi
 print_debug "Database Host '${r_dbhost}'"
 
 ## Question Database Name
-if [ -n "${3}" ]; then
-    if [ ! -f "${3}" ]; then
-        get_dbname
-    else
-        r_dbname="${3}"
-    fi
+if [ -n "${4}" ]; then
+    r_dbname="${4}"
 else
     get_dbname
 fi
 print_debug "Database Name '${r_dbname}'"
 
 ## Question Database User
-if [ -n "${4}" ]; then
-    if [ ! -f "${4}" ]; then
-        get_dbuser
-    else
-        r_dbuser="${4}"
-    fi
+if [ -n "${5}" ]; then
+    r_dbuser="${5}"
 else
     get_dbuser
 fi
 print_debug "Database User '${r_dbuser}'"
 
 ## Question Database Password
-if [ -n "${5}" ]; then
-    if [ ! -f "${5}" ]; then
-        get_dbpass
-    else
-        r_dbpass="${5}"
-    fi
+if [ -n "${6}" ]; then
+    r_dbpass="${6}"
 else
     get_dbpass
 fi
 print_debug "Database Pass '${r_dbpass}'"
 
 ## Question Database Port
-if [ -n "${6}" ]; then
-    if [ ! -f "${6}" ]; then
-        get_dbport
-    else
-        r_dbport="${6}"
-    fi
+if [ -n "${7}" ]; then
+    r_dbport="${7}"
 else
     get_dbport
 fi
@@ -944,12 +920,12 @@ case "${r_dbtype}" in
             mongo_compression="--gzip"
         fi
         if [ -n "${r_dbuser}" ] ; then
-            mongo_user="-u ${r_dbuser}"
+            mongo_user="-u=${r_dbuser}"
         fi
         if [ -n "${r_dbpass}" ] ; then
-            mongo_pass="-u ${r_dbpass}"
+            mongo_pass="-p=${r_dbpass}"
         fi
-        mongorestore ${mongo_compression} -d ${r_dbname} -h ${r_dbhost} --port ${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
+        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
         exit_code=$?
     ;;
     * )
