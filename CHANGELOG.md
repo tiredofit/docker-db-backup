@@ -1,3 +1,9 @@
+## 3.3.8 2022-07-09 <dave at tiredofit dot ca>
+
+   ### Added
+      - MSSQL Client Tools 18.0.1.1-1
+
+
 ## 3.3.7 2022-06-23 <dave at tiredofit dot ca>
 
    ### Changed
