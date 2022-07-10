@@ -641,7 +641,7 @@ EOF
         2 )
             while true; do
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
-                case "${q_port_menu,,}" in
+                case "${q_dbport_menu,,}" in
                     c* )
                         counter=1
                         q_dbport=" "
