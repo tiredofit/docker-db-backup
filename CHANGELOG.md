@@ -1,3 +1,9 @@
+## 3.3.9 2022-07-09 <fardeau@github>
+
+   ### Fixed
+      - Remaining work on interactive mode for entering port on restore script
+
+
 ## 3.3.8 2022-07-09 <dave at tiredofit dot ca>
 
    ### Added
