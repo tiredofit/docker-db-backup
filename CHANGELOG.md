@@ -1,3 +1,9 @@
+## 3.3.10 2022-07-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove MSSQL install packages properly
+
+
 ## 3.3.9 2022-07-09 <fardeau@github>
 
    ### Fixed
