@@ -1,3 +1,9 @@
+## 3.3.11 2022-07-22 <khoazero123@github>
+
+   ### Fixed
+      - Restore script not properly detecting postgres backups
+
+
 ## 3.3.10 2022-07-19 <dave at tiredofit dot ca>
 
    ### Changed
