@@ -644,11 +644,11 @@ post_dbbackup() {
     ### Post Script Support
     if [ -n "${POST_SCRIPT}" ] ; then
         if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
         else
             if [ -x "${POST_SCRIPT}" ] ; then
                 print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
             else
                 print_error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
             fi
@@ -659,12 +659,12 @@ post_dbbackup() {
     if [ -d "/assets/custom-scripts/" ] ; then
         for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
             if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
             else
                 if [ -x "${f}" ] ; then
                     print_notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
                 else
                     print_error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
