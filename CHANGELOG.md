@@ -1,3 +1,9 @@
+## 3.3.12 2022-08-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - arifer612@github contributed a fix for incorrect case of "filesize" variable when using post backup scripts
+
+
 ## 3.3.11 2022-07-22 <khoazero123@github>
 
    ### Fixed
