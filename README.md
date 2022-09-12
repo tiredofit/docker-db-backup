@@ -238,7 +238,7 @@ If you only enter some of the arguments you will be prompted to fill them in.
 ### Custom Scripts
 
 #### Pre Backup
-If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in `/assets/custom/pre`. See the following example to utilize:
+If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in `/assets/custom-scripts/pre`. See the following example to utilize:
 
 ````bash
 $ cat pre-script.sh
@@ -263,7 +263,7 @@ Outputs the following on the console:
 `mysql Backup Starting on example-db for example on 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
 
 #### Post backup
-If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in `/assets/custom`. See the following example to utilize:
+If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in `/assets/custom-scripts`. See the following example to utilize:
 
 ````bash
 $ cat post-script.sh
