@@ -156,13 +156,14 @@ Be sure to view the following repositories to understand all the customizable op
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
 
 ### Scheduling Options
-| Parameter         | Description                                                                                                                                                                                        | Default |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`  |
-| `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |         |
-|                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |         |
-|                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |         |
-| `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE` |
+| Parameter          | Description                                                                                                                                                                                        | Default   |
+|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `DB_DUMP_FREQ`     | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`    |
+| `DB_DUMP_BEGIN`    | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |           |
+|                    | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |           |
+|                    | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |           |
+| `DB_DUMP_TARGET`   | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
+| `DB_CLEANUP_TIME`  | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 ### Backup Options
