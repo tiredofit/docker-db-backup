@@ -468,7 +468,10 @@ compression() {
 
    case "${COMPRESSION,,}" in
         gz* )
-            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            if var_true "${GZ_RSYNCABLE}" ; then
+                gz_rsyncable=--rsyncable
+            fi
+            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
