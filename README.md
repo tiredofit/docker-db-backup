@@ -59,6 +59,8 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
   - [Manual Backups](#manual-backups)
   - [Restoring Databases](#restoring-databases)
   - [Custom Scripts](#custom-scripts)
+    - [Pre Backup](#pre-backup)
+    - [Post backup](#post-backup)
 - [Support](#support)
   - [Usage](#usage)
   - [Bugfixes](#bugfixes)
@@ -104,10 +106,11 @@ Images are built primarily for `amd64` architecture, and may also include builds
 ### Persistent Storage
 
 The following directories are used for configuration and can be mapped for persistent storage.
-| Directory                | Description                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `/backup`                | Backups                                                                            |
-| `/assets/custom-scripts` | *Optional* Put custom scripts in this directory to execute after backup operations |
+| Directory                    | Description                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `/backup`                    | Backups                                                                             |
+| `/assets/custom-scripts/pre` | *Optional* Put custom scripts in this directory to execute before backup operations |
+| `/assets/custom-scripts`     | *Optional* Put custom scripts in this directory to execute after backup operations  |
 
 ### Environment Variables
 
@@ -130,21 +133,24 @@ Be sure to view the following repositories to understand all the customizable op
 | `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 | `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
+| `PRE_SCRIPT`         | Fill this variable in with a command to execute post the script backing up                                                       |                 |
 | `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
-| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only) | `TRUE`
+| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
-| Parameter         | Description                                                                                                                                 | Default |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                             |         |
-| `DB_TYPE`         | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                      |         |
-| `DB_HOST`         | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                               |         |
-| `DB_NAME`         | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2` |         |
-| `DB_NAME_EXCLUDE` | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                 |         |
-| `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |         |
-| `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |         |
-| `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies  |
-| `INFLUX_VERSION`  | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                           |         |
+| Parameter         | Description                                                                                                                                 | Default   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                             |           |
+| `DB_TYPE`         | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                      |           |
+| `DB_HOST`         | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                               |           |
+| `DB_NAME`         | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2` |           |
+| `DB_NAME_EXCLUDE` | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                 |           |
+| `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |           |
+| `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |           |
+| `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies    |
+| `INFLUX_VERSION`  | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                           |           |
+| `MONGO_HOST_TYPE` | Connect to regular `mongodb` or `atlas`                                                                                                     | `mongodb` |
+|                   | You can also skip this and override the uri prefix with `MONGO_URI_PREFIX=mongodb+srv://` or whatever you would like                        |           |
 
 #### For Influx DB2:
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
@@ -231,7 +237,33 @@ If you only enter some of the arguments you will be prompted to fill them in.
 
 ### Custom Scripts
 
-If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in this directory. See the following example to utilize:
+#### Pre Backup
+If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in `/assets/custom/pre`. See the following example to utilize:
+
+````bash
+$ cat pre-script.sh
+##!/bin/bash
+
+# #### Example Pre Script
+# #### $2=DB_TYPE (Type of Backup)
+# #### $3=DB_HOST (Backup Host)
+# #### #4=DB_NAME (Name of Database backed up
+# #### $5=BACKUP START TIME (Seconds since Epoch)
+# #### $8=BACKUP FILENAME (Filename)
+
+echo "${2} Backup Starting on ${3} for ${4} on ${5} ending ${6} for a duration of ${7} seconds. Filename: ${8} Size: ${9} bytes MD5: ${10}"
+````
+
+      ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${target}"
+
+
+Outputs the following on the console:
+
+`mysql Backup Starting on example-db for example on 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+
+#### Post backup
+If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in `/assets/custom`. See the following example to utilize:
 
 ````bash
 $ cat post-script.sh

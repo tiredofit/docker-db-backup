@@ -10,7 +10,10 @@ bootstrap_variables() {
         ;;
         influx* )
             dbtype=influx
-            DB_PORT=${DB_PORT:-8088}
+            case "${INFLUX_VERSION}" in
+                1) DB_PORT=${DB_PORT:-8088} ;;
+                2) DB_PORT=${DB_PORT:-8086} ;;
+            esac
             file_env 'DB_USER'
             file_env 'DB_PASS'
             sanity_var INFLUX_VERSION "What InfluxDB version you are backing up from '1' or '2'"
@@ -78,9 +81,10 @@ bootstrap_variables() {
 }
 
 backup_couch() {
-    pre_dbbackup
+    prepare_dbbackup
     target=couch_${DB_NAME}_${DB_HOST#*//}_${now}.txt
     compression
+    pre_dbbackup ${DB_NAME}
     print_notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
     curl -sSL -X GET ${DB_HOST}:${DB_PORT}/${DB_NAME}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
     exit_code=$?
@@ -101,10 +105,11 @@ backup_influx() {
     case "${INFLUX_VERSION,,}" in
         1 )
             for db in ${db_names}; do
-                pre_dbbackup
+                prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
                 target=influx_${db}_${DB_HOST#*//}_${now}
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping Influx database: '${db}'"
                 influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
@@ -119,10 +124,11 @@ backup_influx() {
         ;;
         2 )
             for db in ${db_names}; do
-                pre_dbbackup
+                prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="--bucket $db" ; else db=all ; fi
                 target=influx2_${db}_${DB_HOST#*//}_${now}
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping Influx2 database: '${db}'"
                 influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
@@ -138,7 +144,7 @@ backup_influx() {
 }
 
 backup_mongo() {
-    pre_dbbackup
+    prepare_dbbackup
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
         target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive
     else
@@ -146,8 +152,14 @@ backup_mongo() {
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
+    if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
+        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
+    else
+        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb://"}
+    fi
+    pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri="${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT}" ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -156,9 +168,10 @@ backup_mongo() {
 }
 
 backup_mssql() {
-    pre_dbbackup
+    prepare_dbbackup
     target=mssql_${DB_NAME,,}_${DB_HOST,,}_${now}.bak
     compression
+    pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
     /opt/mssql-tools/bin/sqlcmd -E -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} –Q "BACKUP DATABASE \[${DB_NAME}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
@@ -194,9 +207,10 @@ backup_mysql() {
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
-                pre_dbbackup
+                prepare_dbbackup
                 target=mysql_${db}_${DB_HOST,,}_${now}.sql
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
@@ -207,9 +221,10 @@ backup_mysql() {
         done
     else
         print_debug "Not splitting database dumps into their own files"
-        pre_dbbackup
+        prepare_dbbackup
         target=mysql_all_${DB_HOST,,}_${now}.sql
         compression
+        pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
@@ -241,9 +256,10 @@ backup_pgsql() {
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
-                pre_dbbackup
+                prepare_dbbackup
                 target=pgsql_${db}_${DB_HOST,,}_${now}.sql
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
@@ -254,9 +270,10 @@ backup_pgsql() {
         done
     else
         print_debug "Not splitting database dumps into their own files"
-        pre_dbbackup
+        prepare_dbbackup
         target=pgsql_all_${DB_HOST,,}_${now}.sql
         compression
+        pre_dbbackup all
         print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         tmp_db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names  | xargs); do
@@ -276,7 +293,7 @@ backup_pgsql() {
 }
 
 backup_redis() {
-    pre_dbbackup
+    prepare_dbbackup
     print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
     echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
@@ -296,6 +313,7 @@ backup_redis() {
     done
     target_original=${target}
     compression
+    pre_dbbackup all
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
     check_exit_code $target
     generate_checksum
@@ -304,11 +322,12 @@ backup_redis() {
 }
 
 backup_sqlite3() {
-    pre_dbbackup
+    prepare_dbbackup
     db=$(basename "${DB_HOST}")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
     compression
+    pre_dbbackup $db
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
     sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
@@ -623,12 +642,45 @@ move_dbbackup() {
     rm -rf "${TEMP_LOCATION}"/*
 }
 
-pre_dbbackup() {
+prepare_dbbackup() {
     dbbackup_start_time=$(date +"%s")
     now=$(date +"%Y%m%d-%H%M%S")
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
     target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.sql
+}
+
+pre_dbbackup() {
+    ### Pre Script Support
+    if [ -n "${PRE_SCRIPT}" ] ; then
+        if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+            eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+        else
+            if [ -x "${PRE_SCRIPT}" ] ; then
+                print_notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
+                eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                print_error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Pre Backup Custom Script Support
+    if [ -d "/assets/custom-scripts/pre/" ] ; then
+        for f in $(find /assets/custom-scripts/pre/ -name \*.sh -type f); do
+            if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+                ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                if [ -x "${f}" ] ; then
+                    print_notice "Executing pre backup custom script : '${f}'"
+                    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+                    ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+                else
+                    print_error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
 }
 
 post_dbbackup() {
