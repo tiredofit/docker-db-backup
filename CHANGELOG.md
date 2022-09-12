@@ -1,3 +1,14 @@
+## 3.4.0 2022-09-12 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add GZ_RSYNCABLE environment variable for better rsync compatibility (Credit teun95@github)
+      - Add Pre Backup Script Support
+      - Add MongoDB Atlas Support
+
+   ### Changed
+      - Fix Default Port for Influx 2 DB Hosts
+
+
 ## 3.3.12 2022-08-15 <dave at tiredofit dot ca>
 
    ### Changed
