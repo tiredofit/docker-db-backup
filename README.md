@@ -59,6 +59,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
   - [Manual Backups](#manual-backups)
   - [Restoring Databases](#restoring-databases)
   - [Custom Scripts](#custom-scripts)
+    - [Path Options](#path-options)
     - [Pre Backup](#pre-backup)
     - [Post backup](#post-backup)
 - [Support](#support)
@@ -106,11 +107,11 @@ Images are built primarily for `amd64` architecture, and may also include builds
 ### Persistent Storage
 
 The following directories are used for configuration and can be mapped for persistent storage.
-| Directory                    | Description                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| `/backup`                    | Backups                                                                             |
-| `/assets/custom-scripts/pre` | *Optional* Put custom scripts in this directory to execute before backup operations |
-| `/assets/custom-scripts`     | *Optional* Put custom scripts in this directory to execute after backup operations  |
+| Directory              | Description                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `/backup`              | Backups                                                                             |
+| `/assets/scripts/pre`  | *Optional* Put custom scripts in this directory to execute before backup operations |
+| `/assets/scripts/post` | *Optional* Put custom scripts in this directory to execute after backup operations  |
 
 ### Environment Variables
 
@@ -133,8 +134,8 @@ Be sure to view the following repositories to understand all the customizable op
 | `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 | `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
-| `PRE_SCRIPT`         | Fill this variable in with a command to execute post the script backing up                                                       |                 |
-| `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
+| `PRE_SCRIPT`         | Fill this variable in with a command to execute pre backing up                                                                   |                 |
+| `POST_SCRIPT`        | Fill this variable in with a command to execute post backing up                                                                  |                 |
 | `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
@@ -165,7 +166,9 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `DB_DUMP_TARGET`   | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
 | `DB_CLEANUP_TIME`  | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
 
+
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
+
 ### Backup Options
 | Parameter                      | Description                                                                                                                  | Default        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -238,33 +241,41 @@ If you only enter some of the arguments you will be prompted to fill them in.
 
 ### Custom Scripts
 
+#### Path Options
+
+| Parameter              | Description                                                                 | Default                 |
+| ---------------------- | --------------------------------------------------------------------------- | ----------------------- |
+| `SCRIPT_LOCATION_PRE`  | Location on filesystem inside container to execute bash scripts pre backup  | `/assets/scripts/pre/`  |
+| `SCRIPT_LOCATION_POST` | Location on filesystem inside container to execute bash scripts post backup | `/assets/scripts/post/` |
+
 #### Pre Backup
-If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in `/assets/custom-scripts/pre`. See the following example to utilize:
+If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in the location defined in `SCRIPT_LOCATION_PRE`. See the following example to utilize:
 
 ````bash
 $ cat pre-script.sh
 ##!/bin/bash
 
 # #### Example Pre Script
-# #### $2=DB_TYPE (Type of Backup)
-# #### $3=DB_HOST (Backup Host)
-# #### #4=DB_NAME (Name of Database backed up
-# #### $5=BACKUP START TIME (Seconds since Epoch)
-# #### $8=BACKUP FILENAME (Filename)
+# #### $1=DB_TYPE (Type of Backup)
+# #### $2=DB_HOST (Backup Host)
+# #### $3=DB_NAME (Name of Database backed up
+# #### $4=BACKUP START TIME (Seconds since Epoch)ff
+# #### $5=BACKUP FILENAME (Filename)
 
-echo "${2} Backup Starting on ${3} for ${4} on ${5} ending ${6} for a duration of ${7} seconds. Filename: ${8} Size: ${9} bytes MD5: ${10}"
+echo "${1} Backup Starting on ${2} for ${3} at ${4}. Filename: ${5}"
 ````
 
-      ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${target}"
+    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+    ${f} "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${target}"
 
 
 Outputs the following on the console:
 
-`mysql Backup Starting on example-db for example on 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+
 
 #### Post backup
-If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in `/assets/custom-scripts`. See the following example to utilize:
+If you want to execute a custom script at the end of a backup, you can drop bash scripts with the extension of `.sh` in the location defined in `SCRIPT_LOCATION_POST`. Also to support legacy users `/assets/custom-scripts` is also scanned and executed.See the following example to utilize:
 
 ````bash
 $ cat post-script.sh

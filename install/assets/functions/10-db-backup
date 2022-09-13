@@ -666,8 +666,14 @@ pre_dbbackup() {
     fi
 
     ### Pre Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/pre/" ] ; then
-        for f in $(find /assets/custom-scripts/pre/ -name \*.sh -type f); do
+    if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
+        print_warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${SCRIPT_LOCATION_PRE}'"
+        mkdir -p "${SCRIPT_LOCATION_PRE}"
+        silent cp /assets/custom-scripts/pre/* "${SCRIPT_LOCATION_PRE}"
+    fi
+
+    if [ -d "${SCRIPT_LOCATION_PRE}" ] && dir_notempty "${SCRIPT_LOCATION_PRE}" ; then
+        for f in $(find ${SCRIPT_LOCATION_PRE} -name \*.sh -type f); do
             if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
                 ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
             else
@@ -711,8 +717,14 @@ post_dbbackup() {
     fi
 
     ### Post Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/" ] ; then
-        for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
+    if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
+        print_warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${SCRIPT_LOCATION_POST}'"
+        mkdir -p "${SCRIPT_LOCATION_POST}"
+        silent cp /assets/custom-scripts/* "${SCRIPT_LOCATION_POST}"
+    fi
+
+    if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
+        for f in $(find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
             if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
                 ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
             else

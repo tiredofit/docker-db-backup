@@ -1,3 +1,12 @@
+## 3.4.1 2022-09-13 <dave at tiredofit dot ca>
+
+   ### Added
+      - Introduce environment variables for SCRIPT_LOCATION_POST and SCRIPT_LOCATION_PRE for better seperation
+
+   ### Changed
+      - Introduce deprecation warning for /assets/custom-scripts and /assets/custom-scripts/pre
+
+
 ## 3.4.0 2022-09-12 <dave at tiredofit dot ca>
 
    ### Added
