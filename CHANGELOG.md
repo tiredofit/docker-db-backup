@@ -1,10 +1,18 @@
 ## 3.4.1 2022-09-13 <dave at tiredofit dot ca>
 
-   ### Added
-      - Introduce environment variables for SCRIPT_LOCATION_POST and SCRIPT_LOCATION_PRE for better seperation
+### Added
+- Introduce environment variables for SCRIPT_LOCATION_POST and SCRIPT_LOCATION_PRE for better seperation
+   
+### Deprecated
 
-   ### Changed
-      - Introduce deprecation warning for /assets/custom-scripts and /assets/custom-scripts/pre
+- Introduce deprecation warning for the custom script paths `/assets/custom-scripts` and `/assets/custom-scripts/pre`. These
+paths will continue to work for now but support may be removed in the next major version release. To support the new
+default paths your scripts should be moved as follows:
+
+  |Script Type|Old Path (Deprecated)|New Environment Variable|Environment Value Default|
+  |-----------|--------|-------------------------|----------------|
+  |Pre|`/assets/custom-scripts/pre`|SCRIPT_LOCATION_PRE|`/assets/scripts/pre`|
+  |Post|`/assets/custom-scripts`|SCRIPT_LOCATION_POST|`/assets/scripts/post`|
 
 
 ## 3.4.0 2022-09-12 <dave at tiredofit dot ca>
