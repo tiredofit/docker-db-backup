@@ -1,3 +1,9 @@
+## 3.4.2 2022-09-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Skip availability check for Mongo Atlas connections
+
+
 ## 3.4.1 2022-09-13 <dave at tiredofit dot ca>
 
 ### Added
