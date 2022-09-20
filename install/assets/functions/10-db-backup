@@ -80,8 +80,8 @@ bootstrap_variables() {
                 mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
                 mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
                 mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
-                DB_NAME=${DB_NAME:-"${mongo_uri_database}"}
-                DB_HOST=${DB_HOST:-"${mongo_uri_hostname}"}
+                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
+                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
             fi
         ;;
         "mysql" )
