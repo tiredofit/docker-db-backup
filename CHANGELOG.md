@@ -1,3 +1,8 @@
+## develop 2022-09-20 <dave at tiredofit dot ca>
+
+   ### Added
+      - MONGO_CUSTOM_URI support to ignore the seperate environment variables - Parses the URI and populates DB_HOST and DB_NAME for filenaming. Can be overridden
+
 ## 3.4.2 2022-09-19 <dave at tiredofit dot ca>
 
    ### Changed

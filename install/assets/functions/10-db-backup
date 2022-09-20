@@ -21,8 +21,10 @@ bootstrap_variables() {
         mongo* )
             dbtype=mongo
             DB_PORT=${DB_PORT:-27017}
-            [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
-            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            if [ -z "${MONGO_CUSTOM_URI}" ] ; then
+                [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
+                [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            fi
         ;;
         "mysql" | "mariadb" )
             dbtype=mysql
@@ -60,13 +62,27 @@ bootstrap_variables() {
         file_env 'S3_KEY_SECRET'
     fi
 
-    ### Set the Database Authentication Details
+    ### Set the Database Authentication Details or parse any custom URIs
     case "$dbtype" in
         "mongo" )
-            [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-            [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-            [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-            [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+            if [ -z "${MONGO_CUSTOM_URI}" ] ; then
+                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
+                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
+                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+            else
+                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
+                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
+                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
+                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
+                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
+                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
+                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
+                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
+                DB_NAME=${DB_NAME:-"${mongo_uri_database}"}
+                DB_HOST=${DB_HOST:-"${mongo_uri_hostname}"}
+            fi
         ;;
         "mysql" )
             [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
@@ -152,14 +168,21 @@ backup_mongo() {
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
-    if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
-        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
+
+    if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+        mongo_generated_uri=${MONGO_CUSTOM_URI}
     else
-        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb://"}
+        if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
+            MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
+            mongo_generated_uri=${MONGO_URI_PREFIX}${DB_HOST} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+        else
+            MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb://"}
+            mongo_generated_uri=${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+        fi
     fi
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri="${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT}" ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri=${mongo_generated_uri}
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -375,7 +398,7 @@ check_availability() {
             esac
         ;;
         "mongo" )
-            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] ; then
+            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] || [ -n "${MONGO_CUSTOM_URI}" ]; then
                 counter=0
                 while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                     sleep 5
