@@ -398,7 +398,7 @@ check_availability() {
             esac
         ;;
         "mongo" )
-            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] || [ -n "${MONGO_CUSTOM_URI}" ]; then
+            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] || [ -z "${MONGO_CUSTOM_URI}" ]; then
                 counter=0
                 while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                     sleep 5
