@@ -363,101 +363,103 @@ backup_sqlite3() {
 
 check_availability() {
 ### Set the Database Type
-   case "$dbtype" in
-        "couch" )
-            counter=0
-            code_received=0
-            while [ "${code_received}" != "200" ]; do
-                code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
-                if [ "${code_received}" = "200" ] ; then break ; fi
-                sleep 5
-                (( counter+=5 ))
-                print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "influx" )
-            counter=0
-            case "${INFLUX_VERSION,,}" in
-                1 )
-                    while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+    if var_false "${SKIP_AVAILABILITY_CHECK}" ; then
+        case "$dbtype" in
+            "couch" )
+                counter=0
+                code_received=0
+                while [ "${code_received}" != "200" ]; do
+                    code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
+                    if [ "${code_received}" = "200" ] ; then break ; fi
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "influx" )
+                counter=0
+                case "${INFLUX_VERSION,,}" in
+                    1 )
+                        while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                    2 )
+                        code_received=0
+                        while [ "${code_received}" != "200" ]; do
+                            code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
+                            if [ "${code_received}" = "200" ] ; then break ; fi
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                esac
+            ;;
+            "mongo" )
+                if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] || [ -z "${MONGO_CUSTOM_URI}" ]; then
+                    counter=0
+                    while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                         sleep 5
                         (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                     done
-                ;;
-                2 )
-                    code_received=0
-                    while [ "${code_received}" != "200" ]; do
-                        code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
-                        if [ "${code_received}" = "200" ] ; then break ; fi
-                        sleep 5
-                        (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-                    done
-                ;;
-            esac
-        ;;
-        "mongo" )
-            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] || [ -z "${MONGO_CUSTOM_URI}" ]; then
+                fi
+            ;;
+            "mysql" )
+                counter=0
+                export MYSQL_PWD=${DB_PASS}
+                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
+                done
+            ;;
+            "mssql" )
                 counter=0
                 while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
-            fi
-        ;;
-        "mysql" )
-            counter=0
-            export MYSQL_PWD=${DB_PASS}
-            while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
-              sleep 5
-              (( counter+=5 ))
-              print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
-            done
-        ;;
-        "mssql" )
-            counter=0
-            while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "pgsql" )
-            counter=0
-            export PGPASSWORD=${DB_PASS}
-            until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
-            do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "redis" )
-            counter=0
-            while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "sqlite3" )
-            if [[ ! -e "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' does not exist."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -f "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not a file."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -r "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not readable."
-                exit_code=2
-                exit $exit_code
-            fi
-        ;;
-    esac
+            ;;
+            "pgsql" )
+                counter=0
+                export PGPASSWORD=${DB_PASS}
+                until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
+                do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "redis" )
+                counter=0
+                while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "sqlite3" )
+                if [[ ! -e "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' does not exist."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -f "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not a file."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -r "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not readable."
+                    exit_code=2
+                    exit $exit_code
+                fi
+            ;;
+        esac
+    fi
 }
 
 check_exit_code() {
