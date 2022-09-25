@@ -70,7 +70,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [License](#license)
 
 > **NOTE**: If you are using this with a docker-compose file along with a seperate SQL container, take care not to set the variables to backup immediately, more so have it delay execution for a minute, otherwise you will get a failed first backup.
-### Persistent Storage
 
 ## Prerequisites and Assumptions
 *  You must have a working connection to one of the supported DB Servers and appropriate credentials
