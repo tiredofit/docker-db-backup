@@ -170,14 +170,14 @@ backup_mongo() {
     fi
 
     if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-        mongo_generated_uri=${MONGO_CUSTOM_URI}
+        mongo_generated_uri="${MONGO_CUSTOM_URI}"
     else
         if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
             MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
-            mongo_generated_uri=${MONGO_URI_PREFIX}${DB_HOST} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+            mongo_generated_uri="${MONGO_URI_PREFIX}${DB_HOST} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}"
         else
             MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb://"}
-            mongo_generated_uri=${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+            mongo_generated_uri="${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}"
         fi
     fi
     pre_dbbackup "${DB_NAME}"
