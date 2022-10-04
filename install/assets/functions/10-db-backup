@@ -173,7 +173,7 @@ backup_mssql() {
     compression
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
-    /opt/mssql-tools/bin/sqlcmd -E -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} –Q "BACKUP DATABASE \[${DB_NAME}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code $target
     generate_checksum
