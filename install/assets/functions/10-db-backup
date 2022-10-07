@@ -452,10 +452,13 @@ cleanup_old_data() {
     if [ -n "${DB_CLEANUP_TIME}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
-                "file" | "filesystem" )
+                "file" | "filesystem" | "blobxfer" )
                     print_info "Cleaning up old backups"
                     mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+
+                    print_info "Cleaning up old backups on S3 storage with blobxfer"
+                    blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
                 ;;
                 "s3" | "minio" )
                     print_info "Cleaning up old backups"
@@ -630,6 +633,18 @@ move_dbbackup() {
                 if var_true "${ENABLE_CHECKSUM}" ; then
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
+
+                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                rm -rf "${TEMP_LOCATION}"/"${target}"
+            ;;
+            "blobxfer" )
+                print_info "Moving backup to S3 Bucket with blobxfer"
+
+                mkdir -p "${DB_DUMP_TARGET}"
+                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+
+                blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
 
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"

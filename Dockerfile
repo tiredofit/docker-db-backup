@@ -68,6 +68,9 @@ RUN set -ex && \
     make && \
     make install && \
     \
+    apk add gcc build-base libressl-dev libffi-dev python3-dev py3-pip && \
+    pip3 install blobxfer && \
+    \
 ### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \

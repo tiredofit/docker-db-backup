@@ -1,0 +1,69 @@
+# 
+# Example for Microsoft SQL Server
+# upload with blobxfer to azure storage
+# 
+
+version: '2'
+
+networks:
+  example-mssql-blobxfer-net:
+    name: example-mssql-blobxfer-net
+
+services:
+  example-mssql-s3-db:
+    hostname: example-db-host
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: example-mssql-s3-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11433:1433"
+    networks:
+      example-mssql-blobxfer-net:
+    volumes:
+      - ./tmp/backups:/tmp/backups    # shared tmp backup directory
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: 5hQa0utRFBpIY3yhoIyE
+      MSSQL_PID: Express
+
+  example-mssql-blobxfer-db-backup:
+    container_name: example-mssql-blobxfer-db-backup
+    # if you want to build and use image from current source
+    # execute in terminal --> docker build -t tiredofit/db-backup-mssql-blobxfer .
+    # replace --> image: tiredofit/db-backup-mssql
+    # image: tiredofit/db-backup
+    image: tiredofit/db-backup-mssql-blobxfer
+    links:
+     - example-mssql-s3-db
+    volumes:
+      - ./backups:/backup
+      - ./tmp/backups:/tmp/backups    # shared tmp backup directory
+      #- ./post-script.sh:/assets/custom-scripts/post-script.sh
+    environment:
+      # - DEBUG_MODE=TRUE
+      - DB_TYPE=mssql
+      - DB_HOST=example-db-host
+      # - DB_PORT=1488
+      # - DB_NAME=ALL             # [ALL] not working on sql server.
+      # create database with name `test1` manually first
+      - DB_NAME=test1             # Create this database
+      - DB_USER=sa
+      - DB_PASS=5hQa0utRFBpIY3yhoIyE
+      - DB_DUMP_FREQ=1            # backup every 5 minute
+      # - DB_DUMP_BEGIN=0000      # backup starts immediately
+      - DB_CLEANUP_TIME=3         # clean backups they are older than 60 minutes
+      - ENABLE_CHECKSUM=TRUE
+      - CHECKSUM=SHA1
+      - COMPRESSION=GZ
+      - SPLIT_DB=FALSE
+      - CONTAINER_ENABLE_MONITORING=FALSE
+      # === S3 Blobxfer ===
+      - BACKUP_LOCATION=blobxfer
+      # Add here azure storage account
+      - BLOBXFER_STORAGE_ACCOUNT={TODO Add Storage Name}
+      # Add here azure storage account key
+      - BLOBXFER_STORAGE_ACCOUNT_KEY={TODO Add Key}
+      - BLOBXFER_REMOTE_PATH=docker-db-backup
+    restart: always
+    networks:
+      example-mssql-blobxfer-net:
