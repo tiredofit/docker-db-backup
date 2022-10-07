@@ -65,12 +65,7 @@ bootstrap_variables() {
     ### Set the Database Authentication Details or parse any custom URIs
     case "$dbtype" in
         "mongo" )
-            if [ -z "${MONGO_CUSTOM_URI}" ] ; then
-                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
-            else
+            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
                 mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
                 mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
                 mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
@@ -82,6 +77,11 @@ bootstrap_variables() {
                 mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
                 DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
                 DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
+            else
+                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
+                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
+                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
             fi
         ;;
         "mysql" )
