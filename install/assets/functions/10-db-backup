@@ -170,7 +170,7 @@ backup_mongo() {
     fi
 
     if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-        mongo_generated_uri="${MONGO_CUSTOM_URI}"
+        mongo_generated_uri="${MONGO_CUSTOM_URI} ${EXTRA_OPTS}"
     else
         if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
             MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
@@ -182,7 +182,7 @@ backup_mongo() {
     fi
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri=${mongo_generated_uri} ${EXTRA_OPTS}
+    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri="${mongo_generated_uri}"
     exit_code=$?
     check_exit_code $target
     generate_checksum
