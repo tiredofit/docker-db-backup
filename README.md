@@ -37,7 +37,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [About](#about)
 - [Maintainer](#maintainer)
 - [Table of Contents](#table-of-contents)
-  - [Persistent Storage](#persistent-storage)
 - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
 - [Installation](#installation)
   - [Build from Source](#build-from-source)
@@ -45,7 +44,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
     - [Multi Architecture](#multi-architecture)
 - [Configuration](#configuration)
   - [Quick Start](#quick-start)
-  - [Persistent Storage](#persistent-storage-1)
+  - [Persistent Storage](#persistent-storage)
   - [Environment Variables](#environment-variables)
     - [Base Images used](#base-images-used)
     - [Container Options](#container-options)
@@ -149,8 +148,6 @@ Be sure to view the following repositories to understand all the customizable op
 | `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |           |
 | `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies    |
 | `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |           |
-| `MONGO_HOST_TYPE`  | Connect to regular `mongodb` or `atlas`                                                                                                                                              | `mongodb` |
-|                    | You can also skip this and override the uri prefix with `MONGO_URI_PREFIX=mongodb+srv://` or whatever you would like                                                                 |           |
 | `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |           |
 |                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |
 
