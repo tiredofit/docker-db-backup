@@ -1,9 +1,16 @@
 version: '2'
 
+networks:
+  example-db-network:
+    name: example-db-network
+
 services:
   example-db:
+    hostname: example-db-host
     container_name: example-db
     image: mariadb:latest
+    ports:
+      - 13306:3306
     volumes:
       - ./db:/var/lib/mysql
     environment:
@@ -12,6 +19,8 @@ services:
       - MYSQL_USER=example
       - MYSQL_PASSWORD=examplepassword
     restart: always
+    networks:
+      - example-db-network
 
   example-db-backup:
     container_name: example-db-backup
@@ -22,17 +31,21 @@ services:
       - ./backups:/backup
       #- ./post-script.sh:/assets/custom-scripts/post-script.sh
     environment:
+      # - DEBUG_MODE=TRUE
       - DB_TYPE=mariadb
-      - DB_HOST=example-db
+      - DB_HOST=example-db-host
       - DB_NAME=example
       - DB_USER=example
-      - DB_PASS="examplepassword"
-      - DB_DUMP_FREQ=1440
-      - DB_DUMP_BEGIN=0000
-      - DB_CLEANUP_TIME=8640
+      - DB_PASS=examplepassword
+      - DB_DUMP_FREQ=1            # backup every minute
+      # - DB_DUMP_BEGIN=0000      # backup starts immediately
+      - DB_CLEANUP_TIME=5         # clean backups they are older than 5 minute
       - CHECKSUM=SHA1
-      - COMPRESSION=ZSTD
+      - COMPRESSION=GZ
       - SPLIT_DB=FALSE
+      - CONTAINER_ENABLE_MONITORING=FALSE
     restart: always
+    networks:
+      - example-db-network
 
 
