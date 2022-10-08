@@ -173,7 +173,7 @@ backup_mssql() {
     compression
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
-    /opt/mssql-tools/bin/sqlcmd -E -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} –Q "BACKUP DATABASE \[${DB_NAME}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -454,10 +454,13 @@ cleanup_old_data() {
     if [ -n "${DB_CLEANUP_TIME}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
-                "file" | "filesystem" )
+                "file" | "filesystem" | "blobxfer" )
                     print_info "Cleaning up old backups"
                     mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+
+                    print_info "Cleaning up old backups on S3 storage with blobxfer"
+                    blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
                 ;;
                 "s3" | "minio" )
                     print_info "Cleaning up old backups"
@@ -632,6 +635,18 @@ move_dbbackup() {
                 if var_true "${ENABLE_CHECKSUM}" ; then
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
+
+                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                rm -rf "${TEMP_LOCATION}"/"${target}"
+            ;;
+            "blobxfer" )
+                print_info "Moving backup to S3 Bucket with blobxfer"
+
+                mkdir -p "${DB_DUMP_TARGET}"
+                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+
+                blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
 
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"
