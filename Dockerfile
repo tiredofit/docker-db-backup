@@ -36,6 +36,7 @@ RUN set -ex && \
                postgresql \
                postgresql-client \
                pv \
+               py3-cryptography \
                redis \
                sqlite \
                xz \
