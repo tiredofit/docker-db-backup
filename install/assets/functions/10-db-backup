@@ -176,7 +176,7 @@ backup_mongo() {
     fi
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} "${mongo_backup_parameter}"
+    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code $target
     generate_checksum
