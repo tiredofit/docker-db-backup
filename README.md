@@ -14,7 +14,7 @@ This will build a container for backing up multiple types of DB Servers
 
 Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
-* dump to local filesystem or backup to S3 Compatible services
+* dump to local filesystem or backup to S3 Compatible services, and Azure.
 * select database user and password
 * backup all databases, single, or multiple databases
 * backup all to seperate files or one singular file
