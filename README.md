@@ -104,6 +104,7 @@ Images are built primarily for `amd64` architecture, and may also include builds
 * Set various [environment variables](#environment-variables) to understand the capabilities of this image.
 * Map [persistent storage](#data-volumes) for access to configuration and data files for backup.
 * Make [networking ports](#networking) available for public access if necessary
+
 ### Persistent Storage
 
 The following directories are used for configuration and can be mapped for persistent storage.
@@ -203,6 +204,22 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | `S3_CERT_CA_FILE`     | Map a volume and point to your custom CA Bundle for verification e.g. `/certs/bundle.pem` |         |
 | _*OR*_                |                                                                                           |         |
 | `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                   | `TRUE`  |
+
+#### Upload to a Azure storage account by `blobxfer`
+
+Support to upload backup files with [blobxfer](https://github.com/Azure/blobxfer) to the Azure fileshare storage.
+
+
+If `BACKUP_LOCATION` = `blobxfer` then the following options are used.
+
+| Parameter                       | Description                                                              | Default              |
+| ------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| `BLOBXFER_STORAGE_ACCOUNT`      | Microsoft Azure Cloud storage account name.                              |                      |
+| `BLOBXFER_STORAGE_ACCOUNT_KEY`  | Microsoft Azure Cloud storage account key.                               |                      |
+| `BLOBXFER_REMOTE_PATH`          | Remote Azure path                                                        | `/docker-db-backup`  |
+
+> This service uploads files from backup targed directory `DB_DUMP_TARGET`. 
+> If the a cleanup configuration in `DB_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ## Maintenance
 
