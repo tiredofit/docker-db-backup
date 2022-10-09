@@ -469,7 +469,7 @@ cleanup_old_data() {
                             s3_filename=$(echo $s3_file | awk {'print $4'})
                             if [ "$s3_filename" != "" ] ; then
                                 print_debug "Deleting $s3_filename"
-                                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                             fi
                         fi
 
