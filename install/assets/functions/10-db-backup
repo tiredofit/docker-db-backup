@@ -461,7 +461,7 @@ cleanup_old_data() {
                 ;;
                 "s3" | "minio" )
                     print_info "Cleaning up old backups"
-                    aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | while read -r s3_file; do
+                    aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
                         s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
                         s3_createdate=$(date -d "$s3_createdate" "+%s")
                         s3_olderthan=$(echo $(( $(date +%s)-${DB_CLEANUP_TIME}*60 )))
@@ -800,4 +800,3 @@ EOF
         fi
     fi
 }
-
