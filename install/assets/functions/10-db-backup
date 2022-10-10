@@ -20,16 +20,33 @@ bootstrap_variables() {
         ;;
         mongo* )
             dbtype=mongo
-            DB_PORT=${DB_PORT:-27017}
-            if [ -z "${MONGO_CUSTOM_URI}" ] ; then
+            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
+                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
+                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
+                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
+                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
+                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
+                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
+                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
+                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
+                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
+            else
+                DB_PORT=${DB_PORT:-27017}
                 [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
                 [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
+                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
+                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
             fi
         ;;
         "mysql" | "mariadb" )
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "mssql" | "microsoftsql" )
@@ -45,12 +62,14 @@ bootstrap_variables() {
             dbtype=pgsql
             DB_PORT=${DB_PORT:-5432}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "redis" )
             dbtype=redis
             DB_PORT=${DB_PORT:-6379}
             [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
         ;;
         sqlite* )
             dbtype=sqlite3
@@ -61,39 +80,6 @@ bootstrap_variables() {
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
-
-    ### Set the Database Authentication Details or parse any custom URIs
-    case "$dbtype" in
-        "mongo" )
-            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
-                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
-                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
-                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
-                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
-                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
-                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
-                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
-                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
-                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
-                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
-            else
-                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
-            fi
-        ;;
-        "mysql" )
-            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
-        ;;
-        "postgres" )
-            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
-        ;;
-        "redis" )
-            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
-        ;;
-    esac
 }
 
 backup_couch() {
@@ -168,7 +154,6 @@ backup_mongo() {
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
-
     if [ -n "${MONGO_CUSTOM_URI}" ] ; then
         mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS}"
     else
@@ -820,25 +805,4 @@ EOF
             fi
         fi
     fi
-}
-
-urlencode() {
-    old_lc_collate=$LC_COLLATE
-    LC_COLLATE=C
-
-    local length="${#1}"
-    for (( i = 0; i < length; i++ )); do
-        local c="${1:$i:1}"
-        case $c in
-            [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
-            *) printf '%%%02X' "'$c" ;;
-        esac
-    done
-
-    LC_COLLATE=$old_lc_collate
-}
-
-urldecode() {
-    local url_encoded="${1//+/ }"
-    printf '%b' "${url_encoded//%/\\x}"
 }
