@@ -1,7 +1,16 @@
-## develop 2022-09-20 <dave at tiredofit dot ca>
+## 3.5.0 2022-10-10 <dave at tiredofit dot ca>
 
    ### Added
-      - MONGO_CUSTOM_URI support to ignore the seperate environment variables - Parses the URI and populates DB_HOST and DB_NAME for filenaming. Can be overridden
+      - Blobxfer / Microsoft Azure Support (credit: eoehen@github)
+      - Introduce MONGO_CUSTOM_URI environment variable for those not wanting to use DB_* variables
+
+   ### Changed
+      - Force filenames to be in lowercase
+      - Fix S3 Database cleanups (credit greenatwork@github)
+      - Remove MONGO_DB_TYPE variable as MONGO_CUSTOM_URI overrides
+      - Fix MSSQL Backups (credit eoehen@github)
+      - Seperate examples for MySQL and MSSQL
+
 
 ## 3.4.2 2022-09-19 <dave at tiredofit dot ca>
 
