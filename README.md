@@ -37,7 +37,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [About](#about)
 - [Maintainer](#maintainer)
 - [Table of Contents](#table-of-contents)
-  - [Persistent Storage](#persistent-storage)
 - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
 - [Installation](#installation)
   - [Build from Source](#build-from-source)
@@ -45,7 +44,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
     - [Multi Architecture](#multi-architecture)
 - [Configuration](#configuration)
   - [Quick Start](#quick-start)
-  - [Persistent Storage](#persistent-storage-1)
+  - [Persistent Storage](#persistent-storage)
   - [Environment Variables](#environment-variables)
     - [Base Images used](#base-images-used)
     - [Container Options](#container-options)
@@ -70,7 +69,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [License](#license)
 
 > **NOTE**: If you are using this with a docker-compose file along with a seperate SQL container, take care not to set the variables to backup immediately, more so have it delay execution for a minute, otherwise you will get a failed first backup.
-### Persistent Storage
 
 ## Prerequisites and Assumptions
 *  You must have a working connection to one of the supported DB Servers and appropriate credentials
@@ -140,32 +138,32 @@ Be sure to view the following repositories to understand all the customizable op
 | `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
-| Parameter         | Description                                                                                                                                 | Default   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                             |           |
-| `DB_TYPE`         | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                      |           |
-| `DB_HOST`         | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                               |           |
-| `DB_NAME`         | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2` |           |
-| `DB_NAME_EXCLUDE` | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                 |           |
-| `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |           |
-| `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |           |
-| `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies    |
-| `INFLUX_VERSION`  | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                           |           |
-| `MONGO_HOST_TYPE` | Connect to regular `mongodb` or `atlas`                                                                                                     | `mongodb` |
-|                   | You can also skip this and override the uri prefix with `MONGO_URI_PREFIX=mongodb+srv://` or whatever you would like                        |           |
+| Parameter          | Description                                                                                                                                                                          | Default   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |           |
+| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |           |
+| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |           |
+| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |           |
+| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |           |
+| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |           |
+| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |           |
+| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies    |
+| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |           |
+| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |           |
+|                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |
 
 #### For Influx DB2:
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
 
 ### Scheduling Options
-| Parameter          | Description                                                                                                                                                                                        | Default   |
-|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
-| `DB_DUMP_FREQ`     | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`    |
-| `DB_DUMP_BEGIN`    | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |           |
-|                    | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |           |
-|                    | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |           |
-| `DB_DUMP_TARGET`   | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
-| `DB_CLEANUP_TIME`  | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
+| Parameter         | Description                                                                                                                                                                                        | Default   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`    |
+| `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |           |
+|                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |           |
+|                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |           |
+| `DB_DUMP_TARGET`  | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
+| `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
 
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.

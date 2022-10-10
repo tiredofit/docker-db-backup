@@ -20,14 +20,33 @@ bootstrap_variables() {
         ;;
         mongo* )
             dbtype=mongo
-            DB_PORT=${DB_PORT:-27017}
-            [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
-            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
+                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
+                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
+                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
+                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
+                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
+                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
+                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
+                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
+                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
+            else
+                DB_PORT=${DB_PORT:-27017}
+                [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
+                [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
+                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
+                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+            fi
         ;;
         "mysql" | "mariadb" )
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "mssql" | "microsoftsql" )
@@ -43,12 +62,14 @@ bootstrap_variables() {
             dbtype=pgsql
             DB_PORT=${DB_PORT:-5432}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "redis" )
             dbtype=redis
             DB_PORT=${DB_PORT:-6379}
             [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
         ;;
         sqlite* )
             dbtype=sqlite3
@@ -59,25 +80,6 @@ bootstrap_variables() {
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
-
-    ### Set the Database Authentication Details
-    case "$dbtype" in
-        "mongo" )
-            [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-            [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-            [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-            [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
-        ;;
-        "mysql" )
-            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
-        ;;
-        "postgres" )
-            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
-        ;;
-        "redis" )
-            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
-        ;;
-    esac
 }
 
 backup_couch() {
@@ -152,19 +154,19 @@ backup_mongo() {
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
-    if [ "${MONGO_HOST_TYPE,,}" = "atlas" ] ; then
-        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb+srv://"}
+    if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+        mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS}"
     else
-        MONGO_URI_PREFIX=${MONGO_URI_PREFIX:-"mongodb://"}
+        mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}"
     fi
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --uri="${MONGO_URI_PREFIX}${DB_HOST}:${DB_PORT}" ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup "${DB_NAME}"
 }
 
 backup_mssql() {
@@ -173,7 +175,7 @@ backup_mssql() {
     compression
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
-    /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    silent /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -212,7 +214,7 @@ backup_mysql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+                silent mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
                 check_exit_code $target
                 generate_checksum
@@ -226,7 +228,7 @@ backup_mysql() {
         compression
         pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+        silent mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
         check_exit_code $target
         generate_checksum
@@ -261,7 +263,7 @@ backup_pgsql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
-                pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
+                silent pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
                 check_exit_code $target
                 generate_checksum
@@ -283,7 +285,7 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
-        pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
+        silent pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
         exit_code=$?
         check_exit_code $target
         generate_checksum
@@ -329,7 +331,7 @@ backup_sqlite3() {
     compression
     pre_dbbackup $db
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
-    sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
+    silent sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
     check_exit_code $target
     cat "${TEMP_LOCATION}"/backup.sqlite3 | ${dir_compress_cmd} > "${TEMP_LOCATION}/${target}"
@@ -340,101 +342,105 @@ backup_sqlite3() {
 
 check_availability() {
 ### Set the Database Type
-   case "$dbtype" in
-        "couch" )
-            counter=0
-            code_received=0
-            while [ "${code_received}" != "200" ]; do
-                code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
-                if [ "${code_received}" = "200" ] ; then break ; fi
-                sleep 5
-                (( counter+=5 ))
-                print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "influx" )
-            counter=0
-            case "${INFLUX_VERSION,,}" in
-                1 )
-                    while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+    if var_false "${SKIP_AVAILABILITY_CHECK}" ; then
+        case "$dbtype" in
+            "couch" )
+                counter=0
+                code_received=0
+                while [ "${code_received}" != "200" ]; do
+                    code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
+                    if [ "${code_received}" = "200" ] ; then break ; fi
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "influx" )
+                counter=0
+                case "${INFLUX_VERSION,,}" in
+                    1 )
+                        while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                    2 )
+                        code_received=0
+                        while [ "${code_received}" != "200" ]; do
+                            code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
+                            if [ "${code_received}" = "200" ] ; then break ; fi
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                esac
+            ;;
+            "mongo" )
+                if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                    print_debug "Skipping Connectivity Check"
+                else
+                    counter=0
+                    while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                         sleep 5
                         (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                     done
-                ;;
-                2 )
-                    code_received=0
-                    while [ "${code_received}" != "200" ]; do
-                        code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
-                        if [ "${code_received}" = "200" ] ; then break ; fi
-                        sleep 5
-                        (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-                    done
-                ;;
-            esac
-        ;;
-        "mongo" )
-            if [ "${MONGO_HOST_TYPE,,}" != "atlas" ] ; then
+                fi
+            ;;
+            "mysql" )
+                counter=0
+                export MYSQL_PWD=${DB_PASS}
+                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
+                done
+            ;;
+            "mssql" )
                 counter=0
                 while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
-            fi
-        ;;
-        "mysql" )
-            counter=0
-            export MYSQL_PWD=${DB_PASS}
-            while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
-              sleep 5
-              (( counter+=5 ))
-              print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
-            done
-        ;;
-        "mssql" )
-            counter=0
-            while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "pgsql" )
-            counter=0
-            export PGPASSWORD=${DB_PASS}
-            until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
-            do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "redis" )
-            counter=0
-            while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "sqlite3" )
-            if [[ ! -e "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' does not exist."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -f "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not a file."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -r "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not readable."
-                exit_code=2
-                exit $exit_code
-            fi
-        ;;
-    esac
+            ;;
+            "pgsql" )
+                counter=0
+                export PGPASSWORD=${DB_PASS}
+                until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
+                do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "redis" )
+                counter=0
+                while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "sqlite3" )
+                if [[ ! -e "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' does not exist."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -f "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not a file."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -r "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not readable."
+                    exit_code=2
+                    exit $exit_code
+                fi
+            ;;
+        esac
+    fi
 }
 
 check_exit_code() {
