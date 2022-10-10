@@ -3,7 +3,7 @@ LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 ### Set Environment Variables
 
-ENV INFLUX2_VERSION=2.2.1 \
+ENV INFLUX2_VERSION=2.4.0 \
     MSSQL_VERSION=18.0.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE \
