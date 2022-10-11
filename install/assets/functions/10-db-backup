@@ -460,16 +460,17 @@ cleanup_old_data() {
     if [ -n "${DB_CLEANUP_TIME}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
-                "file" | "filesystem" | "blobxfer" )
-                    print_info "Cleaning up old backups"
+                "file" | "filesystem" )
+                    print_info "Cleaning up old backups on filesystem"
                     mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
-
-                    print_info "Cleaning up old backups on S3 storage with blobxfer"
-                    blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
+                    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
+                        print_info "Syncing changes via blobxfer"
+                        silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
+                    fi
                 ;;
                 "s3" | "minio" )
-                    print_info "Cleaning up old backups"
+                    print_info "Cleaning up old backups on S3 storage"
                     aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
                         s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
                         s3_createdate=$(date -d "$s3_createdate" "+%s")
@@ -652,7 +653,7 @@ move_dbbackup() {
                 mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
 
-                blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
+                silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
 
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"

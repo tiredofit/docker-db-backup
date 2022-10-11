@@ -1,3 +1,9 @@
+## 3.5.1 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Tighten up cleanup routines to not call blobxfer unless absolutely necessary
+
+
 ## 3.5.0 2022-10-10 <dave at tiredofit dot ca>
 
    ### Added
