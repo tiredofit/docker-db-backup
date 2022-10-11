@@ -1,3 +1,9 @@
+## 3.5.2 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update Influxdb client to 2.4.0 (jauderho@github)
+
+
 ## 3.5.1 2022-10-11 <dave at tiredofit dot ca>
 
    ### Changed
