@@ -1,8 +1,8 @@
 ## 3.5.3 2022-10-12 <dave at tiredofit dot ca>
 
    ### Changed
-      - Cleanup build files for blobxfer making image smaller
-      - Remove some silencing features limiting Postgres backups not working unless DEBUG mode was on
+      - Remove build dependencies for blobxfer making image size smaller
+      - Remove silencing commands limiting Postgres backups from working without DEBUG_MODE=TRUE
 
 
 ## 3.5.2 2022-10-11 <dave at tiredofit dot ca>
