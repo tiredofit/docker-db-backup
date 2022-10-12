@@ -20,6 +20,10 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
+               libressl-dev \
+               libffi-dev \
+               python3-dev \
+               py3-pip \
                xz-dev \
                && \
     \
@@ -69,7 +73,6 @@ RUN set -ex && \
     make && \
     make install && \
     \
-    apk add gcc build-base libressl-dev libffi-dev python3-dev py3-pip && \
     pip3 install blobxfer && \
     \
 ### Cleanup

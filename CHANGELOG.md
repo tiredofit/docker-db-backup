@@ -1,3 +1,10 @@
+## 3.5.3 2022-10-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove build dependencies for blobxfer making image size smaller
+      - Remove silencing commands limiting Postgres backups from working without DEBUG_MODE=TRUE
+
+
 ## 3.5.2 2022-10-11 <dave at tiredofit dot ca>
 
    ### Added
