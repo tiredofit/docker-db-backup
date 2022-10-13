@@ -116,7 +116,7 @@ backup_influx() {
                 influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code $target_dir
-                print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
+                print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
                 generate_checksum

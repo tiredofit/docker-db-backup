@@ -1,3 +1,9 @@
+## 3.5.4 2022-10-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Influx DB 1 backups when compression enabled
+
+
 ## 3.5.3 2022-10-12 <dave at tiredofit dot ca>
 
    ### Changed
