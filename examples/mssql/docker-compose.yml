@@ -1,0 +1,61 @@
+# 
+# Example for Microsoft SQL Server
+# 
+
+version: '2'
+
+networks:
+  example-mssql-net:
+    name: example-mssql-net
+
+services:
+  example-mssql-db:
+    hostname: example-db-host
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: example-mssql-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11433:1433"
+    networks:
+      example-mssql-net:
+    volumes:
+      - ./tmp/backups:/tmp/backups    # shared tmp backup directory
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: 5hQa0utRFBpIY3yhoIyE
+      MSSQL_PID: Express
+
+  example-mssql-db-backup:
+    container_name: example-mssql-db-backup
+    # if you want to build and use image from current source
+    # execute in terminal --> docker build -t tiredofit/db-backup-mssql .
+    # replace --> image: tiredofit/db-backup-mssql
+    # image: tiredofit/db-backup
+    image: tiredofit/db-backup-mssql
+    links:
+     - example-mssql-db
+    volumes:
+      - ./backups:/backup
+      - ./tmp/backups:/tmp/backups    # shared tmp backup directory
+      #- ./post-script.sh:/assets/custom-scripts/post-script.sh
+    environment:
+      # - DEBUG_MODE=TRUE
+      - DB_TYPE=mssql
+      - DB_HOST=example-db-host
+      # - DB_PORT=1488
+      # - DB_NAME=ALL             # [ALL] not working on sql server.
+      # create database with name `test1` manually first
+      - DB_NAME=test1
+      - DB_USER=sa
+      - DB_PASS=5hQa0utRFBpIY3yhoIyE
+      - DB_DUMP_FREQ=1            # backup every minute
+      # - DB_DUMP_BEGIN=0000      # backup starts immediately
+      - DB_CLEANUP_TIME=5         # clean backups they are older than 5 minute
+      - ENABLE_CHECKSUM=FALSE
+      - CHECKSUM=SHA1
+      - COMPRESSION=GZ
+      - SPLIT_DB=FALSE
+      - CONTAINER_ENABLE_MONITORING=FALSE
+    restart: always
+    networks:
+      example-mssql-net:

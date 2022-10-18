@@ -3,7 +3,7 @@ LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 ### Set Environment Variables
 
-ENV INFLUX2_VERSION=2.2.1 \
+ENV INFLUX2_VERSION=2.4.0 \
     MSSQL_VERSION=18.0.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE \
@@ -20,6 +20,10 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
+               libressl-dev \
+               libffi-dev \
+               python3-dev \
+               py3-pip \
                xz-dev \
                && \
     \
@@ -36,6 +40,7 @@ RUN set -ex && \
                postgresql \
                postgresql-client \
                pv \
+               py3-cryptography \
                redis \
                sqlite \
                xz \
@@ -67,6 +72,8 @@ RUN set -ex && \
         && \
     make && \
     make install && \
+    \
+    pip3 install blobxfer && \
     \
 ### Cleanup
     apk del .db-backup-build-deps && \

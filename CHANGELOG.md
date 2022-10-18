@@ -1,3 +1,42 @@
+## 3.5.4 2022-10-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Influx DB 1 backups when compression enabled
+
+
+## 3.5.3 2022-10-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove build dependencies for blobxfer making image size smaller
+      - Remove silencing commands limiting Postgres backups from working without DEBUG_MODE=TRUE
+
+
+## 3.5.2 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update Influxdb client to 2.4.0 (jauderho@github)
+
+
+## 3.5.1 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Tighten up cleanup routines to not call blobxfer unless absolutely necessary
+
+
+## 3.5.0 2022-10-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - Blobxfer / Microsoft Azure Support (credit: eoehen@github)
+      - Introduce MONGO_CUSTOM_URI environment variable for those not wanting to use DB_* variables
+
+   ### Changed
+      - Force filenames to be in lowercase
+      - Fix S3 Database cleanups (credit greenatwork@github)
+      - Remove MONGO_DB_TYPE variable as MONGO_CUSTOM_URI overrides
+      - Fix MSSQL Backups (credit eoehen@github)
+      - Seperate examples for MySQL and MSSQL
+
+
 ## 3.4.2 2022-09-19 <dave at tiredofit dot ca>
 
    ### Changed
