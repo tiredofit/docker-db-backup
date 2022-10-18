@@ -1,3 +1,9 @@
+## 3.5.5 2022-10-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for S3 backups and trailing slashes (@greena13)
+
+
 ## 3.5.4 2022-10-13 <dave at tiredofit dot ca>
 
    ### Changed
