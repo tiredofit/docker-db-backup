@@ -1,3 +1,112 @@
+## 3.5.5 2022-10-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for S3 backups and trailing slashes (@greena13)
+
+
+## 3.5.4 2022-10-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Influx DB 1 backups when compression enabled
+
+
+## 3.5.3 2022-10-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove build dependencies for blobxfer making image size smaller
+      - Remove silencing commands limiting Postgres backups from working without DEBUG_MODE=TRUE
+
+
+## 3.5.2 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update Influxdb client to 2.4.0 (jauderho@github)
+
+
+## 3.5.1 2022-10-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Tighten up cleanup routines to not call blobxfer unless absolutely necessary
+
+
+## 3.5.0 2022-10-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - Blobxfer / Microsoft Azure Support (credit: eoehen@github)
+      - Introduce MONGO_CUSTOM_URI environment variable for those not wanting to use DB_* variables
+
+   ### Changed
+      - Force filenames to be in lowercase
+      - Fix S3 Database cleanups (credit greenatwork@github)
+      - Remove MONGO_DB_TYPE variable as MONGO_CUSTOM_URI overrides
+      - Fix MSSQL Backups (credit eoehen@github)
+      - Seperate examples for MySQL and MSSQL
+
+
+## 3.4.2 2022-09-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Skip availability check for Mongo Atlas connections
+
+
+## 3.4.1 2022-09-13 <dave at tiredofit dot ca>
+
+### Added
+- Introduce environment variables for SCRIPT_LOCATION_POST and SCRIPT_LOCATION_PRE for better seperation
+   
+### Deprecated
+
+- Introduce deprecation warning for the custom script paths `/assets/custom-scripts` and `/assets/custom-scripts/pre`. These
+paths will continue to work for now but support may be removed in the next major version release. To support the new
+default paths your scripts should be moved as follows:
+
+  |Script Type|Old Path (Deprecated)|New Environment Variable|Environment Value Default|
+  |-----------|--------|-------------------------|----------------|
+  |Pre|`/assets/custom-scripts/pre`|SCRIPT_LOCATION_PRE|`/assets/scripts/pre`|
+  |Post|`/assets/custom-scripts`|SCRIPT_LOCATION_POST|`/assets/scripts/post`|
+
+
+## 3.4.0 2022-09-12 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add GZ_RSYNCABLE environment variable for better rsync compatibility (Credit teun95@github)
+      - Add Pre Backup Script Support
+      - Add MongoDB Atlas Support
+
+   ### Changed
+      - Fix Default Port for Influx 2 DB Hosts
+
+
+## 3.3.12 2022-08-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - arifer612@github contributed a fix for incorrect case of "filesize" variable when using post backup scripts
+
+
+## 3.3.11 2022-07-22 <khoazero123@github>
+
+   ### Fixed
+      - Restore script not properly detecting postgres backups
+
+
+## 3.3.10 2022-07-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Remove MSSQL install packages properly
+
+
+## 3.3.9 2022-07-09 <fardeau@github>
+
+   ### Fixed
+      - Remaining work on interactive mode for entering port on restore script
+
+
+## 3.3.8 2022-07-09 <dave at tiredofit dot ca>
+
+   ### Added
+      - MSSQL Client Tools 18.0.1.1-1
+
+
 ## 3.3.7 2022-06-23 <dave at tiredofit dot ca>
 
    ### Changed

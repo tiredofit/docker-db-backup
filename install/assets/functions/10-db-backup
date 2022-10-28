@@ -10,21 +10,43 @@ bootstrap_variables() {
         ;;
         influx* )
             dbtype=influx
-            DB_PORT=${DB_PORT:-8088}
+            case "${INFLUX_VERSION}" in
+                1) DB_PORT=${DB_PORT:-8088} ;;
+                2) DB_PORT=${DB_PORT:-8086} ;;
+            esac
             file_env 'DB_USER'
             file_env 'DB_PASS'
             sanity_var INFLUX_VERSION "What InfluxDB version you are backing up from '1' or '2'"
         ;;
         mongo* )
             dbtype=mongo
-            DB_PORT=${DB_PORT:-27017}
-            [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
-            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
+                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
+                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
+                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
+                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
+                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
+                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
+                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
+                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
+                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
+            else
+                DB_PORT=${DB_PORT:-27017}
+                [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
+                [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
+                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
+                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+            fi
         ;;
         "mysql" | "mariadb" )
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "mssql" | "microsoftsql" )
@@ -40,12 +62,14 @@ bootstrap_variables() {
             dbtype=pgsql
             DB_PORT=${DB_PORT:-5432}
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "redis" )
             dbtype=redis
             DB_PORT=${DB_PORT:-6379}
             [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
+            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
         ;;
         sqlite* )
             dbtype=sqlite3
@@ -56,31 +80,13 @@ bootstrap_variables() {
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
-
-    ### Set the Database Authentication Details
-    case "$dbtype" in
-        "mongo" )
-            [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-            [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-            [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-            [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
-        ;;
-        "mysql" )
-            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
-        ;;
-        "postgres" )
-            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
-        ;;
-        "redis" )
-            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
-        ;;
-    esac
 }
 
 backup_couch() {
-    pre_dbbackup
+    prepare_dbbackup
     target=couch_${DB_NAME}_${DB_HOST#*//}_${now}.txt
     compression
+    pre_dbbackup ${DB_NAME}
     print_notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
     curl -sSL -X GET ${DB_HOST}:${DB_PORT}/${DB_NAME}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
     exit_code=$?
@@ -101,15 +107,16 @@ backup_influx() {
     case "${INFLUX_VERSION,,}" in
         1 )
             for db in ${db_names}; do
-                pre_dbbackup
+                prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
                 target=influx_${db}_${DB_HOST#*//}_${now}
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping Influx database: '${db}'"
                 influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code $target_dir
-                print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
+                print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
                 generate_checksum
@@ -119,10 +126,11 @@ backup_influx() {
         ;;
         2 )
             for db in ${db_names}; do
-                pre_dbbackup
+                prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="--bucket $db" ; else db=all ; fi
                 target=influx2_${db}_${DB_HOST#*//}_${now}
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping Influx2 database: '${db}'"
                 influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
@@ -138,7 +146,7 @@ backup_influx() {
 }
 
 backup_mongo() {
-    pre_dbbackup
+    prepare_dbbackup
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
         target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive
     else
@@ -146,21 +154,28 @@ backup_mongo() {
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
+    if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+        mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS}"
+    else
+        mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}"
+    fi
+    pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} --host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}
+    silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    post_dbbackup
+    post_dbbackup "${DB_NAME}"
 }
 
 backup_mssql() {
-    pre_dbbackup
+    prepare_dbbackup
     target=mssql_${DB_NAME,,}_${DB_HOST,,}_${now}.bak
     compression
+    pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
-    /opt/mssql-tools/bin/sqlcmd -E -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} –Q "BACKUP DATABASE \[${DB_NAME}\] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    silent /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code $target
     generate_checksum
@@ -194,9 +209,10 @@ backup_mysql() {
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
-                pre_dbbackup
+                prepare_dbbackup
                 target=mysql_${db}_${DB_HOST,,}_${now}.sql
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
@@ -207,9 +223,10 @@ backup_mysql() {
         done
     else
         print_debug "Not splitting database dumps into their own files"
-        pre_dbbackup
+        prepare_dbbackup
         target=mysql_all_${DB_HOST,,}_${now}.sql
         compression
+        pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
@@ -241,9 +258,10 @@ backup_pgsql() {
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
-                pre_dbbackup
+                prepare_dbbackup
                 target=pgsql_${db}_${DB_HOST,,}_${now}.sql
                 compression
+                pre_dbbackup $db
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
@@ -254,9 +272,10 @@ backup_pgsql() {
         done
     else
         print_debug "Not splitting database dumps into their own files"
-        pre_dbbackup
+        prepare_dbbackup
         target=pgsql_all_${DB_HOST,,}_${now}.sql
         compression
+        pre_dbbackup all
         print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         tmp_db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names  | xargs); do
@@ -276,7 +295,7 @@ backup_pgsql() {
 }
 
 backup_redis() {
-    pre_dbbackup
+    prepare_dbbackup
     print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
     echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
@@ -296,6 +315,7 @@ backup_redis() {
     done
     target_original=${target}
     compression
+    pre_dbbackup all
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
     check_exit_code $target
     generate_checksum
@@ -304,13 +324,14 @@ backup_redis() {
 }
 
 backup_sqlite3() {
-    pre_dbbackup
+    prepare_dbbackup
     db=$(basename "${DB_HOST}")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
     compression
+    pre_dbbackup $db
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
-    sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
+    silent sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
     check_exit_code $target
     cat "${TEMP_LOCATION}"/backup.sqlite3 | ${dir_compress_cmd} > "${TEMP_LOCATION}/${target}"
@@ -321,99 +342,105 @@ backup_sqlite3() {
 
 check_availability() {
 ### Set the Database Type
-   case "$dbtype" in
-        "couch" )
-            counter=0
-            code_received=0
-            while [ "${code_received}" != "200" ]; do
-                code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
-                if [ "${code_received}" = "200" ] ; then break ; fi
-                sleep 5
-                (( counter+=5 ))
-                print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "influx" )
-            counter=0
-            case "${INFLUX_VERSION,,}" in
-                1 )
-                    while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+    if var_false "${SKIP_AVAILABILITY_CHECK}" ; then
+        case "$dbtype" in
+            "couch" )
+                counter=0
+                code_received=0
+                while [ "${code_received}" != "200" ]; do
+                    code_received=$(curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
+                    if [ "${code_received}" = "200" ] ; then break ; fi
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "influx" )
+                counter=0
+                case "${INFLUX_VERSION,,}" in
+                    1 )
+                        while ! (nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                    2 )
+                        code_received=0
+                        while [ "${code_received}" != "200" ]; do
+                            code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
+                            if [ "${code_received}" = "200" ] ; then break ; fi
+                            sleep 5
+                            (( counter+=5 ))
+                            print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                        done
+                    ;;
+                esac
+            ;;
+            "mongo" )
+                if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                    print_debug "Skipping Connectivity Check"
+                else
+                    counter=0
+                    while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
                         sleep 5
                         (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                        print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                     done
-                ;;
-                2 )
-                    code_received=0
-                    while [ "${code_received}" != "200" ]; do
-                        code_received=$(curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
-                        if [ "${code_received}" = "200" ] ; then break ; fi
-                        sleep 5
-                        (( counter+=5 ))
-                        print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-                    done
-                ;;
-            esac
-        ;;
-        "mongo" )
-            counter=0
-            while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "mysql" )
-            counter=0
-            export MYSQL_PWD=${DB_PASS}
-            while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
-              sleep 5
-              (( counter+=5 ))
-              print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
-            done
-        ;;
-        "mssql" )
-            counter=0
-            while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "pgsql" )
-            counter=0
-            export PGPASSWORD=${DB_PASS}
-            until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
-            do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "redis" )
-            counter=0
-            while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
-                sleep 5
-                (( counter+=5 ))
-                print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
-            done
-        ;;
-        "sqlite3" )
-            if [[ ! -e "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' does not exist."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -f "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not a file."
-                exit_code=2
-                exit $exit_code
-            elif [[ ! -r "${DB_HOST}" ]]; then
-                print_error "File '${DB_HOST}' is not readable."
-                exit_code=2
-                exit $exit_code
-            fi
-        ;;
-    esac
+                fi
+            ;;
+            "mysql" )
+                counter=0
+                export MYSQL_PWD=${DB_PASS}
+                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
+                done
+            ;;
+            "mssql" )
+                counter=0
+                while ! (nc -z ${DB_HOST} ${DB_PORT}) ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "pgsql" )
+                counter=0
+                export PGPASSWORD=${DB_PASS}
+                until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
+                do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "redis" )
+                counter=0
+                while ! (nc -z "${DB_HOST}" "${DB_PORT}") ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "sqlite3" )
+                if [[ ! -e "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' does not exist."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -f "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not a file."
+                    exit_code=2
+                    exit $exit_code
+                elif [[ ! -r "${DB_HOST}" ]]; then
+                    print_error "File '${DB_HOST}' is not readable."
+                    exit_code=2
+                    exit $exit_code
+                fi
+            ;;
+        esac
+    fi
 }
 
 check_exit_code() {
@@ -434,13 +461,17 @@ cleanup_old_data() {
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
                 "file" | "filesystem" )
-                    print_info "Cleaning up old backups"
+                    print_info "Cleaning up old backups on filesystem"
                     mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+                    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
+                        print_info "Syncing changes via blobxfer"
+                        silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
+                    fi
                 ;;
                 "s3" | "minio" )
-                    print_info "Cleaning up old backups"
-                    aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | while read -r s3_file; do
+                    print_info "Cleaning up old backups on S3 storage"
+                    aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
                         s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
                         s3_createdate=$(date -d "$s3_createdate" "+%s")
                         s3_olderthan=$(echo $(( $(date +%s)-${DB_CLEANUP_TIME}*60 )))
@@ -468,7 +499,10 @@ compression() {
 
    case "${COMPRESSION,,}" in
         gz* )
-            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            if var_true "${GZ_RSYNCABLE}" ; then
+                gz_rsyncable=--rsyncable
+            fi
+            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
@@ -621,6 +655,18 @@ move_dbbackup() {
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
+            "blobxfer" )
+                print_info "Moving backup to S3 Bucket with blobxfer"
+
+                mkdir -p "${DB_DUMP_TARGET}"
+                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+
+                silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
+
+                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                rm -rf "${TEMP_LOCATION}"/"${target}"
+            ;;
         esac
     else
         print_error "Skipping moving DB Backup to final location because backup did not complete successfully"
@@ -629,7 +675,7 @@ move_dbbackup() {
     rm -rf "${TEMP_LOCATION}"/*
 }
 
-pre_dbbackup() {
+prepare_dbbackup() {
     dbbackup_start_time=$(date +"%s")
     if var_true "${USE_RESTIC}" ; then
         now="restic"
@@ -639,6 +685,45 @@ pre_dbbackup() {
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
     target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.sql
+}
+
+pre_dbbackup() {
+    ### Pre Script Support
+    if [ -n "${PRE_SCRIPT}" ] ; then
+        if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+            eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+        else
+            if [ -x "${PRE_SCRIPT}" ] ; then
+                print_notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
+                eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                print_error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Pre Backup Custom Script Support
+    if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
+        print_warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${SCRIPT_LOCATION_PRE}'"
+        mkdir -p "${SCRIPT_LOCATION_PRE}"
+        silent cp /assets/custom-scripts/pre/* "${SCRIPT_LOCATION_PRE}"
+    fi
+
+    if [ -d "${SCRIPT_LOCATION_PRE}" ] && dir_notempty "${SCRIPT_LOCATION_PRE}" ; then
+        for f in $(find ${SCRIPT_LOCATION_PRE} -name \*.sh -type f); do
+            if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+                ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                if [ -x "${f}" ] ; then
+                    print_notice "Executing pre backup custom script : '${f}'"
+                    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+                    ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+                else
+                    print_error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
 }
 
 post_dbbackup() {
@@ -657,11 +742,11 @@ post_dbbackup() {
     ### Post Script Support
     if [ -n "${POST_SCRIPT}" ] ; then
         if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
         else
             if [ -x "${POST_SCRIPT}" ] ; then
                 print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
             else
                 print_error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
             fi
@@ -669,15 +754,21 @@ post_dbbackup() {
     fi
 
     ### Post Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/" ] ; then
-        for f in $(find /assets/custom-scripts/ -name \*.sh -type f); do
+    if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
+        print_warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${SCRIPT_LOCATION_POST}'"
+        mkdir -p "${SCRIPT_LOCATION_POST}"
+        silent cp /assets/custom-scripts/* "${SCRIPT_LOCATION_POST}"
+    fi
+
+    if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
+        for f in $(find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
             if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
             else
                 if [ -x "${f}" ] ; then
                     print_notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
                 else
                     print_error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
@@ -744,4 +835,3 @@ EOF
         fi
     fi
 }
-

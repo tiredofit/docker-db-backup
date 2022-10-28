@@ -14,7 +14,7 @@ This will build a container for backing up multiple types of DB Servers
 
 Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 
-* dump to local filesystem or backup to S3 Compatible services
+* dump to local filesystem or backup to S3 Compatible services, and Azure.
 * select database user and password
 * backup all databases, single, or multiple databases
 * backup all to seperate files or one singular file
@@ -37,7 +37,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [About](#about)
 - [Maintainer](#maintainer)
 - [Table of Contents](#table-of-contents)
-  - [Persistent Storage](#persistent-storage)
 - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
 - [Installation](#installation)
   - [Build from Source](#build-from-source)
@@ -45,7 +44,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
     - [Multi Architecture](#multi-architecture)
 - [Configuration](#configuration)
   - [Quick Start](#quick-start)
-  - [Persistent Storage](#persistent-storage-1)
+  - [Persistent Storage](#persistent-storage)
   - [Environment Variables](#environment-variables)
     - [Base Images used](#base-images-used)
     - [Container Options](#container-options)
@@ -59,6 +58,9 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
   - [Manual Backups](#manual-backups)
   - [Restoring Databases](#restoring-databases)
   - [Custom Scripts](#custom-scripts)
+    - [Path Options](#path-options)
+    - [Pre Backup](#pre-backup)
+    - [Post backup](#post-backup)
 - [Support](#support)
   - [Usage](#usage)
   - [Bugfixes](#bugfixes)
@@ -67,7 +69,6 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
 - [License](#license)
 
 > **NOTE**: If you are using this with a docker-compose file along with a seperate SQL container, take care not to set the variables to backup immediately, more so have it delay execution for a minute, otherwise you will get a failed first backup.
-### Persistent Storage
 
 ## Prerequisites and Assumptions
 *  You must have a working connection to one of the supported DB Servers and appropriate credentials
@@ -101,13 +102,15 @@ Images are built primarily for `amd64` architecture, and may also include builds
 * Set various [environment variables](#environment-variables) to understand the capabilities of this image.
 * Map [persistent storage](#data-volumes) for access to configuration and data files for backup.
 * Make [networking ports](#networking) available for public access if necessary
+
 ### Persistent Storage
 
 The following directories are used for configuration and can be mapped for persistent storage.
-| Directory                | Description                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `/backup`                | Backups                                                                            |
-| `/assets/custom-scripts` | *Optional* Put custom scripts in this directory to execute after backup operations |
+| Directory              | Description                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `/backup`              | Backups                                                                             |
+| `/assets/scripts/pre`  | *Optional* Put custom scripts in this directory to execute before backup operations |
+| `/assets/scripts/post` | *Optional* Put custom scripts in this directory to execute after backup operations  |
 
 ### Environment Variables
 
@@ -130,36 +133,42 @@ Be sure to view the following repositories to understand all the customizable op
 | `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 | `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
-| `POST_SCRIPT`        | Fill this variable in with a command to execute post the script backing up                                                       |                 |
-| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only) | `TRUE`
+| `PRE_SCRIPT`         | Fill this variable in with a command to execute pre backing up                                                                   |                 |
+| `POST_SCRIPT`        | Fill this variable in with a command to execute post backing up                                                                  |                 |
+| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 | `USE_RESTIC`         | Whether to use restic for backup. `TRUE` or `FALSE` | `FALSE`
 
 ### Database Specific Options
-| Parameter         | Description                                                                                                                                 | Default |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `DB_AUTH`         | (Mongo Only - Optional) Authentication Database                                                                                             |         |
-| `DB_TYPE`         | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                      |         |
-| `DB_HOST`         | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                               |         |
-| `DB_NAME`         | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2` |         |
-| `DB_NAME_EXCLUDE` | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                 |         |
-| `DB_USER`         | username for the database(s) - Can use `root` for MySQL                                                                                     |         |
-| `DB_PASS`         | (optional if DB doesn't require it) password for the database                                                                               |         |
-| `DB_PORT`         | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                            | varies  |
-| `INFLUX_VERSION`  | What Version of Influx are you backing up from `1`.x or `2.x` series - AMD64 and ARM64 only for `2`                                         |         |
+| Parameter          | Description                                                                                                                                                                          | Default   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |           |
+| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |           |
+| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |           |
+| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |           |
+| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |           |
+| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |           |
+| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |           |
+| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies    |
+| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |           |
+| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |           |
+|                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |
 
 #### For Influx DB2:
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
 
 ### Scheduling Options
-| Parameter         | Description                                                                                                                                                                                        | Default |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`  |
-| `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |         |
-|                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |         |
-|                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |         |
-| `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE` |
+| Parameter         | Description                                                                                                                                                                                        | Default   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`    |
+| `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |           |
+|                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |           |
+|                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |           |
+| `DB_DUMP_TARGET`  | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
+| `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
+
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
+
 ### Backup Options
 | Parameter                      | Description                                                                                                                  | Default        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -167,6 +176,7 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`            |
 | `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`         |
 | `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected` |
+| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`        |
 | `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`         |
 | `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`          |
 | `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                |
@@ -180,19 +190,35 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 If `BACKUP_LOCATION` = `S3` then the following options are used.
 
-| Parameter             | Description                                                                               | Default |
-| --------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                            |         |
-| `S3_KEY_ID`           | S3 Key ID                                                                                 |         |
-| `S3_KEY_SECRET`       | S3 Key Secret                                                                             |         |
-| `S3_PATH`             | S3 Pathname to save to e.g. '`backup`'                                                    |         |
-| `S3_REGION`           | Define region in which bucket is defined. Example: `ap-northeast-2`                       |         |
-| `S3_HOST`             | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.         |         |
-| `S3_PROTOCOL`         | Protocol to connect to `S3_HOST`. Either `http` or `https`. Defaults to `https`.          | `https` |
-| `S3_EXTRA_OPTS`       | Add any extra options to the end of the `aws-cli` process execution                       |         |
+| Parameter             | Description                                                                              | Default |
+|-----------------------|------------------------------------------------------------------------------------------|---------|
+| `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                           |         |
+| `S3_KEY_ID`           | S3 Key ID                                                                                |         |
+| `S3_KEY_SECRET`       | S3 Key Secret                                                                            |         |
+| `S3_PATH`             | S3 Pathname to save to (must NOT end in a trailing slash e.g. '`backup`')                |         |
+| `S3_REGION`           | Define region in which bucket is defined. Example: `ap-northeast-2`                      |         |
+| `S3_HOST`             | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.        |         |
+| `S3_PROTOCOL`         | Protocol to connect to `S3_HOST`. Either `http` or `https`. Defaults to `https`.         | `https` |
+| `S3_EXTRA_OPTS`       | Add any extra options to the end of the `aws-cli` process execution                      |         |
 | `S3_CERT_CA_FILE`     | Map a volume and point to your custom CA Bundle for verification e.g. `/certs/bundle.pem` |         |
-| _*OR*_                |                                                                                           |         |
-| `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                   | `TRUE`  |
+| _*OR*_                |                                                                                          |         |
+| `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                  | `TRUE`  |
+
+#### Upload to a Azure storage account by `blobxfer`
+
+Support to upload backup files with [blobxfer](https://github.com/Azure/blobxfer) to the Azure fileshare storage.
+
+
+If `BACKUP_LOCATION` = `blobxfer` then the following options are used.
+
+| Parameter                       | Description                                                              | Default              |
+| ------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| `BLOBXFER_STORAGE_ACCOUNT`      | Microsoft Azure Cloud storage account name.                              |                      |
+| `BLOBXFER_STORAGE_ACCOUNT_KEY`  | Microsoft Azure Cloud storage account key.                               |                      |
+| `BLOBXFER_REMOTE_PATH`          | Remote Azure path                                                        | `/docker-db-backup`  |
+
+> This service uploads files from backup targed directory `DB_DUMP_TARGET`. 
+> If the a cleanup configuration in `DB_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ## Maintenance
 
@@ -231,7 +257,41 @@ If you only enter some of the arguments you will be prompted to fill them in.
 
 ### Custom Scripts
 
-If you want to execute a custom script at the end of backup, you can drop bash scripts with the extension of `.sh` in this directory. See the following example to utilize:
+#### Path Options
+
+| Parameter              | Description                                                                 | Default                 |
+| ---------------------- | --------------------------------------------------------------------------- | ----------------------- |
+| `SCRIPT_LOCATION_PRE`  | Location on filesystem inside container to execute bash scripts pre backup  | `/assets/scripts/pre/`  |
+| `SCRIPT_LOCATION_POST` | Location on filesystem inside container to execute bash scripts post backup | `/assets/scripts/post/` |
+
+#### Pre Backup
+If you want to execute a custom script before a backup starts, you can drop bash scripts with the extension of `.sh` in the location defined in `SCRIPT_LOCATION_PRE`. See the following example to utilize:
+
+````bash
+$ cat pre-script.sh
+##!/bin/bash
+
+# #### Example Pre Script
+# #### $1=DB_TYPE (Type of Backup)
+# #### $2=DB_HOST (Backup Host)
+# #### $3=DB_NAME (Name of Database backed up
+# #### $4=BACKUP START TIME (Seconds since Epoch)ff
+# #### $5=BACKUP FILENAME (Filename)
+
+echo "${1} Backup Starting on ${2} for ${3} at ${4}. Filename: ${5}"
+````
+
+    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+    ${f} "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_time}" "${target}"
+
+
+Outputs the following on the console:
+
+`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+
+
+#### Post backup
+If you want to execute a custom script at the end of a backup, you can drop bash scripts with the extension of `.sh` in the location defined in `SCRIPT_LOCATION_POST`. Also to support legacy users `/assets/custom-scripts` is also scanned and executed.See the following example to utilize:
 
 ````bash
 $ cat post-script.sh

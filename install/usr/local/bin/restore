@@ -271,7 +271,7 @@ get_dbtype() {
             parsed_type=true
             print_debug "Parsed DBType: MariaDB/MySQL"
         ;;
-        psql | postgres* )
+        pgsql | postgres* )
             parsed_type=true
             print_debug "Parsed DBType: Postgresql"
         ;;
@@ -641,7 +641,7 @@ EOF
         2 )
             while true; do
                 read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}C${cdgy}\) \| \(${cwh}E${cdgy}\)  : ${cwh}${coff}) " q_dbport_menu
-                case "${q_port_menu,,}" in
+                case "${q_dbport_menu,,}" in
                     c* )
                         counter=1
                         q_dbport=" "
@@ -908,7 +908,7 @@ case "${r_dbtype}" in
         pv ${r_filename} | ${decompress_cmd}cat | mysql -u${r_dbuser} -p${r_dbpass} -P${r_dbport} -h${r_dbhost} ${r_dbname}
         exit_code=$?
     ;;
-    psql | postgres* )
+    pgsql | postgres* )
         print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
         export PGPASSWORD=${r_dbpass}
         pv ${r_filename} | ${decompress_cmd}cat | psql  -d ${r_dbname} -h ${r_dbhost} -p ${r_dbport} -U ${r_dbuser}

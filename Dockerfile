@@ -3,8 +3,8 @@ LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 ### Set Environment Variables
 
-ENV INFLUX2_VERSION=2.2.1 \
-    MSSQL_VERSION=17.8.1.1-1 \
+ENV INFLUX2_VERSION=2.4.0 \
+    MSSQL_VERSION=18.0.1.1-1 \
     CONTAINER_ENABLE_MESSAGING=FALSE \
     CONTAINER_ENABLE_MONITORING=TRUE \
     CONTAINER_PROCESS_RUNAWAY_PROTECTOR=FALSE \
@@ -16,34 +16,36 @@ RUN set -ex && \
     apk update && \
     apk upgrade && \
     apk add -t .db-backup-build-deps \
-    build-base \
-    bzip2-dev \
-    git \
-    libarchive-dev \
-    xz-dev \
-    && \
+               build-base \
+               bzip2-dev \
+               git \
+               libarchive-dev \
+               libressl-dev \
+               libffi-dev \
+               python3-dev \
+               py3-pip \
+               xz-dev \
+               && \
     \
     apk add --no-cache -t .db-backup-run-deps \
-    aws-cli \
-    bzip2 \
-    influxdb \
-    libarchive \
-    mariadb-client \
-    mariadb-connector-c \
-    mongodb-tools \
-    libressl \
-    pigz \
-    postgresql \
-    postgresql-client \
-    pv \
-    redis \
-    restic \
-    sqlite \
-    xz \
-    zstd \
-    && \
-    \
-    cd /usr/src && \
+               aws-cli \
+               bzip2 \
+               influxdb \
+               libarchive \
+               mariadb-client \
+               mariadb-connector-c \
+               mongodb-tools \
+               libressl \
+               pigz \
+               postgresql \
+               postgresql-client \
+               pv \
+               py3-cryptography \
+               redis \
+               sqlite \
+               xz \
+               zstd \
+               && \
     \
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
@@ -52,7 +54,7 @@ RUN set -ex && \
     *) sleep 0.1 ;; \
     esac; \
     \
-    if [ $mssql = "true" ] ; then curl -O https://download.microsoft.com/download/e/4/e/e4e67866-dffd-428c-aac7-8d28ddafb39b/msodbcsql17_${MSSQL_VERSION}_amd64.apk ; curl -O https://download.microsoft.com/download/e/4/e/e4e67866-dffd-428c-aac7-8d28ddafb39b/mssql-tools_${MSSQL_VERSION}_amd64.apk ; echo y | apk add --allow-untrusted msodbcsql17_${MSSQL_VERSION}_amd64.apk mssql-tools_${MSSQL_VERSION}_amd64.apk ; else echo >&2 "Detected non x86_64 build variant, skipping MSSQL installation" ; fi; \
+    if [ $mssql = "true" ] ; then curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/msodbcsql18_${MSSQL_VERSION}_amd64.apk ; curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/mssql-tools18_${MSSQL_VERSION}_amd64.apk ; echo y | apk add --allow-untrusted msodbcsql18_${MSSQL_VERSION}_amd64.apk mssql-tools18_${MSSQL_VERSION}_amd64.apk ; else echo >&2 "Detected non x86_64 build variant, skipping MSSQL installation" ; fi; \
     if [ $influx2 = "true" ] ; then curl -sSL https://dl.influxdata.com/influxdb/releases/influxdb2-client-${INFLUX2_VERSION}-linux-${influx_arch}.tar.gz | tar xvfz - --strip=1 -C /usr/src/ ; chmod +x /usr/src/influx ; mv /usr/src/influx /usr/sbin/ ; else echo >&2 "Unable to build Influx 2 on this system" ; fi ; \
     \
     mkdir -p /usr/src/pbzip2 && \
@@ -71,9 +73,12 @@ RUN set -ex && \
     make && \
     make install && \
     \
-    ### Cleanup
+    pip3 install blobxfer && \
+    \
+### Cleanup
     apk del .db-backup-build-deps && \
     rm -rf /usr/src/* && \
+    rm -rf /*.apk && \
     rm -rf /etc/logrotate.d/redis && \
     rm -rf /root/.cache /tmp/* /var/cache/apk/*
 
