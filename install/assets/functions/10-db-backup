@@ -1,6 +1,7 @@
 #!/command/with-contenv bash
 
 bootstrap_variables() {
+    sanity_var DB_TYPE "Set appropriate DB_TYPE"
     case "${DB_TYPE,,}" in
         couch* )
             dbtype=couch
@@ -74,12 +75,18 @@ bootstrap_variables() {
         sqlite* )
             dbtype=sqlite3
         ;;
+        * )
+            print_error "I don't recognize 'DB_TYPE=${DB_TYPE}' - Exitting.."
+            exit 99
+        ;;
     esac
 
     if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
+
+
 }
 
 backup_couch() {

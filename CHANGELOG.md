@@ -1,3 +1,9 @@
+## 3.5.6 2022-11-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Add failure if DB_TYPE empty or malformed
+
+
 ## 3.5.5 2022-10-18 <dave at tiredofit dot ca>
 
    ### Changed

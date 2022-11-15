@@ -83,4 +83,4 @@ RUN set -ex && \
     rm -rf /root/.cache /tmp/* /var/cache/apk/*
 
 ### S6 Setup
-ADD install  /
+COPY install  /
