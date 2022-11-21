@@ -85,8 +85,6 @@ bootstrap_variables() {
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
-
-
 }
 
 backup_couch() {

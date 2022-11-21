@@ -1,3 +1,9 @@
+## 3.6.0 2022-11-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Postgresql 15 Support
+
+
 ## 3.5.6 2022-11-15 <dave at tiredofit dot ca>
 
    ### Changed
