@@ -1,4 +1,4 @@
-FROM docker.io/tiredofit/alpine:3.16
+FROM docker.io/tiredofit/alpine:3.17
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 ### Set Environment Variables
@@ -116,7 +116,7 @@ RUN set -ex && \
                bzip2-dev \
                git \
                libarchive-dev \
-               libressl-dev \
+               openssl-dev \
                libffi-dev \
                python3-dev \
                py3-pip \
@@ -131,7 +131,7 @@ RUN set -ex && \
                mariadb-client \
                mariadb-connector-c \
                mongodb-tools \
-               libressl \
+               openssl \
                pigz \
                #postgresql \
                #postgresql-client \
