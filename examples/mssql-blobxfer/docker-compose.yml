@@ -57,6 +57,7 @@ services:
       - COMPRESSION=GZ
       - SPLIT_DB=FALSE
       - CONTAINER_ENABLE_MONITORING=FALSE
+      - TEMP_LOCATION=/tmp/backups/test
       # === S3 Blobxfer ===
       - BACKUP_LOCATION=blobxfer
       # Add here azure storage account
@@ -64,6 +65,7 @@ services:
       # Add here azure storage account key
       - BLOBXFER_STORAGE_ACCOUNT_KEY={TODO Add Key}
       - BLOBXFER_REMOTE_PATH=docker-db-backup
+      - BLOBXFER_REMOTE_CLEANUP=TRUE
     restart: always
     networks:
       example-mssql-blobxfer-net:

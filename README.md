@@ -215,9 +215,10 @@ If `BACKUP_LOCATION` = `blobxfer` then the following options are used.
 | `BLOBXFER_STORAGE_ACCOUNT`      | Microsoft Azure Cloud storage account name.                              |                      |
 | `BLOBXFER_STORAGE_ACCOUNT_KEY`  | Microsoft Azure Cloud storage account key.                               |                      |
 | `BLOBXFER_REMOTE_PATH`          | Remote Azure path                                                        | `/docker-db-backup`  |
+| `BLOBXFER_REMOTE_CLEANUP`       | Cleanup remote path by `DB_CLEANUP_TIME` configuration.                  | `FALSE`              |
 
 > This service uploads files from backup targed directory `DB_DUMP_TARGET`. 
-> If the a cleanup configuration in `DB_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
+> If the a cleanup configuration in `DB_CLEANUP_TIME` is defined and `BLOBXFER_REMOTE_CLEANUP` is `true`, the remote directory on Azure storage will be cleaned.
 
 ## Maintenance
 
