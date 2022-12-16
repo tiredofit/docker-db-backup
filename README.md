@@ -1,7 +1,7 @@
 # github.com/tiredofit/docker-db-backup
 
 [![GitHub release](https://img.shields.io/github/v/tag/tiredofit/docker-db-backup?style=flat-square)](https://github.com/tiredofit/docker-db-backup/releases/latest)
-[![Build Status](https://img.shields.io/github/workflow/status/tiredofit/docker-db-backup/build?style=flat-square)](https://github.com/tiredofit/docker-db-backup/actions?query=workflow%3Abuild)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/tiredofit/docker-db-backup/main.yml?branch=main&style=flat-square)](https://github.com/tiredofit/docker-db-backup/actions)
 [![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/tiredofit/db-backup/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/tiredofit/db-backup/)
 [![Become a sponsor](https://img.shields.io/badge/sponsor-tiredofit-181717.svg?logo=github&style=flat-square)](https://github.com/sponsors/tiredofit)
@@ -53,6 +53,7 @@ Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
   - [Scheduling Options](#scheduling-options)
   - [Backup Options](#backup-options)
     - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
+    - [Upload to a Azure storage account by `blobxfer`](#upload-to-a-azure-storage-account-by-blobxfer)
 - [Maintenance](#maintenance)
   - [Shell Access](#shell-access)
   - [Manual Backups](#manual-backups)
@@ -138,18 +139,18 @@ Be sure to view the following repositories to understand all the customizable op
 | `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
-| Parameter          | Description                                                                                                                                                                          | Default   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |           |
-| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |           |
-| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |           |
-| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |           |
-| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |           |
-| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |           |
-| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |           |
-| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies    |
-| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |           |
-| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |           |
+| Parameter          | Description                                                                                                                                                                          | Default |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |         |
+| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |         |
+| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |         |
+| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |         |
+| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |         |
+| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |         |
+| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |         |
+| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies  |
+| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |         |
+| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |         |
 |                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |
 
 #### For Influx DB2:
@@ -169,19 +170,24 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
 ### Backup Options
-| Parameter                      | Description                                                                                                                  | Default        |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`         |
-| `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`            |
-| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`         |
-| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected` |
-| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`        |
-| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`         |
-| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`          |
-| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                |
-| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`         |
-| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`         |
-| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`         |
+| Parameter                      | Description                                                                                                                           | Default                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                               | `ZSTD`                    |
+| `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` -          | `3`                       |
+| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                         | `TRUE`                    |
+| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                            | `autodetected`            |
+| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                            | `FALSE`                   |
+| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                         | `TRUE`                    |
+| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                                | `MD5`                     |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                                       |                           |
+| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                                      | `512M`                    |
+| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                                   | `TRUE`                    |
+| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                         | `TRUE`                    |
+| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                                        | `FALSE`                   |
+| `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                                      | `TLSv1.1,TLSv1.2,TLSv1.3` |
+| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS e.g. `/etc/ssl/cert.pem` should suffice for most non self signed setups |                           |
+| `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                            |                           |
+| `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                                    |                           |
 
 - When using compression with MongoDB, only `GZ` compression is possible.
 
@@ -189,19 +195,19 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 If `BACKUP_LOCATION` = `S3` then the following options are used.
 
-| Parameter             | Description                                                                              | Default |
-|-----------------------|------------------------------------------------------------------------------------------|---------|
-| `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                           |         |
-| `S3_KEY_ID`           | S3 Key ID                                                                                |         |
-| `S3_KEY_SECRET`       | S3 Key Secret                                                                            |         |
-| `S3_PATH`             | S3 Pathname to save to (must NOT end in a trailing slash e.g. '`backup`')                |         |
-| `S3_REGION`           | Define region in which bucket is defined. Example: `ap-northeast-2`                      |         |
-| `S3_HOST`             | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.        |         |
-| `S3_PROTOCOL`         | Protocol to connect to `S3_HOST`. Either `http` or `https`. Defaults to `https`.         | `https` |
-| `S3_EXTRA_OPTS`       | Add any extra options to the end of the `aws-cli` process execution                      |         |
+| Parameter             | Description                                                                               | Default |
+| --------------------- | ----------------------------------------------------------------------------------------- | ------- |
+| `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                            |         |
+| `S3_KEY_ID`           | S3 Key ID                                                                                 |         |
+| `S3_KEY_SECRET`       | S3 Key Secret                                                                             |         |
+| `S3_PATH`             | S3 Pathname to save to (must NOT end in a trailing slash e.g. '`backup`')                 |         |
+| `S3_REGION`           | Define region in which bucket is defined. Example: `ap-northeast-2`                       |         |
+| `S3_HOST`             | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.         |         |
+| `S3_PROTOCOL`         | Protocol to connect to `S3_HOST`. Either `http` or `https`. Defaults to `https`.          | `https` |
+| `S3_EXTRA_OPTS`       | Add any extra options to the end of the `aws-cli` process execution                       |         |
 | `S3_CERT_CA_FILE`     | Map a volume and point to your custom CA Bundle for verification e.g. `/certs/bundle.pem` |         |
-| _*OR*_                |                                                                                          |         |
-| `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                  | `TRUE`  |
+| _*OR*_                |                                                                                           |         |
+| `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                   | `TRUE`  |
 
 #### Upload to a Azure storage account by `blobxfer`
 
@@ -210,13 +216,13 @@ Support to upload backup files with [blobxfer](https://github.com/Azure/blobxfer
 
 If `BACKUP_LOCATION` = `blobxfer` then the following options are used.
 
-| Parameter                       | Description                                                              | Default              |
-| ------------------------------- | ------------------------------------------------------------------------ | -------------------- |
-| `BLOBXFER_STORAGE_ACCOUNT`      | Microsoft Azure Cloud storage account name.                              |                      |
-| `BLOBXFER_STORAGE_ACCOUNT_KEY`  | Microsoft Azure Cloud storage account key.                               |                      |
-| `BLOBXFER_REMOTE_PATH`          | Remote Azure path                                                        | `/docker-db-backup`  |
+| Parameter                      | Description                                 | Default             |
+| ------------------------------ | ------------------------------------------- | ------------------- |
+| `BLOBXFER_STORAGE_ACCOUNT`     | Microsoft Azure Cloud storage account name. |                     |
+| `BLOBXFER_STORAGE_ACCOUNT_KEY` | Microsoft Azure Cloud storage account key.  |                     |
+| `BLOBXFER_REMOTE_PATH`         | Remote Azure path                           | `/docker-db-backup` |
 
-> This service uploads files from backup targed directory `DB_DUMP_TARGET`. 
+> This service uploads files from backup targed directory `DB_DUMP_TARGET`.
 > If the a cleanup configuration in `DB_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ## Maintenance

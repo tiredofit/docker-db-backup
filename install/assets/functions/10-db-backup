@@ -46,9 +46,28 @@ bootstrap_variables() {
         "mysql" | "mariadb" )
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
+            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
             [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
-            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
+            if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
+                mysql_tls=TRUE
+                mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
+            fi
+            if [ -n "${MYSQL_TLS_CERT_FILE}" ] ; then
+                mysql_tls=TRUE
+                mysql_tls_args="${mysql_tls_args} --ssl_cert=${MYSQL_TLS_CERT_FILE}"
+            fi
+            if [ -n "${MYSQL_TLS_KEY_FILE}" ] ; then
+                mysql_tls=TRUE
+                mysql_tls_args="${mysql_tls_args} --ssl_key=${MYSQL_TLS_KEY_FILE}"
+            fi
+            if var_true "${TLS_VERIFY}" ; then
+                mysql_tls=TRUE
+                mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
+            fi
+            if var_true "${mysql_tls}" ; then
+                mysql_tls_args="${mysql_tls_args} --tls_version=${MYSQL_TLS_VERSION}"
+            fi
         ;;
         "mssql" | "microsoftsql" )
             apkArch="$(apk --print-arch)"; \
@@ -198,7 +217,7 @@ backup_mysql() {
 
     if [ "${DB_NAME,,}" = "all" ] ; then
         print_debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        db_names=$(mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER ${mysql_tls_args} ${EXTRA_OPTS} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${DB_NAME_EXCLUDE}" ] ; then
             db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -219,7 +238,7 @@ backup_mysql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
                 check_exit_code $target
                 generate_checksum
@@ -233,7 +252,7 @@ backup_mysql() {
         compression
         pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
         check_exit_code $target
         generate_checksum
@@ -397,7 +416,7 @@ check_availability() {
             "mysql" )
                 counter=0
                 export MYSQL_PWD=${DB_PASS}
-                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" status > /dev/null 2>&1) ; do
+                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} ${EXTRA_OPTS} status > /dev/null 2>&1) ; do
                     sleep 5
                     (( counter+=5 ))
                     print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
@@ -465,14 +484,17 @@ cleanup_old_data() {
     if [ -n "${DB_CLEANUP_TIME}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
+                "blobxfer" )
+                    print_info "Cleaning up old backups on filesystem"
+                    mkdir -p "${DB_DUMP_TARGET}"
+                    find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+                    print_info "Syncing changes via blobxfer"
+                    silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
+                ;;
                 "file" | "filesystem" )
                     print_info "Cleaning up old backups on filesystem"
                     mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
-                    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
-                        print_info "Syncing changes via blobxfer"
-                        silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
-                    fi
                 ;;
                 "s3" | "minio" )
                     print_info "Cleaning up old backups on S3 storage"
@@ -484,7 +506,7 @@ cleanup_old_data() {
                             s3_filename=$(echo $s3_file | awk {'print $4'})
                             if [ "$s3_filename" != "" ] ; then
                                 print_debug "Deleting $s3_filename"
-                                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                                aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                             fi
                         fi
 
@@ -496,6 +518,7 @@ cleanup_old_data() {
         fi
     fi
 }
+
 
 compression() {
    if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then

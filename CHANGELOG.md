@@ -1,3 +1,12 @@
+## 3.7.0 2022-12-16 <dave at tiredofit dot ca>
+
+   ### Added
+      - Introduce support for connecting via TLS to MySQL / MariaDB Hosts with MYSQL_TLS_* variables - See README for more details
+
+   ### Changed
+      - Fix for cleaning up filesystems that are syncing to Azure via blobxfer
+
+
 ## 3.6.1 2022-11-23 <dave at tiredofit dot ca>
 
    ### Added
