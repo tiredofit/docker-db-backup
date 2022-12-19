@@ -587,7 +587,7 @@ compression() {
 
 create_archive() {
     if [ "${exit_code}" = "0" ] ; then
-        print_notice "Creating archive file of '${target_dir}' with tar ${compresion_string}"
+        print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
         tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
     else
         print_error "Skipping creating archive file because backup did not complete successfully"
