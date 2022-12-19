@@ -1,3 +1,9 @@
+## 3.7.2 2022-12-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Bugfix for 3.7.1
+
+
 ## 3.7.1 2022-12-19 <dave at tiredofit dot ca>
 
    ### Changed

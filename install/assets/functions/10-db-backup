@@ -59,10 +59,12 @@ bootstrap_variables() {
                 if [ -n "${MYSQL_TLS_KEY_FILE}" ] ; then
                     mysql_tls_args="${mysql_tls_args} --ssl_key=${MYSQL_TLS_KEY_FILE}"
                 fi
+
                 if var_true "${TLS_VERIFY}" ; then
                     mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
                 fi
-                if [ -n "${MYSQL_TLS_VERSION}" ; then
+
+                if [ -n "${MYSQL_TLS_VERSION}" ] ; then
                     mysql_tls_args="${mysql_tls_args} --tls_version=${MYSQL_TLS_VERSION}"
                 fi
             fi
