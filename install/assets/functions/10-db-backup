@@ -49,24 +49,22 @@ bootstrap_variables() {
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
             [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
             [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
-            if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
-                mysql_tls=TRUE
-                mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
-            fi
-            if [ -n "${MYSQL_TLS_CERT_FILE}" ] ; then
-                mysql_tls=TRUE
-                mysql_tls_args="${mysql_tls_args} --ssl_cert=${MYSQL_TLS_CERT_FILE}"
-            fi
-            if [ -n "${MYSQL_TLS_KEY_FILE}" ] ; then
-                mysql_tls=TRUE
-                mysql_tls_args="${mysql_tls_args} --ssl_key=${MYSQL_TLS_KEY_FILE}"
-            fi
-            if var_true "${TLS_VERIFY}" ; then
-                mysql_tls=TRUE
-                mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
-            fi
-            if var_true "${mysql_tls}" ; then
-                mysql_tls_args="${mysql_tls_args} --tls_version=${MYSQL_TLS_VERSION}"
+            if var_true "${MYSQL_ENABLE_TLS}" ; then
+                if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
+                    mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
+                fi
+                if [ -n "${MYSQL_TLS_CERT_FILE}" ] ; then
+                    mysql_tls_args="${mysql_tls_args} --ssl_cert=${MYSQL_TLS_CERT_FILE}"
+                fi
+                if [ -n "${MYSQL_TLS_KEY_FILE}" ] ; then
+                    mysql_tls_args="${mysql_tls_args} --ssl_key=${MYSQL_TLS_KEY_FILE}"
+                fi
+                if var_true "${TLS_VERIFY}" ; then
+                    mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
+                fi
+                if [ -n "${MYSQL_TLS_VERSION}" ; then
+                    mysql_tls_args="${mysql_tls_args} --tls_version=${MYSQL_TLS_VERSION}"
+                fi
             fi
         ;;
         "mssql" | "microsoftsql" )

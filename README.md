@@ -183,9 +183,10 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                                      | `512M`                    |
 | `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                                   | `TRUE`                    |
 | `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                         | `TRUE`                    |
+| `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                             | `FALSE`                   |
 | `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                                        | `FALSE`                   |
 | `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                                      | `TLSv1.1,TLSv1.2,TLSv1.3` |
-| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS e.g. `/etc/ssl/cert.pem` should suffice for most non self signed setups |                           |
+| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS  | `/etc/ssl/cert.pem`                          |
 | `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                            |                           |
 | `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                                    |                           |
 

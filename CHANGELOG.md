@@ -1,3 +1,12 @@
+## 3.7.1 2022-12-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Add MYSQL_ENABLE_TLS environment variable to switch on and off
+
+   ### Reverted
+      - Set default for MYSQL_TLS_CA_FILE to accomodate for most use cases
+
+
 ## 3.7.0 2022-12-16 <dave at tiredofit dot ca>
 
    ### Added
