@@ -100,7 +100,7 @@ bootstrap_variables() {
         ;;
     esac
 
-    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
+    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] && [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
@@ -652,8 +652,12 @@ move_dbbackup() {
             ;;
             "s3" | "minio" )
                 print_debug "Moving backup to S3 Bucket"
-                export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
-                export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
+                if [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
+                    export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
+                    export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
+                else
+                    print_debug "Variable S3_KEY_ID or S3_KEY_SECRET is not set. Please ensure sufficiant IAM role is assigned."
+                fi
                 export AWS_DEFAULT_REGION=${S3_REGION}
                 if [ -f "${S3_CERT_CA_FILE}" ] ; then
                     print_debug "Using Custom CA for S3 Backups"
@@ -809,7 +813,7 @@ sanity_test() {
         ;;
     esac
 
-    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
+    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] && [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
         sanity_var S3_BUCKET "S3 Bucket"
         sanity_var S3_PATH "S3 Path"
         sanity_var S3_REGION "S3 Region"
@@ -827,6 +831,7 @@ setup_mode() {
         if var_true "${MANUAL_RUN_FOREVER}" ; then
             mkdir -p /etc/services.d/99-run_forever
             cat <<EOF > /etc/services.d/99-run_forever/run
+
 #!/bin/bash
 while true
 do
