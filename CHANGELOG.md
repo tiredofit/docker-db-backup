@@ -1,3 +1,9 @@
+## 3.7.3 2022-12-20 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Make S3_KEY_ID and S3_KEY_SECRET optional should IAM roles be used (Credit to alwynpan@github)
+
+
 ## 3.7.2 2022-12-19 <dave at tiredofit dot ca>
 
    ### Changed
