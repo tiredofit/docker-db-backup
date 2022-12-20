@@ -199,8 +199,8 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | Parameter             | Description                                                                               | Default |
 | --------------------- | ----------------------------------------------------------------------------------------- | ------- |
 | `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                            |         |
-| `S3_KEY_ID`           | S3 Key ID                                                                                 |         |
-| `S3_KEY_SECRET`       | S3 Key Secret                                                                             |         |
+| `S3_KEY_ID`           | S3 Key ID (Optional)                                                                      |         |
+| `S3_KEY_SECRET`       | S3 Key Secret (Optional)                                                                  |         |
 | `S3_PATH`             | S3 Pathname to save to (must NOT end in a trailing slash e.g. '`backup`')                 |         |
 | `S3_REGION`           | Define region in which bucket is defined. Example: `ap-northeast-2`                       |         |
 | `S3_HOST`             | Hostname (and port) of S3-compatible service, e.g. `minio:8080`. Defaults to AWS.         |         |
@@ -209,6 +209,8 @@ If `BACKUP_LOCATION` = `S3` then the following options are used.
 | `S3_CERT_CA_FILE`     | Map a volume and point to your custom CA Bundle for verification e.g. `/certs/bundle.pem` |         |
 | _*OR*_                |                                                                                           |         |
 | `S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                   | `TRUE`  |
+
+- When `S3_KEY_ID` and/or `S3_KEY_SECRET` is not set, will try to use IAM role assigned (if any) for uploading the backup files to S3 bucket.
 
 #### Upload to a Azure storage account by `blobxfer`
 
