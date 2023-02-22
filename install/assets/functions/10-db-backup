@@ -831,7 +831,6 @@ setup_mode() {
         if var_true "${MANUAL_RUN_FOREVER}" ; then
             mkdir -p /etc/services.d/99-run_forever
             cat <<EOF > /etc/services.d/99-run_forever/run
-
 #!/bin/bash
 while true
 do
