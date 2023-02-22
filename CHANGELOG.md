@@ -1,3 +1,9 @@
+## 3.7.4 2023-02-22 <gbe0@github>
+
+   ### Changed
+      - Fix when running in MANUAL_RUN_FOREVER mode looping
+
+
 ## 3.7.3 2022-12-20 <dave at tiredofit dot ca>
 
    ### Changed
