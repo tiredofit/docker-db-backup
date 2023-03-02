@@ -1,3 +1,9 @@
+## 3.7.5 2023-03-02 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add support for Docker Swarm mode Secrets for BLOBXFER_STORAGE_ACCOUNT_*_FILE
+
+
 ## 3.7.4 2023-02-22 <gbe0@github>
 
    ### Changed

@@ -104,6 +104,11 @@ bootstrap_variables() {
         file_env 'S3_KEY_ID'
         file_env 'S3_KEY_SECRET'
     fi
+
+    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] && [ -n "${BLOBXFER_STORAGE_ACCOUNT_FILE}" ] && [ -n "${BLOBXFER_STORAGE_ACCOUNT_KEY_FILE}" ]; then
+        file_env 'BLOBXFER_STORAGE_ACCOUNT_FILE'
+        file_env 'BLOBXFER_STORAGE_ACCOUNT_KEY_FILE'
+    fi
 }
 
 backup_couch() {
