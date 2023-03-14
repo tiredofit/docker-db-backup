@@ -421,7 +421,7 @@ check_availability() {
             "mysql" )
                 counter=0
                 export MYSQL_PWD=${DB_PASS}
-                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} ${EXTRA_OPTS} status > /dev/null 2>&1) ; do
+                while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
                     sleep 5
                     (( counter+=5 ))
                     print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
