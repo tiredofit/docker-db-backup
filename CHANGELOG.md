@@ -1,3 +1,9 @@
+## 3.7.6 2023-03-14 <toshy@github>
+
+   ### Changed
+      - Remove EXTRA_OPT variable from MySQL/MariaDB check
+
+
 ## 3.7.5 2023-03-02 <dave at tiredofit dot ca>
 
    ### Added
