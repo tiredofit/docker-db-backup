@@ -1,3 +1,9 @@
+## 3.7.7 2023-03-20 <codemonium@github>
+
+   ### Changed
+      - Simplify pg_isready usage
+
+
 ## 3.7.6 2023-03-14 <toshy@github>
 
    ### Changed
