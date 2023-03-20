@@ -437,8 +437,7 @@ check_availability() {
             ;;
             "pgsql" )
                 counter=0
-                export PGPASSWORD=${DB_PASS}
-                until pg_isready --dbname=${DB_NAME} --host=${DB_HOST} --port=${DB_PORT} --username=${DB_USER} -q
+                until pg_isready --host=${DB_HOST} --port=${DB_PORT} -q
                 do
                     sleep 5
                     (( counter+=5 ))
