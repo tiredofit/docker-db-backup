@@ -114,6 +114,7 @@ bootstrap_variables() {
 backup_couch() {
     prepare_dbbackup
     target=couch_${DB_NAME}_${DB_HOST#*//}_${now}.txt
+    ltarget=couch_${DB_NAME}_${DB_HOST#*//}
     compression
     pre_dbbackup ${DB_NAME}
     print_notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
@@ -139,6 +140,7 @@ backup_influx() {
                 prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
                 target=influx_${db}_${DB_HOST#*//}_${now}
+                ltarget=influx_${db}_${DB_HOST#*//}
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping Influx database: '${db}'"
@@ -148,6 +150,7 @@ backup_influx() {
                 print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
+                target=influx_${db}_${DB_HOST#*//}
                 generate_checksum
                 move_dbbackup
                 post_dbbackup $db
@@ -158,6 +161,7 @@ backup_influx() {
                 prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="--bucket $db" ; else db=all ; fi
                 target=influx2_${db}_${DB_HOST#*//}_${now}
+                ltarget=influx2_${db}_${DB_HOST#*//}
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping Influx2 database: '${db}'"
@@ -178,8 +182,10 @@ backup_mongo() {
     prepare_dbbackup
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
         target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive
+        ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
     else
         target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive.gz
+        ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
@@ -201,6 +207,7 @@ backup_mongo() {
 backup_mssql() {
     prepare_dbbackup
     target=mssql_${DB_NAME,,}_${DB_HOST,,}_${now}.bak
+    target=mssql_${DB_NAME,,}_${DB_HOST,,}
     compression
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
@@ -240,6 +247,7 @@ backup_mysql() {
         for db in ${db_names} ; do
                 prepare_dbbackup
                 target=mysql_${db}_${DB_HOST,,}_${now}.sql
+                ltarget=mysql_${db}_${DB_HOST,,}
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
@@ -254,6 +262,7 @@ backup_mysql() {
         print_debug "Not splitting database dumps into their own files"
         prepare_dbbackup
         target=mysql_all_${DB_HOST,,}_${now}.sql
+        ltarget=mysql_all_${DB_HOST,,}
         compression
         pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
@@ -289,6 +298,7 @@ backup_pgsql() {
         for db in ${db_names} ; do
                 prepare_dbbackup
                 target=pgsql_${db}_${DB_HOST,,}_${now}.sql
+                ltarget=pgsql_${db}_${DB_HOST,,}
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
@@ -303,6 +313,7 @@ backup_pgsql() {
         print_debug "Not splitting database dumps into their own files"
         prepare_dbbackup
         target=pgsql_all_${DB_HOST,,}_${now}.sql
+        ltarget=pgsql_${db}_${DB_HOST,,}
         compression
         pre_dbbackup all
         print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
@@ -327,6 +338,7 @@ backup_redis() {
     prepare_dbbackup
     print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
+    ltarget=redis_${DB_HOST,,}
     echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
     sleep 10
     try=5
@@ -357,6 +369,7 @@ backup_sqlite3() {
     db=$(basename "${DB_HOST}")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
+    target=sqlite3_${db}.sqlite3
     compression
     pre_dbbackup $db
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
@@ -653,6 +666,14 @@ move_dbbackup() {
                 mkdir -p "${DB_DUMP_TARGET}"
                 mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+                if var_true "${CREATE_LATEST_SYMLINK}" ; then
+                    ln -sf "${DB_DUMP_TARGET}"/"${target}" "${DB_DUMP_TARGET}"/latest-"${ltarget}"
+                fi
+                if [ -n "${DB_ARCHIVE_TIME}" ] ; then
+                    mkdir -p "${DB_DUMP_TARGET_ARCHIVE}"
+                    find "${DB_DUMP_TARGET}"/  -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "*" -exec mv {} foo \;
+                    find "${DB_DUMP_TARGET}"/  -maxdepth 1 -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+                fi
             ;;
             "s3" | "minio" )
                 print_debug "Moving backup to S3 Bucket"
@@ -707,6 +728,7 @@ prepare_dbbackup() {
     now=$(date +"%Y%m%d-%H%M%S")
     now_time=$(date +"%H:%M:%S")
     now_date=$(date +"%Y-%m-%d")
+    ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
     target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.sql
 }
 
@@ -836,8 +858,7 @@ setup_mode() {
             mkdir -p /etc/services.d/99-run_forever
             cat <<EOF > /etc/services.d/99-run_forever/run
 #!/bin/bash
-while true
-do
+while true; do
 	sleep 86400
 done
 EOF

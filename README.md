@@ -82,11 +82,11 @@ Clone this repository and build the image with `docker build <arguments> (imagen
 ### Prebuilt Images
 Builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/db-backup)
 
-Builds of the image are also available on the [Github Container Registry](https://github.com/tiredofit/docker-db-backup/pkgs/container/docker-db-backup) 
- 
+Builds of the image are also available on the [Github Container Registry](https://github.com/tiredofit/docker-db-backup/pkgs/container/docker-db-backup)
+
 ```
 docker pull ghcr.io/tiredofit/docker-db-backup:(imagetag)
-``` 
+```
 
 The following image tags are available along with their tagged release based on what's written in the [Changelog](CHANGELOG.md):
 
@@ -123,7 +123,7 @@ The following directories are used for configuration and can be mapped for persi
 
 #### Base Images used
 
-This image relies on an [Alpine Linux](https://hub.docker.com/r/tiredofit/alpine) or [Debian Linux](https://hub.docker.com/r/tiredofit/debian) base image that relies on an [init system](https://github.com/just-containers/s6-overlay) for added capabilities. Outgoing SMTP capabilities are handlded via `msmtp`. Individual container performance monitoring is performed by [zabbix-agent](https://zabbix.org). Additional tools include: `bash`,`curl`,`less`,`logrotate`, `nano`.
+This image relies on an [Alpine Linux](https://hub.docker.com/r/tiredofit/alpine) base image that relies on an [init system](https://github.com/just-containers/s6-overlay) for added capabilities. Outgoing SMTP capabilities are handlded via `msmtp`. Individual container performance monitoring is performed by [zabbix-agent](https://zabbix.org). Additional tools include: `bash`,`curl`,`less`,`logrotate`, `nano`.
 
 Be sure to view the following repositories to understand all the customizable options:
 
@@ -133,16 +133,17 @@ Be sure to view the following repositories to understand all the customizable op
 
 #### Container Options
 
-| Parameter            | Description                                                                                                                      | Default         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `BACKUP_LOCATION`    | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
-| `MODE`               | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
-| `MANUAL_RUN_FOREVER` | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
-| `TEMP_LOCATION`      | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
-| `DEBUG_MODE`         | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
-| `PRE_SCRIPT`         | Fill this variable in with a command to execute pre backing up                                                                   |                 |
-| `POST_SCRIPT`        | Fill this variable in with a command to execute post backing up                                                                  |                 |
-| `SPLIT_DB`           | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
+| Parameter               | Description                                                                                                                      | Default         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `BACKUP_LOCATION`       | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
+| `MODE`                  | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
+| `MANUAL_RUN_FOREVER`    | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
+| `TEMP_LOCATION`         | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
+| `DEBUG_MODE`            | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
+| `CREATE_LATEST_SYMLINK` | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)                             | `TRUE`          |
+| `PRE_SCRIPT`            | Fill this variable in with a command to execute pre backing up                                                                   |                 |
+| `POST_SCRIPT`           | Fill this variable in with a command to execute post backing up                                                                  |                 |
+| `SPLIT_DB`              | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
 | Parameter          | Description                                                                                                                                                                          | Default |
@@ -163,38 +164,39 @@ Be sure to view the following repositories to understand all the customizable op
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
 
 ### Scheduling Options
-| Parameter         | Description                                                                                                                                                                                        | Default   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `DB_DUMP_FREQ`    | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`    |
-| `DB_DUMP_BEGIN`   | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |           |
-|                   | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |           |
-|                   | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |           |
-| `DB_DUMP_TARGET`  | Directory where the database dumps are kept.                                                                                                                                                       | `/backup` |
-| `DB_CLEANUP_TIME` | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`   |
-
+| Parameter                | Description                                                                                                                                                                                        | Default                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `DB_DUMP_FREQ`           | How often to do a dump, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                                                                              | `1440`                       |
+| `DB_DUMP_BEGIN`          | What time to do the first dump. Defaults to immediate. Must be in one of two formats                                                                                                               |                              |
+|                          | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |                              |
+|                          | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |                              |
+| `DB_DUMP_TARGET`         | Directory where the database dumps are kept.                                                                                                                                                       | `${DB_DUMP_TARGET}/archive/` |
+| `DB_DUMP_TARGET_ARCHIVE` | Optional Directory where the database dumps archivs are kept.                                                                                                                                      |
+| `DB_CLEANUP_TIME`        | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`                      |
+| `DB_ARCHIVE_TIME`        | Value in minutes to move all files from `DB_DUMP_TARGET` to `DB_DUMP_TARGET_ARCHIVE` - which is useful when pairing against an external backup system.                                             |
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
 ### Backup Options
-| Parameter                      | Description                                                                                                                           | Default                   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                               | `ZSTD`                    |
-| `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` -          | `3`                       |
-| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                         | `TRUE`                    |
-| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                            | `autodetected`            |
-| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                            | `FALSE`                   |
-| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                         | `TRUE`                    |
-| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                                | `MD5`                     |
-| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                                       |                           |
-| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                                      | `512M`                    |
-| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                                   | `TRUE`                    |
-| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                         | `TRUE`                    |
-| `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                             | `FALSE`                   |
-| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                                        | `FALSE`                   |
-| `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                                      | `TLSv1.1,TLSv1.2,TLSv1.3` |
-| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS  | `/etc/ssl/cert.pem`                          |
-| `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                            |                           |
-| `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                                    |                           |
+| Parameter                      | Description                                                                                                                  | Default                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`                    |
+| `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`                       |
+| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`                    |
+| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected`            |
+| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`                   |
+| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`                    |
+| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`                     |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                           |
+| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`                    |
+| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`                    |
+| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`                    |
+| `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                    | `FALSE`                   |
+| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                               | `FALSE`                   |
+| `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                             | `TLSv1.1,TLSv1.2,TLSv1.3` |
+| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS                                                                | `/etc/ssl/cert.pem`       |
+| `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                   |                           |
+| `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                           |                           |
 
 - When using compression with MongoDB, only `GZ` compression is possible.
 

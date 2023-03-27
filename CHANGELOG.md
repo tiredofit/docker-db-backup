@@ -1,3 +1,10 @@
+## 3.8.0 2023-03-27 <dave at tiredofit dot ca>
+
+   ### Added
+      - Introduce DB_DUMP_TARGET_ARCHIVE which works with DB_ARCHIVE_TIME to move backups older than (x) minutes from DB_DUMP_TARGET to DB_DUMP_TARGET_ARCHIVE for use with external backup systems and custom exclude rules
+      - Introduce CREATE_LATEST_SYMLINK which creates a symbolic link in DB_DUMP_TARGET of `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)`
+
+
 ## 3.7.7 2023-03-20 <codemonium@github>
 
    ### Changed
