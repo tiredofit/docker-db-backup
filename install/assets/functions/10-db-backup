@@ -671,8 +671,7 @@ move_dbbackup() {
                 fi
                 if [ -n "${DB_ARCHIVE_TIME}" ] ; then
                     mkdir -p "${DB_DUMP_TARGET_ARCHIVE}"
-                    find "${DB_DUMP_TARGET}"/  -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "*" -exec mv {} foo \;
-                    find "${DB_DUMP_TARGET}"/  -maxdepth 1 -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm {} \;
+                    find "${DB_DUMP_TARGET}"/  -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "*" -exec mv {} "${DB_DUMP_TARGET_ARCHIVE}" \;
                 fi
             ;;
             "s3" | "minio" )

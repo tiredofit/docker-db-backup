@@ -1,3 +1,9 @@
+## 3.8.3 2023-03-30 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Patchup for 3.8.2
+
+
 ## 3.8.2 2023-03-30 <dave at tiredofit dot ca>
 
    ### Changed
