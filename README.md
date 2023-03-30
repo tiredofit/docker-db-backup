@@ -140,7 +140,7 @@ Be sure to view the following repositories to understand all the customizable op
 | `MANUAL_RUN_FOREVER`    | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`         | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 | `DEBUG_MODE`            | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
-| `CREATE_LATEST_SYMLINK` | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)                             | `TRUE`          |
+| `CREATE_LATEST_SYMLINK` | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)`                             | `TRUE`          |
 | `PRE_SCRIPT`            | Fill this variable in with a command to execute pre backing up                                                                   |                 |
 | `POST_SCRIPT`           | Fill this variable in with a command to execute post backing up                                                                  |                 |
 | `SPLIT_DB`              | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
@@ -171,9 +171,9 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 |                          | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |                              |
 |                          | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |                              |
 | `DB_DUMP_TARGET`         | Directory where the database dumps are kept.                                                                                                                                                       | `${DB_DUMP_TARGET}/archive/` |
-| `DB_DUMP_TARGET_ARCHIVE` | Optional Directory where the database dumps archivs are kept.                                                                                                                                      |
+| `DB_DUMP_TARGET_ARCHIVE` | Optional Directory where the database dumps archives are kept.                                                                                                                                      |
 | `DB_CLEANUP_TIME`        | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`                      |
-| `DB_ARCHIVE_TIME`        | Value in minutes to move all files from `DB_DUMP_TARGET` to `DB_DUMP_TARGET_ARCHIVE` - which is useful when pairing against an external backup system.                                             |
+| `DB_ARCHIVE_TIME`        | Value in minutes to move all files files older than (x) from `DB_DUMP_TARGET` to `DB_DUMP_TARGET_ARCHIVE` - which is useful when pairing against an external backup system.                                             |
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
