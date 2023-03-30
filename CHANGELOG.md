@@ -1,3 +1,10 @@
+## 3.8.1 2023-03-30 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Cleanup Dockerfile
+      - Fix issue with DB_ARCHIVE_TIME not firing correctly
+
+
 ## 3.8.0 2023-03-27 <dave at tiredofit dot ca>
 
    ### Added

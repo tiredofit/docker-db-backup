@@ -13,9 +13,9 @@ ENV INFLUX2_VERSION=2.4.0 \
 ### Dependencies
 RUN source /assets/functions/00-container && \
     set -ex && \
-    apk update && \
-    apk upgrade && \
-    apk add -t .db-backup-build-deps \
+    package update && \
+    package upgrade && \
+    package install .db-backup-build-deps \
                build-base \
                bzip2-dev \
                git \
@@ -27,7 +27,7 @@ RUN source /assets/functions/00-container && \
                xz-dev \
                && \
     \
-    apk add --no-cache -t .db-backup-run-deps \
+    package install .db-backup-run-deps \
                aws-cli \
                bzip2 \
                influxdb \
@@ -47,14 +47,14 @@ RUN source /assets/functions/00-container && \
                zstd \
                && \
     \
-    apkArch="$(apk --print-arch)"; \
+    apkArch="$(package --print-arch)"; \
     case "$apkArch" in \
 	x86_64) mssql=true ; influx2=true ; influx_arch=amd64; ;; \
     aarch64 ) influx2=true ; influx_arch=arm64 ;; \
     *) sleep 0.1 ;; \
     esac; \
     \
-    if [ $mssql = "true" ] ; then curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/msodbcsql18_${MSSQL_VERSION}_amd64.apk ; curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/mssql-tools18_${MSSQL_VERSION}_amd64.apk ; echo y | apk add --allow-untrusted msodbcsql18_${MSSQL_VERSION}_amd64.apk mssql-tools18_${MSSQL_VERSION}_amd64.apk ; else echo >&2 "Detected non x86_64 build variant, skipping MSSQL installation" ; fi; \
+    if [ $mssql = "true" ] ; then curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/msodbcsql18_${MSSQL_VERSION}_amd64.package ; curl -O https://download.microsoft.com/download/b/9/f/b9f3cce4-3925-46d4-9f46-da08869c6486/mssql-tools18_${MSSQL_VERSION}_amd64.package ; echo y | package add --allow-untrusted msodbcsql18_${MSSQL_VERSION}_amd64.package mssql-tools18_${MSSQL_VERSION}_amd64.package ; else echo >&2 "Detected non x86_64 build variant, skipping MSSQL installation" ; fi; \
     if [ $influx2 = "true" ] ; then curl -sSL https://dl.influxdata.com/influxdb/releases/influxdb2-client-${INFLUX2_VERSION}-linux-${influx_arch}.tar.gz | tar xvfz - --strip=1 -C /usr/src/ ; chmod +x /usr/src/influx ; mv /usr/src/influx /usr/sbin/ ; else echo >&2 "Unable to build Influx 2 on this system" ; fi ; \
     \
     mkdir -p /usr/src/pbzip2 && \
@@ -75,12 +75,14 @@ RUN source /assets/functions/00-container && \
     \
     pip3 install blobxfer && \
     \
-### Cleanup
-    apk del .db-backup-build-deps && \
-    rm -rf /usr/src/* && \
-    rm -rf /*.apk && \
-    rm -rf /etc/logrotate.d/redis && \
-    rm -rf /root/.cache /tmp/* /var/cache/apk/*
+    package remove .db-backup-build-deps && \
+    package cleanup && \
+    rm -rf \
+            /*.package \
+            /etc/logrotate.d/* \
+            /root/.cache \
+            /tmp/* \
+            /usr/src/*
 
-### S6 Setup
+
 COPY install  /
