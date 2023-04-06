@@ -1,3 +1,9 @@
+## 3.8.4 2023-04-06 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with Influx2 and MSSQL clients not installing properly
+
+
 ## 3.8.3 2023-03-30 <dave at tiredofit dot ca>
 
    ### Changed
