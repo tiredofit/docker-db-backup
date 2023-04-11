@@ -1,3 +1,9 @@
+## 3.8.5 2023-04-11 <tpansino@github>
+
+   ### Changed
+      - Fix SQLite3, Influx, and MSSQL backups failing due to malformed/non existent ltarget
+
+
 ## 3.8.4 2023-04-06 <dave at tiredofit dot ca>
 
    ### Changed
