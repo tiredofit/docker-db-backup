@@ -150,7 +150,7 @@ backup_influx() {
                 print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
-                target=influx_${db}_${DB_HOST#*//}
+                ltarget=influx_${db}_${DB_HOST#*//}
                 generate_checksum
                 move_dbbackup
                 post_dbbackup $db
@@ -170,6 +170,7 @@ backup_influx() {
                 check_exit_code $target_dir
                 create_archive
                 target=influx2_${db}_${DB_HOST#*//}_${now}.tar${extension}
+                ltarget=influx2_${db}_${DB_HOST#*//}
                 generate_checksum
                 move_dbbackup
                 post_dbbackup $db
@@ -207,7 +208,7 @@ backup_mongo() {
 backup_mssql() {
     prepare_dbbackup
     target=mssql_${DB_NAME,,}_${DB_HOST,,}_${now}.bak
-    target=mssql_${DB_NAME,,}_${DB_HOST,,}
+    ltarget=mssql_${DB_NAME,,}_${DB_HOST,,}
     compression
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
@@ -369,7 +370,7 @@ backup_sqlite3() {
     db=$(basename "${DB_HOST}")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
-    target=sqlite3_${db}.sqlite3
+    ltarget=sqlite3_${db}.sqlite3
     compression
     pre_dbbackup $db
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
