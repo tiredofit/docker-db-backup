@@ -2,12 +2,17 @@
 
 bootstrap_variables() {
     sanity_var DB_TYPE "Set appropriate DB_TYPE"
+    transform_var \
+                        DB_HOST \
+                        DB_PORT \
+                        DB_USER \
+                        DB_PASS
     case "${DB_TYPE,,}" in
         couch* )
             dbtype=couch
             DB_PORT=${DB_PORT:-5984}
-            file_env 'DB_USER'
-            file_env 'DB_PASS'
+            sanity_var DB_USER
+            sanity_var DB_PASS
         ;;
         influx* )
             dbtype=influx
@@ -15,31 +20,31 @@ bootstrap_variables() {
                 1) DB_PORT=${DB_PORT:-8088} ;;
                 2) DB_PORT=${DB_PORT:-8086} ;;
             esac
-            file_env 'DB_USER'
-            file_env 'DB_PASS'
+            sanity_var DB_USER
+            sanity_var DB_PASS
             sanity_var INFLUX_VERSION "What InfluxDB version you are backing up from '1' or '2'"
         ;;
         mongo* )
             dbtype=mongo
+            transform_var MONGO_CUSTOM_URI
             if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-                mongo_uri_proto=$(echo ${MONGO_CUSTOM_URI} | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                mongo_uri_proto=$(echo "${MONGO_CUSTOM_URI}" | grep :// | sed -e's,^\(.*://\).*,\1,g')
                 mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
-                mongo_uri_username_password=$(echo ${mongo_uri_scratch} | grep @ | rev | cut -d@ -f2- | rev)
-                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch=$(echo ${mongo_uri_scratch} | rev | cut -d@ -f1 | rev) ; fi
-                mongo_uri_port=$(echo ${mongo_uri_scratch} | grep : | rev | cut -d: -f2- | rev)
-                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port=$(echo ${mongo_uri_scratch} | rev | cut -d: -f1 | cut -d/ -f2 | rev) ; fi
-                mongo_uri_hostname=$(echo ${mongo_uri_scratch} | cut -d/ -f1 | cut -d: -f1 )
-                mongo_uri_database=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f1 )
-                mongo_uri_options=$(echo ${mongo_uri_scratch} | cut -d/ -f2 | cut -d? -f2 )
+                mongo_uri_username_password="$(echo "${mongo_uri_scratch}" | grep @ | rev | cut -d@ -f2- | rev)"
+                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch="$(echo "${mongo_uri_scratch}" | rev | cut -d@ -f1 | rev)" ; fi
+                mongo_uri_port="$(echo "${mongo_uri_scratch}" | grep : | rev | cut -d: -f2- | rev)"
+                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port="$(echo "${mongo_uri_scratch}" | rev | cut -d: -f1 | cut -d/ -f2 | rev)" ; fi
+                mongo_uri_hostname="$(echo "${mongo_uri_scratch}" | cut -d/ -f1 | cut -d: -f1 )"
+                mongo_uri_database="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f1 )"
+                mongo_uri_options="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f2 )"
                 DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
                 DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
             else
                 DB_PORT=${DB_PORT:-27017}
-                [[ ( -n "${DB_USER}" ) || ( -n "${DB_USER_FILE}" ) ]] && file_env 'DB_USER'
-                [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
                 [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
                 [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
                 [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
+                transform_var DB_AUTH
                 [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
             fi
         ;;
@@ -47,8 +52,7 @@ bootstrap_variables() {
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
-            [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
+                        [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
             if var_true "${MYSQL_ENABLE_TLS}" ; then
                 if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
                     mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
@@ -81,14 +85,12 @@ bootstrap_variables() {
         postgres* | "pgsql" )
             dbtype=pgsql
             DB_PORT=${DB_PORT:-5432}
-            [[ ( -n "${DB_PASS}" ) || ( -n "${DB_PASS_FILE}" ) ]] && file_env 'DB_PASS'
             [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
         "redis" )
             dbtype=redis
             DB_PORT=${DB_PORT:-6379}
-            [[ ( -n "${DB_PASS}" || ( -n "${DB_PASS_FILE}" ) ) ]] && file_env 'DB_PASS'
             [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
         ;;
         sqlite* )
@@ -100,14 +102,23 @@ bootstrap_variables() {
         ;;
     esac
 
-    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] && [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
-        file_env 'S3_KEY_ID'
-        file_env 'S3_KEY_SECRET'
+    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
+        transform_var \
+                        S3_BUCKET \
+                        S3_KEY_ID \
+                        S3_KEY_SECRET \
+                        S3_PATH \
+                        S3_REGION \
+                        S3_HOST \
+                        S3_PROTOCOL \
+                        S3_EXTRA_OPTS \
+                        S3_CERT_CA_FILE
     fi
 
-    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] && [ -n "${BLOBXFER_STORAGE_ACCOUNT_FILE}" ] && [ -n "${BLOBXFER_STORAGE_ACCOUNT_KEY_FILE}" ]; then
-        file_env 'BLOBXFER_STORAGE_ACCOUNT_FILE'
-        file_env 'BLOBXFER_STORAGE_ACCOUNT_KEY_FILE'
+    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
+        transform_var \
+                        BLOBXFER_STORAGE_ACCOUNT \
+                        BLOBXFER_STORAGE_KEY
     fi
 }
 
@@ -838,14 +849,6 @@ sanity_test() {
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
         ;;
     esac
-
-    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] && [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
-        sanity_var S3_BUCKET "S3 Bucket"
-        sanity_var S3_PATH "S3 Path"
-        sanity_var S3_REGION "S3 Region"
-        file_env 'S3_KEY_ID'
-        file_env 'S3_KEY_SECRET'
-    fi
 }
 
 setup_mode() {
