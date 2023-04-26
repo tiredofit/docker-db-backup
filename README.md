@@ -170,14 +170,14 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 |                          | Absolute HHMM, e.g. `2330` or `0415`                                                                                                                                                               |                              |
 |                          | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half                                                     |                              |
 | `DB_DUMP_TARGET`         | Directory where the database dumps are kept.                                                                                                                                                       | `${DB_DUMP_TARGET}/archive/` |
-| `DB_DUMP_TARGET_ARCHIVE` | Optional Directory where the database dumps archives are kept.                                                                                                                                     |
+| `DB_DUMP_TARGET_ARCHIVE` | Optional Directory where the database dumps archives are kept.                                                                                                                                     |                              |
 | `DB_CLEANUP_TIME`        | Value in minutes to delete old backups (only fired when dump freqency fires). 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything. | `FALSE`                      |
-| `DB_ARCHIVE_TIME`        | Value in minutes to move all files files older than (x) from `DB_DUMP_TARGET` to `DB_DUMP_TARGET_ARCHIVE` - which is useful when pairing against an external backup system.                        |
+| `DB_ARCHIVE_TIME`        | Value in minutes to move all files files older than (x) from `DB_DUMP_TARGET` to `DB_DUMP_TARGET_ARCHIVE` - which is useful when pairing against an external backup system.                        |                              |
 
 - You may need to wrap your `DB_DUMP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
 ### Backup Options
-| Parameter                      | Description                                                                                                                  | Default                   | `_NAME` |
+| Parameter                      | Description                                                                                                                  | Default                   | `_FILE` |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
 | `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`                    |         |
 | `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`                       |         |
