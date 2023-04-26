@@ -2,7 +2,7 @@
 
 bootstrap_variables() {
     sanity_var DB_TYPE "Set appropriate DB_TYPE"
-    transform_var \
+    transform_file_var \
                         DB_HOST \
                         DB_PORT \
                         DB_USER \
@@ -26,7 +26,7 @@ bootstrap_variables() {
         ;;
         mongo* )
             dbtype=mongo
-            transform_var MONGO_CUSTOM_URI
+            transform_file_var MONGO_CUSTOM_URI
             if [ -n "${MONGO_CUSTOM_URI}" ] ; then
                 mongo_uri_proto=$(echo "${MONGO_CUSTOM_URI}" | grep :// | sed -e's,^\(.*://\).*,\1,g')
                 mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
@@ -44,7 +44,7 @@ bootstrap_variables() {
                 [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
                 [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
                 [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-                transform_var DB_AUTH
+                transform_file_var DB_AUTH
                 [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
             fi
         ;;
@@ -103,7 +103,7 @@ bootstrap_variables() {
     esac
 
     if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
-        transform_var \
+        transform_file_var \
                         S3_BUCKET \
                         S3_KEY_ID \
                         S3_KEY_SECRET \
@@ -116,7 +116,7 @@ bootstrap_variables() {
     fi
 
     if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
-        transform_var \
+        transform_file_var \
                         BLOBXFER_STORAGE_ACCOUNT \
                         BLOBXFER_STORAGE_KEY
     fi

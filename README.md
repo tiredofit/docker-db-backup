@@ -203,7 +203,7 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 If `BACKUP_LOCATION` = `S3` then the following options are used.
 
-| Parameter             | Description                                                                               | Default | `_NAME` |
+| Parameter             | Description                                                                               | Default | `_FILE` |
 | --------------------- | ----------------------------------------------------------------------------------------- | ------- | ------- |
 | `S3_BUCKET`           | S3 Bucket name e.g. `mybucket`                                                            |         | x       |
 | `S3_KEY_ID`           | S3 Key ID (Optional)                                                                      |         | x       |

@@ -1,3 +1,9 @@
+## 3.9.0 2023-04-26 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add support for _FILE environment variables
+
+
 ## 3.8.5 2023-04-11 <tpansino@github>
 
    ### Changed
