@@ -146,18 +146,19 @@ Be sure to view the following repositories to understand all the customizable op
 | `SPLIT_DB`              | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
-| Parameter          | Description                                                                                                                                                                          | Default | `_NAME |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------ |
-| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |         |        | `DB_TYPE` | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3` |  |  |
-| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |         | x      |
-| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |         | x      |
-| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |         | x      |
-| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |         | x      |
-| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |         | x      |
-| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies  | x      |
-| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |         |        |
-| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |         | x      |
-|                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |         |        |
+| Parameter          | Description                                                                                                                                                                          | Default | `_FILE` |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------- |
+| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |         |         |
+| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |         |         |
+| `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |         | x       |
+| `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |         | x       |
+| `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |         | x       |
+| `DB_USER`          | username for the database(s) - Can use `root` for MySQL                                                                                                                              |         | x       |
+| `DB_PASS`          | (optional if DB doesn't require it) password for the database                                                                                                                        |         | x       |
+| `DB_PORT`          | (optional) Set port to connect to DB_HOST. Defaults are provided                                                                                                                     | varies  | x       |
+| `INFLUX_VERSION`   | What Version of Influx are you backing up from `1`.x or `2` series - AMD64 and ARM64 only for `2`                                                                                    |         |         |
+| `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`                                                    |         | x       |
+|                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. You can overrde them by making your own entries |         |         |
 
 #### For Influx DB2:
 Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`. You may use `DB_NAME=ALL` to backup the entire set of databases. For `DB_HOST` use syntax of `http(s)://db-name`
@@ -225,7 +226,7 @@ Support to upload backup files with [blobxfer](https://github.com/Azure/blobxfer
 
 If `BACKUP_LOCATION` = `blobxfer` then the following options are used.
 
-| Parameter                      | Description                                 | Default             | `_NAME` |
+| Parameter                      | Description                                 | Default             | `_FILE` |
 | ------------------------------ | ------------------------------------------- | ------------------- | ------- |
 | `BLOBXFER_STORAGE_ACCOUNT`     | Microsoft Azure Cloud storage account name. |                     | x       |
 | `BLOBXFER_STORAGE_ACCOUNT_KEY` | Microsoft Azure Cloud storage account key.  |                     | x       |
