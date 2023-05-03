@@ -4,9 +4,11 @@ bootstrap_variables() {
     sanity_var DB_TYPE "Set appropriate DB_TYPE"
     transform_file_var \
                         DB_HOST \
+                        DB_NAME \
                         DB_PORT \
                         DB_USER \
                         DB_PASS
+
     case "${DB_TYPE,,}" in
         couch* )
             dbtype=couch
@@ -52,7 +54,8 @@ bootstrap_variables() {
             dbtype=mysql
             DB_PORT=${DB_PORT:-3306}
             sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-                        [[ ( -n "${DB_PASS}" ) ]] && export MYSQL_PWD=${DB_PASS}
+            transform_file_var DB_PASS
+            if [ -n "${DB_PASS}" ] ; then export MYSQL_PWD=${DB_PASS} ; fi
             if var_true "${MYSQL_ENABLE_TLS}" ; then
                 if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
                     mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
@@ -445,6 +448,7 @@ check_availability() {
             ;;
             "mysql" )
                 counter=0
+                transform_file_var DB_PASS
                 export MYSQL_PWD=${DB_PASS}
                 while ! (mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
                     sleep 5

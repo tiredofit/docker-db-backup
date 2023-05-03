@@ -1,3 +1,10 @@
+## 3.9.1 2023-05-03 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Properly allow multiple _FILE environment variables to execute solving an issue with MySQL backups
+      - Fix _FILE functionality for DB_NAME variable
+
+
 ## 3.9.0 2023-04-26 <dave at tiredofit dot ca>
 
    ### Added
