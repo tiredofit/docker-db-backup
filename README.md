@@ -135,7 +135,7 @@ Be sure to view the following repositories to understand all the customizable op
 
 | Parameter               | Description                                                                                                                      | Default         |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `BACKUP_LOCATION`       | Backup to `FILESYSTEM` or `S3` compatible services like S3, Minio, Wasabi                                                        | `FILESYSTEM`    |
+| `BACKUP_LOCATION`       | Backup to `FILESYSTEM`, `blobxfer` or `S3` compatible services like S3, Minio, Wasabi                                            | `FILESYSTEM`    |
 | `MODE`                  | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
 | `MANUAL_RUN_FOREVER`    | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
 | `TEMP_LOCATION`         | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
