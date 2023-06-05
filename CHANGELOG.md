@@ -1,3 +1,10 @@
+## 3.9.3 2023-06-05 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add notification if blobxfer/s3 upload fails (credit @alwynpan)
+      - Add zip package
+
+
 ## 3.9.2 2023-05-10 <dave at tiredofit dot ca>
 
    ### Changed
