@@ -47,6 +47,7 @@ RUN source /assets/functions/00-container && \
                redis \
                sqlite \
                xz \
+               zip \
                zstd \
                && \
     \
