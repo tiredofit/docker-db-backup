@@ -1,3 +1,9 @@
+## 3.9.4 2023-06-13 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add abliity to use --rsyncable argument to zstd archives
+
+
 ## 3.9.3 2023-06-05 <dave at tiredofit dot ca>
 
    ### Added

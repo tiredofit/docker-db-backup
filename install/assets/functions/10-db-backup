@@ -565,15 +565,16 @@ cleanup_old_data() {
 
 
 compression() {
-   if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
-       PARALLEL_COMPRESSION_THREADS=1
-   fi
+    if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
+        PARALLEL_COMPRESSION_THREADS=1
+    fi
 
-   case "${COMPRESSION,,}" in
+    if var_true "${GZ_RSYNCABLE}" ; then
+        gz_rsyncable=--rsyncable
+    fi
+
+    case "${COMPRESSION,,}" in
         gz* )
-            if var_true "${GZ_RSYNCABLE}" ; then
-                gz_rsyncable=--rsyncable
-            fi
             compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
@@ -598,7 +599,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="zstd -q -q --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="zstd -q -q --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
