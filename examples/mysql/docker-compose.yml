@@ -31,6 +31,8 @@ services:
       - ./backups:/backup
       #- ./post-script.sh:/assets/custom-scripts/post-script.sh
     environment:
+      - TIMEZONE=America/Vancouver
+      - CONTAINER_ENABLE_MONITORING=FALSE
       # - DEBUG_MODE=TRUE
       - DB_TYPE=mariadb
       - DB_HOST=example-db-host
@@ -43,7 +45,7 @@ services:
       - CHECKSUM=SHA1
       - COMPRESSION=GZ
       - SPLIT_DB=FALSE
-      - CONTAINER_ENABLE_MONITORING=FALSE
+
     restart: always
     networks:
       - example-db-network

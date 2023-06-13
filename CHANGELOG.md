@@ -1,3 +1,9 @@
+## 3.9.5 2023-06-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Start building Influx DB v1 manually due to being removed from Alpine repositories
+
+
 ## 3.9.4 2023-06-13 <dave at tiredofit dot ca>
 
    ### Added
