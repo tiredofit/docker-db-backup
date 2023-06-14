@@ -16,17 +16,37 @@ else
     current_time=$(date +"%s")
     today=$(date +"%Y%m%d")
 
-    if [[ $DB_DUMP_BEGIN =~ ^\+(.*)$ ]]; then
+    # Check if DB_DUMP_BEGIN is an integer
+    if [[ $DB_DUMP_BEGIN =~ ^[0-9]+$ ]]; then
+        print_info "DB_DUMP_BEGIN is an integer."
         waittime=$(( ${BASH_REMATCH[1]} * 60 ))
         target_time=$(($current_time + $waittime))
-    else
-        target_time=$(date --date="${today}${DB_DUMP_BEGIN}" +"%s")
-        if [[ "$target_time" < "$current_time" ]]; then
-            target_time=$(($target_time + 24*60*60))
+    elif [[ $DB_DUMP_BEGIN =~ ^([0-9]{2}):([0-9]{2}):([0-9]{2})$ ]]; then
+        print_info "DB_DUMP_BEGIN is time."
+        # Extract hours, minutes, and seconds from DB_DUMP_BEGIN
+        db_hour=${BASH_REMATCH[1]}
+        db_minute=${BASH_REMATCH[2]}
+        db_second=${BASH_REMATCH[3]}
+
+        # Calculate DB_DUMP_BEGIN time in seconds
+        db_time=$(date -d "${db_hour}:${db_minute}:${db_second}" +%s)
+
+        # Calculate the difference in seconds
+        waittime=$((db_time - current_time))
+        print_info "Difference in seconds: $waittime"
+
+        if (( $waittime < 0 )); then
+            waittime=$(( ($waittime + ($DB_DUMP_FREQ - 1)) / ($DB_DUMP_FREQ * 60) ))
+            waittime=$(( $waittime * -1 ))
+            print_info "Difference in seconds (rounded): $waittime"
         fi
-        waittime=$(($target_time - $current_time))
+
+        target_time=$(($current_time + $waittime))
+    else
+        print_info "DB_DUMP_BEGIN is not an integer or in the correct format (hh:mm:ss)."
     fi
-    print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
+
+    print_info "Wait Time: ${waittime} Target time: $(date -d @${target_time} +"%Y-%m-%d %T %Z") Current Time: $(date -d @${current_time} +"%Y-%m-%d %T %Z")"
     print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
     sleep $waittime
 fi
