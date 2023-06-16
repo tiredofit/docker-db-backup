@@ -1,3 +1,9 @@
+## 3.9.6 2023-06-16 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve issues introduced with 3.9.3. Split exit codes to be specific for backing up and moving. Uses paremter $11 for post backup scripts
+
+
 ## 3.9.5 2023-06-13 <dave at tiredofit dot ca>
 
    ### Changed

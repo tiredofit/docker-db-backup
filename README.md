@@ -323,17 +323,18 @@ $ cat post-script.sh
 # #### $8=BACKUP FILENAME (Filename)
 # #### $9=BACKUP FILESIZE
 # #### $10=HASH (If CHECKSUM enabled)
+# #### $11=MOVE_EXIT_CODE
 
 echo "${1} ${2} Backup Completed on ${3} for ${4} on ${5} ending ${6} for a duration of ${7} seconds. Filename: ${8} Size: ${9} bytes MD5: ${10}"
 ````
 
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}" "${move_exit_code}
 
 
 Outputs the following on the console:
 
-`0 mysql Backup Completed on example-db for example on 1647370800 ending 1647370920 for a duration of 120 seconds. Filename: mysql_example_example-db_202200315-000000.sql.bz2 Size: 7795 bytes Hash: 952fbaafa30437494fdf3989a662cd40`
+`0 mysql Backup Completed on example-db for example on 1647370800 ending 1647370920 for a duration of 120 seconds. Filename: mysql_example_example-db_202200315-000000.sql.bz2 Size: 7795 bytes Hash: 952fbaafa30437494fdf3989a662cd40 0`
 
 If you wish to change the size value from bytes to megabytes set environment variable `SIZE_VALUE=megabytes`
 

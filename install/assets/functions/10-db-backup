@@ -134,10 +134,10 @@ backup_couch() {
     print_notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
     curl -sSL -X GET ${DB_HOST}:${DB_PORT}/${DB_NAME}/_all_docs?include_docs=true ${compress_cmd} | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
     exit_code=$?
-    check_exit_code $target
+    check_exit_code backup $target
     generate_checksum
     move_dbbackup
-    check_exit_code "move backup file"
+    check_exit_code move $target
     post_dbbackup ${DB_NAME}
 }
 
@@ -161,14 +161,14 @@ backup_influx() {
                 print_notice "Dumping Influx database: '${db}'"
                 influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
-                check_exit_code $target_dir
+                check_exit_code backup $target_dir
                 print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 tar cf - "${TEMP_LOCATION}"/"${target_dir}" | $dir_compress_cmd > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
                 ltarget=influx_${db}_${DB_HOST#*//}
                 generate_checksum
                 move_dbbackup
-                check_exit_code "move backup file"
+                check_exit_code move $target_dir
                 post_dbbackup $db
             done
         ;;
@@ -183,13 +183,13 @@ backup_influx() {
                 print_notice "Dumping Influx2 database: '${db}'"
                 influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
-                check_exit_code $target_dir
+                check_exit_code backup $target_dir
                 create_archive
                 target=influx2_${db}_${DB_HOST#*//}_${now}.tar${extension}
                 ltarget=influx2_${db}_${DB_HOST#*//}
                 generate_checksum
                 move_dbbackup
-                check_exit_code "move backup file"
+                check_exit_code move $target_dir
                 post_dbbackup $db
             done
         ;;
@@ -219,7 +219,7 @@ backup_mongo() {
     check_exit_code $target
     generate_checksum
     move_dbbackup
-    check_exit_code "move backup file"
+    check_exit_code move $target
     post_dbbackup "${DB_NAME}"
 }
 
@@ -232,10 +232,10 @@ backup_mssql() {
     print_notice "Dumping MSSQL database: '${DB_NAME}'"
     silent /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
-    check_exit_code $target
+    check_exit_code backup $target
     generate_checksum
     move_dbbackup
-    check_exit_code "move backup file"
+    check_exit_code move $target
     post_dbbackup $DB_NAME
 }
 
@@ -273,10 +273,10 @@ backup_mysql() {
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
-                check_exit_code $target
+                check_exit_code backup $target
                 generate_checksum
                 move_dbbackup
-                check_exit_code "move backup file"
+                check_exit_code move $target
                 post_dbbackup $db
         done
     else
@@ -292,7 +292,7 @@ backup_mysql() {
         check_exit_code $target
         generate_checksum
         move_dbbackup
-        check_exit_code "move backup file"
+        check_exit_code move $target
         post_dbbackup all
     fi
 }
@@ -326,10 +326,10 @@ backup_pgsql() {
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
-                check_exit_code $target
+                check_exit_code backup $target
                 generate_checksum
                 move_dbbackup
-                check_exit_code "move backup file"
+                check_exit_code move $target
                 post_dbbackup $db
         done
     else
@@ -350,10 +350,10 @@ backup_pgsql() {
         done
         pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
         exit_code=$?
-        check_exit_code $target
+        check_exit_code backup $target
         generate_checksum
         move_dbbackup
-        check_exit_code "move backup file"
+        check_exit_code move $target
         post_dbbackup all
     fi
 }
@@ -382,10 +382,10 @@ backup_redis() {
     compression
     pre_dbbackup all
     $compress_cmd "${TEMP_LOCATION}/${target_original}"
-    check_exit_code $target
+    check_exit_code backup $target
     generate_checksum
     move_dbbackup
-    check_exit_code "move backup file"
+    check_exit_code move $target
     post_dbbackup all
 }
 
@@ -400,11 +400,11 @@ backup_sqlite3() {
     print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
     silent sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
-    check_exit_code $target
+    check_exit_code backup $target
     cat "${TEMP_LOCATION}"/backup.sqlite3 | ${dir_compress_cmd} > "${TEMP_LOCATION}/${target}"
     generate_checksum
     move_dbbackup
-    check_exit_code "move backup file"
+    check_exit_code move $target
     post_dbbackup $db
 }
 
@@ -513,6 +513,32 @@ check_availability() {
 
 check_exit_code() {
     print_debug "DB Backup Exit Code is ${exit_code}"
+    case "${1}" in
+        backup )
+            case "${exit_code}" in
+                0 )
+                    print_info "DB Backup of '${2}' completed successfully"
+                ;;
+                * )
+                    print_error "DB Backup of '${2}' reported errors"
+                    master_exit_code=1
+                ;;
+            esac
+            ;;
+        move )
+            case "${move_exit_code}" in
+                0 )
+                    print_debug "Moving of backup '${2}' completed successfully"
+                ;;
+                * )
+                    print_error "Moving of backup '${1}' reported errors"
+                    master_exit_code=1
+                ;;
+            esac
+        ;;
+    esac
+
+
     case "${exit_code}" in
         0 )
             print_info "DB Backup of '${1}' completed successfully"
@@ -694,6 +720,7 @@ move_dbbackup() {
                 mkdir -p "${DB_DUMP_TARGET}"
                 mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+                move_exit_code=$?
                 if var_true "${CREATE_LATEST_SYMLINK}" ; then
                     ln -sf "${DB_DUMP_TARGET}"/"${target}" "${DB_DUMP_TARGET}"/latest-"${ltarget}"
                 fi
@@ -723,7 +750,7 @@ move_dbbackup() {
                 [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
 
                 silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
-                exit_code=$?
+                move_exit_code=$?
                 if var_true "${ENABLE_CHECKSUM}" ; then
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
@@ -739,7 +766,7 @@ move_dbbackup() {
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
 
                 silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
-                exit_code=$?
+                move_exit_code=$?
 
                 rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
                 rm -rf "${TEMP_LOCATION}"/"${target}"
@@ -816,11 +843,11 @@ post_dbbackup() {
     ### Post Script Support
     if [ -n "${POST_SCRIPT}" ] ; then
         if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
+            eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
         else
             if [ -x "${POST_SCRIPT}" ] ; then
                 print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
+                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 print_error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
             fi
@@ -837,12 +864,12 @@ post_dbbackup() {
     if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
         for f in $(find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
             if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
+                ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 if [ -x "${f}" ] ; then
                     print_notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}"
+                    ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
                 else
                     print_error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
