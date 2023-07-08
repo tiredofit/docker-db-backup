@@ -748,6 +748,10 @@ move_dbbackup() {
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
             "blobxfer" )
+
+                print_info "Synchronize local storage from S3 Bucket with blobxfer"
+                blobxfer download --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete
+
                 print_info "Moving backup to external storage with blobxfer"
 
                 mkdir -p "${DB_DUMP_TARGET}"
