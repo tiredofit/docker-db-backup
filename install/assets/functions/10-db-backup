@@ -216,7 +216,7 @@ backup_mongo() {
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
     silent mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
-    check_exit_code $target
+    check_exit_code backup $target
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -289,7 +289,7 @@ backup_mysql() {
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
-        check_exit_code $target
+        check_exit_code backup $target
         generate_checksum
         move_dbbackup
         check_exit_code move $target
@@ -531,21 +531,10 @@ check_exit_code() {
                     print_debug "Moving of backup '${2}' completed successfully"
                 ;;
                 * )
-                    print_error "Moving of backup '${1}' reported errors"
+                    print_error "Moving of backup '${2}' reported errors"
                     master_exit_code=1
                 ;;
             esac
-        ;;
-    esac
-
-
-    case "${exit_code}" in
-        0 )
-            print_info "DB Backup of '${1}' completed successfully"
-        ;;
-        * )
-            print_error "DB Backup of '${1}' reported errors"
-            master_exit_code=1
         ;;
     esac
 }

@@ -1,3 +1,9 @@
+## 3.9.7 2023-07-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Cleanup check_exit_code parameter and reduce duplicate output
+
+
 ## 3.9.6 2023-06-16 <dave at tiredofit dot ca>
 
    ### Changed
