@@ -22,6 +22,7 @@ RUN source /assets/functions/00-container && \
     package install .db-backup-build-deps \
                build-base \
                bzip2-dev \
+               cargo \
                git \
                go \
                libarchive-dev \
