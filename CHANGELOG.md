@@ -1,3 +1,9 @@
+## 3.9.8 2023-08-20 <ToshY@github>
+
+   ### Changed
+      - Restore armv7 and aarch64 builds
+
+
 ## 3.9.7 2023-07-18 <dave at tiredofit dot ca>
 
    ### Changed
