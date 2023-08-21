@@ -1,3 +1,9 @@
+## 3.9.9 2023-08-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Start compiling aws-cli instead of from packages to continue to support arm/v7
+
+
 ## 3.9.8 2023-08-20 <ToshY@github>
 
    ### Changed
