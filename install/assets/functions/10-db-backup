@@ -707,7 +707,7 @@ move_dbbackup() {
             "file" | "filesystem" )
                 print_debug "Moving backup to filesystem"
                 mkdir -p "${DB_DUMP_TARGET}"
-                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                 if var_true "${ENABLE_CHECKSUM}" ; then mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/ ; fi
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
                 move_exit_code=$?
                 if var_true "${CREATE_LATEST_SYMLINK}" ; then

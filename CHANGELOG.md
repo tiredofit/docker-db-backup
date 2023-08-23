@@ -1,3 +1,9 @@
+## 3.9.10 2023-08-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Stop trying to move a non existent checksum file when ENABLE_CHECKSUM=FALSE
+
+
 ## 3.9.9 2023-08-21 <dave at tiredofit dot ca>
 
    ### Changed
