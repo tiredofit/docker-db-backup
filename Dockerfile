@@ -30,7 +30,6 @@ RUN source /assets/functions/00-container && \
                openssl-dev \
                libffi-dev \
                python3-dev \
-               py3-setuptools \
                py3-pip \
                xz-dev \
                && \
@@ -53,6 +52,7 @@ RUN source /assets/functions/00-container && \
                py3-docutils \
                py3-jmespath \
                py3-rsa \
+               py3-setuptools \
                py3-s3transfer \
                py3-yaml \
                python3 \

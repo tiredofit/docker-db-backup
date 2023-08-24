@@ -1,3 +1,9 @@
+## 3.9.11 2023-08-24 <dave at tiredofit dot ca>
+
+   ### Changed
+      - AWS CLI 2.13.9
+
+
 ## 3.9.10 2023-08-23 <dave at tiredofit dot ca>
 
    ### Changed
