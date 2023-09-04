@@ -1,3 +1,9 @@
+## 3.9.12 2023-09-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Perform additional checks for ENABLE_CHECKSUM=FALSE and skip executing actions for S3/BlobXfer
+
+
 ## 3.9.11 2023-08-24 <dave at tiredofit dot ca>
 
    ### Changed

@@ -744,20 +744,21 @@ move_dbbackup() {
                     silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                 fi
 
-                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                if var_true "${ENABLE_CHECKSUM}" ; then rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"; fi
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
             "blobxfer" )
                 print_info "Moving backup to S3 Bucket with blobxfer"
 
                 mkdir -p "${DB_DUMP_TARGET}"
-                mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/
+                if var_true "${ENABLE_CHECKSUM}" ; then mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/; fi
+
                 mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
 
                 silent blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
                 move_exit_code=$?
 
-                rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"
+                if var_true "${ENABLE_CHECKSUM}" ; then rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}" ; fi
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
         esac
