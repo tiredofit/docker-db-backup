@@ -1,3 +1,9 @@
+## 3.10.0 2023-09-13 <jcdirks@github>
+
+   ### Added
+      - Add EXTRA_DUMP_OPTS and EXTRA_ENUMERATION_OPTS to add different arguments when checking for databases, vs doing the actual backup
+
+
 ## 3.9.12 2023-09-04 <dave at tiredofit dot ca>
 
    ### Changed
