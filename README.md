@@ -179,7 +179,7 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 ### Backup Options
 | Parameter                      | Description                                                                                                                  | Default                   | `_FILE` |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------|---------------------------|---------|
 | `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`                    |         |
 | `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`                       |         |
 | `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
@@ -187,7 +187,9 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`                   |         |
 | `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
 | `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`                     |         |
-| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                           |         |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command`     |                           |         |
+| `EXTRA_DUMP_OPTS`              | If you need to pass extra arguments to the backup command only, add them here e.g. `--extra-command`                         |                           |         |
+| `EXTRA_ENUMERATION_OPTS`       | If you need to pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`           |                           |         |
 | `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`                    |         |
 | `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`                    |         |
 | `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`                    |         |

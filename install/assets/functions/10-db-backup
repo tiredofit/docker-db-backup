@@ -159,7 +159,7 @@ backup_influx() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping Influx database: '${db}'"
-                influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
+                influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS ${EXTRA_DUMP_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
                 print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
@@ -181,7 +181,7 @@ backup_influx() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping Influx2 database: '${db}'"
-                influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
+                influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
                 create_archive
@@ -208,9 +208,9 @@ backup_mongo() {
         compression_string="and compressing with gzip"
     fi
     if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-        mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS}"
+        mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}"
     else
-        mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS}"
+        mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}"
     fi
     pre_dbbackup "${DB_NAME}"
     print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
@@ -249,7 +249,7 @@ backup_mysql() {
 
     if [ "${DB_NAME,,}" = "all" ] ; then
         print_debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER ${mysql_tls_args} ${EXTRA_OPTS} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        db_names=$(mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_ENUMERATION_OPTS} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${DB_NAME_EXCLUDE}" ] ; then
             db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -271,7 +271,7 @@ backup_mysql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -287,7 +287,7 @@ backup_mysql() {
         compression
         pre_dbbackup all
         print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+        mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --databases $(echo ${db_names} | xargs) | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -324,7 +324,7 @@ backup_pgsql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
-                pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
+                pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -348,7 +348,7 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
-        pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
+        pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} | $compress_cmd > ${TEMP_LOCATION}/${target}
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -363,7 +363,7 @@ backup_redis() {
     print_notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
     ltarget=redis_${DB_HOST,,}
-    echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS}
+    echo bgsave | silent redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
