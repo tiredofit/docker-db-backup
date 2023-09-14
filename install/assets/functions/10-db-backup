@@ -271,7 +271,7 @@ backup_mysql() {
                 compression
                 pre_dbbackup $db
                 print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --databases $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
+                mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} $db | $compress_cmd > "${TEMP_LOCATION}"/"${target}"
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
