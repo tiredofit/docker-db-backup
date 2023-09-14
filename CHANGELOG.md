@@ -1,3 +1,10 @@
+## 3.10.2 2023-09-14 <pimjansen@github>
+
+   ### Changed
+      - Update to wording when sending files to blobxfer
+      - Remove --databases flag when backing up a single mysql/mariadb backup which allows to omit the "USE <db_name>" statement in the backup allowing for better restores
+
+
 ## 3.10.1 2023-09-13 <dave at tiredofit dot ca>
 
    ### Changed
