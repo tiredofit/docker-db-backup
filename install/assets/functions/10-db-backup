@@ -748,7 +748,7 @@ move_dbbackup() {
                 rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
             "blobxfer" )
-                print_info "Moving backup to S3 Bucket with blobxfer"
+                print_info "Moving backup to external storage with blobxfer"
 
                 mkdir -p "${DB_DUMP_TARGET}"
                 if var_true "${ENABLE_CHECKSUM}" ; then mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/; fi
