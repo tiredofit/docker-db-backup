@@ -1,3 +1,9 @@
+## 3.10.1 2023-09-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Bugfix to 3.10.0 with syntax error revolving around unbraced variable
+
+
 ## 3.10.0 2023-09-13 <jcdirks@github>
 
    ### Added
