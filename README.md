@@ -179,7 +179,7 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 ### Backup Options
 | Parameter                      | Description                                                                                                                  | Default                   | `_FILE` |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------|---------------------------|---------|
 | `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`                    |         |
 | `COMPRESSION_LEVEL`            | Numberical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`                       |         |
 | `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
@@ -187,7 +187,9 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`                   |         |
 | `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
 | `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`                     |         |
-| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup command, add them here e.g. `--extra-command`                              |                           |         |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command`     |                           |         |
+| `EXTRA_DUMP_OPTS`              | If you need to pass extra arguments to the backup command only, add them here e.g. `--extra-command`                         |                           |         |
+| `EXTRA_ENUMERATION_OPTS`       | If you need to pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`           |                           |         |
 | `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`                    |         |
 | `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`                    |         |
 | `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`                    |         |
@@ -323,17 +325,18 @@ $ cat post-script.sh
 # #### $8=BACKUP FILENAME (Filename)
 # #### $9=BACKUP FILESIZE
 # #### $10=HASH (If CHECKSUM enabled)
+# #### $11=MOVE_EXIT_CODE
 
 echo "${1} ${2} Backup Completed on ${3} for ${4} on ${5} ending ${6} for a duration of ${7} seconds. Filename: ${8} Size: ${9} bytes MD5: ${10}"
 ````
 
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}"
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_start_timme}" "${backup_finish_time}" "${backup_total_time}" "${target}" "${FILESIZE}" "${checksum_value}" "${move_exit_code}
 
 
 Outputs the following on the console:
 
-`0 mysql Backup Completed on example-db for example on 1647370800 ending 1647370920 for a duration of 120 seconds. Filename: mysql_example_example-db_202200315-000000.sql.bz2 Size: 7795 bytes Hash: 952fbaafa30437494fdf3989a662cd40`
+`0 mysql Backup Completed on example-db for example on 1647370800 ending 1647370920 for a duration of 120 seconds. Filename: mysql_example_example-db_202200315-000000.sql.bz2 Size: 7795 bytes Hash: 952fbaafa30437494fdf3989a662cd40 0`
 
 If you wish to change the size value from bytes to megabytes set environment variable `SIZE_VALUE=megabytes`
 

@@ -1,3 +1,76 @@
+## 3.10.2 2023-09-14 <pimjansen@github>
+
+   ### Changed
+      - Update to wording when sending files to blobxfer
+      - Remove --databases flag when backing up a single mysql/mariadb backup which allows to omit the "USE <db_name>" statement in the backup allowing for better restores
+
+
+## 3.10.1 2023-09-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Bugfix to 3.10.0 with syntax error revolving around unbraced variable
+
+
+## 3.10.0 2023-09-13 <jcdirks@github>
+
+   ### Added
+      - Add EXTRA_DUMP_OPTS and EXTRA_ENUMERATION_OPTS to add different arguments when checking for databases, vs doing the actual backup
+
+
+## 3.9.12 2023-09-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Perform additional checks for ENABLE_CHECKSUM=FALSE and skip executing actions for S3/BlobXfer
+
+
+## 3.9.11 2023-08-24 <dave at tiredofit dot ca>
+
+   ### Changed
+      - AWS CLI 2.13.9
+
+
+## 3.9.10 2023-08-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Stop trying to move a non existent checksum file when ENABLE_CHECKSUM=FALSE
+
+
+## 3.9.9 2023-08-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Start compiling aws-cli instead of from packages to continue to support arm/v7
+
+
+## 3.9.8 2023-08-20 <ToshY@github>
+
+   ### Changed
+      - Restore armv7 and aarch64 builds
+
+
+## 3.9.7 2023-07-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Cleanup check_exit_code parameter and reduce duplicate output
+
+
+## 3.9.6 2023-06-16 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve issues introduced with 3.9.3. Split exit codes to be specific for backing up and moving. Uses paremter $11 for post backup scripts
+
+
+## 3.9.5 2023-06-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Start building Influx DB v1 manually due to being removed from Alpine repositories
+
+
+## 3.9.4 2023-06-13 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add abliity to use --rsyncable argument to zstd archives
+
+
 ## 3.9.3 2023-06-05 <dave at tiredofit dot ca>
 
    ### Added
