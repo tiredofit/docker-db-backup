@@ -131,7 +131,7 @@ EOF
     fi
 
     if [ -z "${DB_HOST}" ] && [ -n "${parsed_host}" ]; then
-        print_debug "Parsed DBHostpho Variant: 3 - No Env, Parsed Filename"
+        print_debug "Parsed DBHost Variant: 3 - No Env, Parsed Filename"
         q_dbhost_variant=3
         q_dbhost_menu=$(cat <<EOF
 
@@ -335,7 +335,7 @@ EOF
     case "${q_dbtype_variant}" in
         1 )
             while true; do
-                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}M${cdgy}\) | \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}M${cdgy}\) \| \(${cwh}O${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     m* )
                         r_dbtype=mysql
@@ -358,7 +358,7 @@ EOF
         ;;
         2 )
             while true; do
-                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}O${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     e* | "" )
                         r_dbtype=${DB_TYPE}
@@ -385,7 +385,7 @@ EOF
         ;;
         3 )
             while true; do
-                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}O${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     f* | "" )
                         r_dbtype=${p_dbtype}
@@ -413,7 +413,7 @@ EOF
 
         4 )
             while true; do
-                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
+                read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}E${cdgy}\) \| \(${cwh}F${cdgy}\) \| \(${cwh}M${cdgy}\) \| \(${cwh}O${cdgy}\) \| \(${cwh}P${cdgy}\) : ${cwh}${coff}) " q_dbtype
                 case "${q_dbtype,,}" in
                     e* | "" )
                         r_dbtype=${DB_TYPE}
@@ -425,6 +425,10 @@ EOF
                     ;;
                     m* )
                         r_dbtype=mysql
+                        break
+                    ;;
+                    o* )
+                        r_dbtype=mongo
                         break
                     ;;
                     p* )
@@ -915,6 +919,30 @@ case "${r_dbtype}" in
         exit_code=$?
     ;;
     mongo )
+        cat << EOF
+
+Do you wish to drop any existing data before restoring?
+    Y ) Yes
+    N ) No
+    Q ) Quit
+
+EOF
+
+        echo -e "${coff}"
+        read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}Y${cdgy}\) \| \(${cwh}N${cdgy}\) \| \(${cwh}Q${cdgy}\)  : ${cwh}${coff})" q_menu_mongo_dropdb
+        case "${q_menu_mongo_dropdb,,}" in
+            "y" | "yes" | * )
+                mongo_dropdb="--drop"
+            ;;
+            "n" | "update" )
+                unset mongo_dropdb
+            ;;
+            "q" | "exit" )
+                print_info "Quitting Script"
+                exit 1
+            ;;
+        esac
+
         print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
         if [ "${ENABLE_COMPRESSION,,}" != "none" ] && [ "${ENABLE_COMPRESSION,,}" != "false" ] ; then
             mongo_compression="--gzip"
@@ -928,7 +956,8 @@ case "${r_dbtype}" in
         if [ -n "${DB_AUTH}" ] ; then
             mongo_auth_database="--authenticationDatabase=${DB_AUTH}"
         fi
-        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename} ${mongo_auth_database}
+
+        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_dropdb} ${mongo_user} ${mongo_pass} --archive=${r_filename} ${mongo_auth_database}
         exit_code=$?
     ;;
     * )

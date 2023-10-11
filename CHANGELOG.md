@@ -1,3 +1,12 @@
+## 3.10.5 2023-10-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add option to drop exsiting data from MongoDB restore
+
+   ### Changed
+      - Fix some capabilities of not being able to select mongodb manually to restore
+
+
 ## 3.10.4 2023-10-11 <thomas-negrault@github>
 
    ### Changed
