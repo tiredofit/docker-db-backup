@@ -78,7 +78,7 @@ fi
 get_filename() {
     COLUMNS=12
     prompt="Please select a file to restore:"
-    options=( $(find "${DB_DUMP_TARGET}" -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | xargs -0) )
+    options=( $(find "${DB_DUMP_TARGET}" -type f -maxdepth 1  -not -name '*.md5' -not -name '*.sha1' -print0 | sort -z | xargs -0) )
     PS3="$prompt "
     select opt in "${options[@]}" "Custom" "Quit" ; do
         if (( REPLY == 2 + ${#options[@]} )) ; then
