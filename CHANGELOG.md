@@ -1,3 +1,9 @@
+## 3.10.4 2023-10-11 <thomas-negrault@github>
+
+   ### Changed
+      - Use authentication database for MongoDB restores
+
+
 ## 3.10.3 2023-10-11 <thomas-negrault@github>
 
    ### Changed
