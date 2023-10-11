@@ -925,7 +925,10 @@ case "${r_dbtype}" in
         if [ -n "${r_dbpass}" ] ; then
             mongo_pass="-p=${r_dbpass}"
         fi
-        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename}
+        if [ -n "${DB_AUTH}" ] ; then
+            mongo_auth_database="--authenticationDatabase=${DB_AUTH}"
+        fi
+        mongorestore ${mongo_compression} -d=${r_dbname} -h=${r_dbhost} --port=${r_dbport} ${mongo_user} ${mongo_pass} --archive=${r_filename} ${mongo_auth_database}
         exit_code=$?
     ;;
     * )
