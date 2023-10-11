@@ -1,3 +1,9 @@
+## 3.10.3 2023-10-11 <thomas-negrault@github>
+
+   ### Changed
+      - Change sorting for restore script
+
+
 ## 3.10.2 2023-09-14 <pimjansen@github>
 
    ### Changed
