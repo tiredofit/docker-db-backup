@@ -1,3 +1,11 @@
+## 3.11.0 2023-10-12 <dave at tiredofit dot ca>
+
+   ### Added
+      - Introduce aarch64 (ARMv8) support for Microsoft SQL Server backups
+      - Microsoft ODBC Driver 18.3.2.1-1
+      - Microsoft SQL Client 18.3.1.1-1
+
+
 ## 3.10.5 2023-10-11 <dave at tiredofit dot ca>
 
    ### Added

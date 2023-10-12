@@ -12,7 +12,7 @@
 
 This will build a container for backing up multiple types of DB Servers
 
-Currently backs up CouchDB, InfluxDB, MySQL, MongoDB, Postgres, Redis servers.
+Currently backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis servers.
 
 * dump to local filesystem or backup to S3 Compatible services, and Azure.
 * select database user and password
@@ -149,7 +149,7 @@ Be sure to view the following repositories to understand all the customizable op
 | Parameter          | Description                                                                                                                                                                          | Default | `_FILE` |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ------- |
 | `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                      |         |         |
-| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `pgsql` `mongo` `redis` `sqlite3`                                                                                               |         |         |
+| `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `mssql` `pgsql` `mongo` `redis` `sqlite3`                                                                                       |         |         |
 | `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                        |         | x       |
 | `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by seperating with commas eg `db1,db2`                                          |         | x       |
 | `DB_NAME_EXCLUDE`  | If using `ALL` - use this as to exclude databases seperated via commas from being backed up                                                                                          |         | x       |
