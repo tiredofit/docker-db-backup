@@ -299,10 +299,9 @@ backup_mysql() {
 
 backup_pgsql() {
   export PGPASSWORD=${DB_PASS}
-  authdb=${DB_USER}
     if [ "${DB_NAME,,}" = "all" ] ; then
         print_debug "Preparing to back up all databases"
-        db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         if [ -n "${DB_NAME_EXCLUDE}" ] ; then
             db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -340,7 +339,7 @@ backup_pgsql() {
         compression
         pre_dbbackup all
         print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        tmp_db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        tmp_db_names=$(psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names  | xargs); do
             tmp_db_names=$(echo "$tmp_db_names" | xargs | sed "s|${r_db_name}||g"  )
         done
