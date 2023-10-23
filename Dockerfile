@@ -1,5 +1,5 @@
 ARG DISTRO=alpine
-ARG DISTRO_VARIANT=3.18
+ARG DISTRO_VARIANT=edge
 
 FROM docker.io/tiredofit/${DISTRO}:${DISTRO_VARIANT}
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
@@ -44,8 +44,8 @@ RUN source /assets/functions/00-container && \
                mongodb-tools \
                openssl \
                pigz \
-               postgresql15 \
-               postgresql15-client \
+               postgresql16 \
+               postgresql16-client \
                pv \
                py3-botocore \
                py3-colorama \
@@ -94,7 +94,7 @@ RUN source /assets/functions/00-container && \
     make && \
     make install && \
     \
-    pip3 install blobxfer && \
+    pip3 install --break-system-packages blobxfer && \
     \
     package remove .db-backup-build-deps && \
     package cleanup && \

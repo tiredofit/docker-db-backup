@@ -1,3 +1,13 @@
+## 3.11.1 2023-10-23 <dave at tiredofit dot ca>
+
+   ### Added
+      - Switch to tiredofit/alpine:edge for newer packages
+      - Postgresql 16 support
+
+   ### Changed
+      - Add --break-system-packages flag to pip when installing blobxfer
+
+
 ## 3.11.0 2023-10-12 <dave at tiredofit dot ca>
 
    ### Added
