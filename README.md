@@ -156,7 +156,7 @@ Be sure to view the following repositories to understand all the customizable op
 
 | Parameter          | Description                                                                                                                                                                           | Default | `_FILE` |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
-| `DB_AUTH`          | (Mongo Only - Optional) Authentication Database                                                                                                                                       |         |         |
+| `DB_AUTH`          | (Mongo/PGSQL Only - Optional) Authentication Database                                                                                                                                 |         |         |
 | `DB_TYPE`          | Type of DB Server to backup `couch` `influx` `mysql` `mssql` `pgsql` `mongo` `redis` `sqlite3`                                                                                        |         |         |
 | `DB_HOST`          | Server Hostname e.g. `mariadb`. For `sqlite3`, full path to DB file e.g. `/backup/db.sqlite3`                                                                                         |         | x       |
 | `DB_NAME`          | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to. Backup multiple by separating with commas eg `db1,db2`                                           |         | x       |
@@ -205,7 +205,7 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 | `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`                    |         |
 | `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`                    |         |
 | `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                    | `FALSE`                   |         |
-| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL*TLS*\* variables) verify remote host                                              | `FALSE`                   |         |
+| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                               | `FALSE`                   |         |
 | `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                             | `TLSv1.1,TLSv1.2,TLSv1.3` |         |
 | `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS                                                                | `/etc/ssl/cert.pem`       | x       |
 | `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                   |                           | x       |
