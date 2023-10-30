@@ -1,3 +1,15 @@
+## 3.12.0 2023-10-29 <alwynpan@github>
+
+   ### Added
+      - Add DB_AUTH functionalith for Postgresql databases
+
+
+## 3.12.0 2023-10-29 <alwynpan>
+
+   ### Added
+      - Add DB_AUTH environment for PGSQL
+
+
 ## 3.11.1 2023-10-23 <dave at tiredofit dot ca>
 
 ### Added
