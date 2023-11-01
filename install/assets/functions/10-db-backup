@@ -608,14 +608,6 @@ compression() {
     fi
 
     case "${COMPRESSION,,}" in
-        gz* )
-            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
-            compression_type="gzip"
-            extension=".gz"
-            dir_compress_cmd=${compress_cmd}
-            target_dir=${target}
-            target=${target}.gz
-        ;;
         bz* )
             compress_cmd="pbzip2 -q -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
             compression_type="bzip2"
@@ -623,6 +615,14 @@ compression() {
             extension=".bz2"
             target_dir=${target}
             target=${target}.bz2
+        ;;
+        gz* )
+            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
+            compression_type="gzip"
+            extension=".gz"
+            dir_compress_cmd=${compress_cmd}
+            target_dir=${target}
+            target=${target}.gz
         ;;
         xz* )
             compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
