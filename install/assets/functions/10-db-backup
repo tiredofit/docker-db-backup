@@ -5,9 +5,11 @@ bootstrap_filesystem() {
         mkdir -p "${DB_DUMP_TARGET}"
     fi
     if [ "$(stat -c %U "${DB_DUMP_TARGET}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${DB_DUMP_TARGET}" ; fi
+    if [ "$(stat -c %a "${DB_DUMP_TARGET}")" != "${DB_DUMP_TARGET_PERMISSION}" ] ; then chmod -R ${DB_DUMP_TARGET_PERMISSION} "${DB_DUMP_TARGET}" ; fi
 
     if [ -d "${DB_DUMP_TARGET_ARCHIVE}" ]; then
         if [ "$(stat -c %U "${DB_DUMP_TARGET_ARCHIVE}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${DB_DUMP_TARGET_ARCHIVE}" ; fi
+        if [ "$(stat -c %a "${DB_DUMP_TARGET_ARCHIVE}")" != "${DB_DUMP_TARGET_PERMISSION}" ] ; then chmod -R ${DB_DUMP_TARGET_PERMISSION} "${DB_DUMP_TARGET_ARCHIVE}" ; fi
     fi
 
     if [ ! -d "${TEMP_LOCATION}" ]; then
@@ -690,6 +692,7 @@ generate_checksum() {
             print_notice "Generating ${checksum_extension^^} for '${target}'"
             cd "${TEMP_LOCATION}"
             run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
+            chmod ${DB_DUMP_TARGET_PERMISSION} "${target}"."${checksum_extension}"
             ## TODO - We're doing this twice, why not just pull from the previously generated file
             checksum_value=$(run_as_user ${checksum_command} "${target}" | awk ' { print $1}')
             print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
@@ -723,6 +726,7 @@ move_dbbackup() {
             print_notice "Backup of ${target} created with the size of ${filesize}"
         fi
 
+        chmod ${DB_DUMP_TARGET_PERMISSION} "${TEMP_LOCATION}"/"${target}"
         case "${BACKUP_LOCATION,,}" in
             "file" | "filesystem" )
                 print_debug "Moving backup to filesystem"
