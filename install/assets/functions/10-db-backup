@@ -693,8 +693,7 @@ generate_checksum() {
             cd "${TEMP_LOCATION}"
             run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
             chmod ${DB_DUMP_TARGET_PERMISSION} "${target}"."${checksum_extension}"
-            ## TODO - We're doing this twice, why not just pull from the previously generated file
-            checksum_value=$(run_as_user ${checksum_command} "${target}" | awk ' { print $1}')
+            checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
             print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
         else
             print_error "Skipping Checksum creation because backup did not complete successfully"
