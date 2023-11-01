@@ -7,10 +7,11 @@ PROCESS_NAME="db-backup"
 
 bootstrap_variables
 
+write_log info "Starting instance - hostname $(hostname) container_name ${CONTAINER_NAME}"
 if [ "${MODE,,}" = "manual" ] || [ "${1,,}" = "manual" ] || [ "${1,,}" = "now" ]; then
     DB_DUMP_BEGIN=+0
     manual=TRUE
-    print_debug "Detected Manual Mode"
+    write_log debug "Detected Manual Mode"
 else
     sleep 5
     current_time=$(date +"%s")
@@ -26,15 +27,15 @@ else
         fi
         waittime=$(($target_time - $current_time))
     fi
-    print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
-    print_info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
+    write_log debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
+    write_log info "Next Backup at $(date -d @${target_time} +"%Y-%m-%d %T %Z")"
     sleep $waittime
 fi
 
 while true; do
     mkdir -p "${TEMP_LOCATION}"
     backup_start_time=$(date +"%s")
-    print_debug "Backup routines started time: $(date +'%Y-%m-%d %T %Z')"
+    write_log debug "Backup routines started time: $(date +'%Y-%m-%d %T %Z')"
     case "${dbtype,,}" in
         "couch" )
             check_availability
@@ -73,16 +74,16 @@ while true; do
     backup_finish_time=$(date +"%s")
     backup_total_time=$(echo $((backup_finish_time-backup_start_time)))
     if [ -z "$master_exit_code" ] ; then master_exit_code="0" ; fi
-    print_info "Backup routines finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z") with overall exit code ${master_exit_code}"
-    print_notice "Backup routines time taken: $(echo ${backup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+    write_log info "Backup routines finish time: $(date -d @${backup_finish_time} +"%Y-%m-%d %T %Z") with overall exit code ${master_exit_code}"
+    write_log notice "Backup routines time taken: $(echo ${backup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
 
     cleanup_old_data
 
     if var_true "${manual}" ; then
-        print_debug "Exiting due to manual mode"
+        write_log debug "Exiting due to manual mode"
         exit ${master_exit_code};
     else
-        print_notice "Sleeping for another $(($DB_DUMP_FREQ*60-backup_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($DB_DUMP_FREQ*60-backup_total_time))))" +"%Y-%m-%d %T %Z") "
+        write_log notice "Sleeping for another $(($DB_DUMP_FREQ*60-backup_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($DB_DUMP_FREQ*60-backup_total_time))))" +"%Y-%m-%d %T %Z") "
         sleep $(($DB_DUMP_FREQ*60-backup_total_time))
     fi
 done

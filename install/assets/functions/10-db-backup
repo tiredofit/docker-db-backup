@@ -12,6 +12,15 @@ bootstrap_filesystem() {
         if [ "$(stat -c %a "${DB_DUMP_TARGET_ARCHIVE}")" != "${DB_DUMP_TARGET_PERMISSION}" ] ; then chmod -R ${DB_DUMP_TARGET_PERMISSION} "${DB_DUMP_TARGET_ARCHIVE}" ; fi
     fi
 
+    if [ ! -d "${LOG_PATH}" ]; then
+        mkdir -p "${LOG_PATH}"
+    fi
+
+    if [ "$(stat -c %U "${LOG_PATH}")" != "dbbackup" ] ; then chown dbbackup:dbbackup "${LOG_PATH}" ; fi
+    if [ "$(stat -c %a "${LOG_PATH}")" != "755" ] ; then chmod -R 755 "${LOG_PATH}" ; fi
+
+    create_logrotate dbbackup "${LOG_PATH}"/"${LOG_FILE}" none dbbackup dbbackup
+
     if [ ! -d "${TEMP_LOCATION}" ]; then
         mkdir -p "${TEMP_LOCATION}"
     fi
@@ -98,7 +107,7 @@ bootstrap_variables() {
             apkArch="$(apk --print-arch)"; \
             case "$apkArch" in
                 x86_64) mssql=true ;;
-                *) print_error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
+                *) write_log error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
             esac
             dbtype=mssql
             DB_PORT=${DB_PORT:-1433}
@@ -118,7 +127,7 @@ bootstrap_variables() {
             dbtype=sqlite3
         ;;
         * )
-            print_error "I don't recognize 'DB_TYPE=${DB_TYPE}' - Exitting.."
+            write_log error "I don't recognize 'DB_TYPE=${DB_TYPE}' - Exitting.."
             exit 99
         ;;
     esac
@@ -149,7 +158,7 @@ backup_couch() {
     ltarget=couch_${DB_NAME}_${DB_HOST#*//}
     compression
     pre_dbbackup ${DB_NAME}
-    print_notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
+    write_log notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
     run_as_user curl -sSL -X GET ${DB_HOST}:${DB_PORT}/${DB_NAME}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
     exit_code=$?
     check_exit_code backup $target
@@ -161,7 +170,7 @@ backup_couch() {
 
 backup_influx() {
     if [ "${DB_NAME,,}" = "all" ] ; then
-        print_debug "Preparing to back up everything"
+        write_log debug "Preparing to back up everything"
         db_names=justbackupeverything
     else
         db_names=$(echo "${DB_NAME}" | tr ',' '\n')
@@ -176,11 +185,11 @@ backup_influx() {
                 ltarget=influx_${db}_${DB_HOST#*//}
                 compression
                 pre_dbbackup $db
-                print_notice "Dumping Influx database: '${db}'"
+                write_log notice "Dumping Influx database: '${db}'"
                 run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
-                print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
+                write_log notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
                 run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}" > /dev/null
                 target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
                 ltarget=influx_${db}_${DB_HOST#*//}
@@ -198,7 +207,7 @@ backup_influx() {
                 ltarget=influx2_${db}_${DB_HOST#*//}
                 compression
                 pre_dbbackup $db
-                print_notice "Dumping Influx2 database: '${db}'"
+                write_log notice "Dumping Influx2 database: '${db}'"
                 run_as_user influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
@@ -231,7 +240,7 @@ backup_mongo() {
         mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}"
     fi
     pre_dbbackup "${DB_NAME}"
-    print_notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
+    write_log notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
     silent run_as_user mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code backup $target
@@ -247,7 +256,7 @@ backup_mssql() {
     ltarget=mssql_${DB_NAME,,}_${DB_HOST,,}
     compression
     pre_dbbackup "${DB_NAME}"
-    print_notice "Dumping MSSQL database: '${DB_NAME}'"
+    write_log notice "Dumping MSSQL database: '${DB_NAME}'"
     silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code backup $target
@@ -266,12 +275,12 @@ backup_mysql() {
     fi
 
     if [ "${DB_NAME,,}" = "all" ] ; then
-        print_debug "Preparing to back up everything except for information_schema and _* prefixes"
+        write_log debug "Preparing to back up everything except for information_schema and _* prefixes"
         db_names=$(run_as_user mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_ENUMERATION_OPTS} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${DB_NAME_EXCLUDE}" ] ; then
             db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
-                print_debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
+                write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
         fi
@@ -279,7 +288,7 @@ backup_mysql() {
         db_names=$(echo "${DB_NAME}" | tr ',' '\n')
     fi
 
-    print_debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
+    write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
@@ -288,7 +297,7 @@ backup_mysql() {
                 ltarget=mysql_${db}_${DB_HOST,,}
                 compression
                 pre_dbbackup $db
-                print_notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
+                write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 run_as_user mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} $db | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
@@ -298,13 +307,13 @@ backup_mysql() {
                 post_dbbackup $db
         done
     else
-        print_debug "Not splitting database dumps into their own files"
+        write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
         target=mysql_all_${DB_HOST,,}_${now}.sql
         ltarget=mysql_all_${DB_HOST,,}
         compression
         pre_dbbackup all
-        print_notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
+        write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         run_as_user mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
@@ -323,12 +332,12 @@ backup_pgsql() {
         authdb=${DB_USER}
     fi
     if [ "${DB_NAME,,}" = "all" ] ; then
-        print_debug "Preparing to back up all databases"
+        write_log debug "Preparing to back up all databases"
         db_names=$(run_as_user psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         if [ -n "${DB_NAME_EXCLUDE}" ] ; then
             db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
-                print_debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
+                write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
         fi
@@ -336,7 +345,7 @@ backup_pgsql() {
         db_names=$(echo "${DB_NAME}" | tr ',' '\n')
     fi
 
-    print_debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
+    write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
     if var_true "${SPLIT_DB}" ; then
         for db in ${db_names} ; do
@@ -345,7 +354,7 @@ backup_pgsql() {
                 ltarget=pgsql_${db}_${DB_HOST,,}
                 compression
                 pre_dbbackup $db
-                print_notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
+                write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 run_as_user pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
@@ -355,13 +364,13 @@ backup_pgsql() {
                 post_dbbackup $db
         done
     else
-        print_debug "Not splitting database dumps into their own files"
+        write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
         target=pgsql_all_${DB_HOST,,}_${now}.sql
         ltarget=pgsql_${db}_${DB_HOST,,}
         compression
         pre_dbbackup all
-        print_notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
+        write_log notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         tmp_db_names=$(run_as_user psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names | xargs); do
             tmp_db_names=$(echo "$tmp_db_names" | xargs | sed "s|${r_db_name}||g"  )
@@ -382,7 +391,7 @@ backup_pgsql() {
 
 backup_redis() {
     prepare_dbbackup
-    print_notice "Dumping Redis - Flushing Redis Cache First"
+    write_log notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${DB_HOST,,}_${now}.rdb
     ltarget=redis_${DB_HOST,,}
     echo bgsave | silent run_as_user redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}
@@ -392,12 +401,12 @@ backup_redis() {
         saved=$(echo 'info Persistence' | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
         ok=$(echo 'info Persistence' | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
-            print_notice "Redis Backup Complete"
+            write_log notice "Redis Backup Complete"
             exit_code=0
             break
         fi
         try=$((try - 1))
-        print_warn "Redis Busy - Waiting and retrying in 5 seconds"
+        write_log warn "Redis Busy - Waiting and retrying in 5 seconds"
         sleep 5
     done
     target_original=${target}
@@ -419,7 +428,7 @@ backup_sqlite3() {
     ltarget=sqlite3_${db}.sqlite3
     compression
     pre_dbbackup $db
-    print_notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
+    write_log notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
     silent run_as_user sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
     exit_code=$?
     check_exit_code backup $target
@@ -442,7 +451,7 @@ check_availability() {
                     if [ "${code_received}" = "200" ] ; then break ; fi
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "influx" )
@@ -452,7 +461,7 @@ check_availability() {
                         while ! (run_as_user nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
                             sleep 5
                             (( counter+=5 ))
-                            print_warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                            write_log warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
                         done
                     ;;
                     2 )
@@ -462,20 +471,20 @@ check_availability() {
                             if [ "${code_received}" = "200" ] ; then break ; fi
                             sleep 5
                             (( counter+=5 ))
-                            print_warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                            write_log warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                         done
                     ;;
                 esac
             ;;
             "mongo" )
                 if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-                    print_debug "Skipping Connectivity Check"
+                    write_log debug "Skipping Connectivity Check"
                 else
                     counter=0
                     while ! (run_as_user nc -z ${DB_HOST} ${DB_PORT}) ; do
                         sleep 5
                         (( counter+=5 ))
-                        print_warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                        write_log warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                     done
                 fi
             ;;
@@ -486,7 +495,7 @@ check_availability() {
                 while ! (run_as_user mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
+                    write_log warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
                 done
             ;;
             "mssql" )
@@ -494,7 +503,7 @@ check_availability() {
                 while ! (run_as_user nc -z ${DB_HOST} ${DB_PORT}) ; do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "pgsql" )
@@ -503,7 +512,7 @@ check_availability() {
                 do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "redis" )
@@ -511,20 +520,20 @@ check_availability() {
                 while ! (run_as_user nc -z "${DB_HOST}" "${DB_PORT}") ; do
                     sleep 5
                     (( counter+=5 ))
-                    print_warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "sqlite3" )
                 if [[ ! -e "${DB_HOST}" ]]; then
-                    print_error "File '${DB_HOST}' does not exist."
+                    write_log error "File '${DB_HOST}' does not exist."
                     exit_code=2
                     exit $exit_code
                 elif [[ ! -f "${DB_HOST}" ]]; then
-                    print_error "File '${DB_HOST}' is not a file."
+                    write_log error "File '${DB_HOST}' is not a file."
                     exit_code=2
                     exit $exit_code
                 elif [[ ! -r "${DB_HOST}" ]]; then
-                    print_error "File '${DB_HOST}' is not readable."
+                    write_log error "File '${DB_HOST}' is not readable."
                     exit_code=2
                     exit $exit_code
                 fi
@@ -534,15 +543,15 @@ check_availability() {
 }
 
 check_exit_code() {
-    print_debug "DB Backup Exit Code is ${exit_code}"
+    write_log debug "DB Backup Exit Code is ${exit_code}"
     case "${1}" in
         backup )
             case "${exit_code}" in
                 0 )
-                    print_info "DB Backup of '${2}' completed successfully"
+                    write_log info "DB Backup of '${2}' completed successfully"
                 ;;
                 * )
-                    print_error "DB Backup of '${2}' reported errors"
+                    write_log error "DB Backup of '${2}' reported errors"
                     master_exit_code=1
                 ;;
             esac
@@ -550,10 +559,10 @@ check_exit_code() {
         move )
             case "${move_exit_code}" in
                 0 )
-                    print_debug "Moving of backup '${2}' completed successfully"
+                    write_log debug "Moving of backup '${2}' completed successfully"
                 ;;
                 * )
-                    print_error "Moving of backup '${2}' reported errors"
+                    write_log error "Moving of backup '${2}' reported errors"
                     master_exit_code=1
                 ;;
             esac
@@ -566,19 +575,19 @@ cleanup_old_data() {
         if [ "${master_exit_code}" != 1 ]; then
             case "${BACKUP_LOCATION,,}" in
                 "blobxfer" )
-                    print_info "Cleaning up old backups on filesystem"
+                    write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${DB_DUMP_TARGET}"
                     find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm -f {} \;
-                    print_info "Syncing changes via blobxfer"
+                    write_log info "Syncing changes via blobxfer"
                     silent run_as_user blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
                 ;;
                 "file" | "filesystem" )
-                    print_info "Cleaning up old backups on filesystem"
+                    write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${DB_DUMP_TARGET}"
                     run_as_user find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm -f {} \;
                 ;;
                 "s3" | "minio" )
-                    print_info "Cleaning up old backups on S3 storage"
+                    write_log info "Cleaning up old backups on S3 storage"
                     run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
                         s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
                         s3_createdate=$(date -d "$s3_createdate" "+%s")
@@ -586,7 +595,7 @@ cleanup_old_data() {
                         if [[ $s3_createdate -le $s3_olderthan ]] ; then
                             s3_filename=$(echo $s3_file | awk {'print $4'})
                             if [ "$s3_filename" != "" ] ; then
-                                print_debug "Deleting $s3_filename"
+                                write_log debug "Deleting $s3_filename"
                                 run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                             fi
                         fi
@@ -595,7 +604,7 @@ cleanup_old_data() {
                 ;;
             esac
         else
-            print_error "Skipping Cleaning up old backups because there were errors in backing up"
+            write_log error "Skipping Cleaning up old backups because there were errors in backing up"
         fi
     fi
 }
@@ -668,10 +677,10 @@ compression() {
 
 create_archive() {
     if [ "${exit_code}" = "0" ] ; then
-        print_notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
+        write_log notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
         run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
     else
-        print_error "Skipping creating archive file because backup did not complete successfully"
+        write_log error "Skipping creating archive file because backup did not complete successfully"
     fi
 }
 
@@ -689,14 +698,14 @@ generate_checksum() {
                 ;;
             esac
 
-            print_notice "Generating ${checksum_extension^^} for '${target}'"
+            write_log notice "Generating ${checksum_extension^^} for '${target}'"
             cd "${TEMP_LOCATION}"
             run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
             chmod ${DB_DUMP_TARGET_PERMISSION} "${target}"."${checksum_extension}"
             checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
-            print_debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+            write_log debug "${checksum_extension^^}: ${checksum_value} - ${target}"
         else
-            print_error "Skipping Checksum creation because backup did not complete successfully"
+            write_log error "Skipping Checksum creation because backup did not complete successfully"
         fi
     fi
 }
@@ -719,16 +728,16 @@ move_dbbackup() {
         esac
         if [ "$SIZE_VALUE" = "1" ] ; then
             filesize=$(run_as_user stat -c%s "${TEMP_LOCATION}"/"${target}")
-            print_notice "Backup of ${target} created with the size of ${filesize} bytes"
+            write_log notice "Backup of ${target} created with the size of ${filesize} bytes"
         else
             filesize=$(run_as_user du -h "${TEMP_LOCATION}"/"${target}" | awk '{ print $1}')
-            print_notice "Backup of ${target} created with the size of ${filesize}"
+            write_log notice "Backup of ${target} created with the size of ${filesize}"
         fi
 
         chmod ${DB_DUMP_TARGET_PERMISSION} "${TEMP_LOCATION}"/"${target}"
         case "${BACKUP_LOCATION,,}" in
             "file" | "filesystem" )
-                print_debug "Moving backup to filesystem"
+                write_log debug "Moving backup to filesystem"
                 run_as_user mkdir -p "${DB_DUMP_TARGET}"
                 if var_true "${ENABLE_CHECKSUM}" ; then run_as_user mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/ ; fi
                 run_as_user mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
@@ -742,20 +751,20 @@ move_dbbackup() {
                 fi
             ;;
             "s3" | "minio" )
-                print_debug "Moving backup to S3 Bucket"
+                write_log debug "Moving backup to S3 Bucket"
                 if [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
                     export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
                     export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
                 else
-                    print_debug "Variable S3_KEY_ID or S3_KEY_SECRET is not set. Please ensure sufficiant IAM role is assigned."
+                    write_log debug "Variable S3_KEY_ID or S3_KEY_SECRET is not set. Please ensure sufficiant IAM role is assigned."
                 fi
                 export AWS_DEFAULT_REGION=${S3_REGION}
                 if [ -f "${S3_CERT_CA_FILE}" ] ; then
-                    print_debug "Using Custom CA for S3 Backups"
+                    write_log debug "Using Custom CA for S3 Backups"
                     s3_ca_cert="--ca-bundle ${S3_CERT_CA_FILE}"
                 fi
                 if var_true "${S3_CERT_SKIP_VERIFY}" ; then
-                    print_debug "Skipping SSL verification for HTTPS S3 Hosts"
+                    write_log debug "Skipping SSL verification for HTTPS S3 Hosts"
                     s3_ssl="--no-verify-ssl"
                 fi
 
@@ -771,7 +780,7 @@ move_dbbackup() {
                 run_as_user rm -rf "${TEMP_LOCATION}"/"${target}"
             ;;
             "blobxfer" )
-                print_info "Moving backup to external storage with blobxfer"
+                write_log info "Moving backup to external storage with blobxfer"
 
                 mkdir -p "${DB_DUMP_TARGET}"
                 if var_true "${ENABLE_CHECKSUM}" ; then run_as_user mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/; fi
@@ -786,7 +795,7 @@ move_dbbackup() {
             ;;
         esac
     else
-        print_error "Skipping moving DB Backup to final location because backup did not complete successfully"
+        write_log error "Skipping moving DB Backup to final location because backup did not complete successfully"
     fi
 
     run_as_user rm -rf "${TEMP_LOCATION}"/*
@@ -808,17 +817,17 @@ pre_dbbackup() {
             run_as_user eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
         else
             if [ -x "${PRE_SCRIPT}" ] ; then
-                print_notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
+                write_log notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
                 run_as_user eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
             else
-                print_error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
+                write_log error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
             fi
         fi
     fi
 
     ### Pre Backup Custom Script Support
     if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
-        print_warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${SCRIPT_LOCATION_PRE}'"
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${SCRIPT_LOCATION_PRE}'"
         run_as_user mkdir -p "${SCRIPT_LOCATION_PRE}"
         silent run_as_user cp /assets/custom-scripts/pre/* "${SCRIPT_LOCATION_PRE}"
     fi
@@ -829,11 +838,11 @@ pre_dbbackup() {
                 run_as_user ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
             else
                 if [ -x "${f}" ] ; then
-                    print_notice "Executing pre backup custom script : '${f}'"
+                    write_log notice "Executing pre backup custom script : '${f}'"
                     ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
                     run_as_user ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
                 else
-                    print_error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
+                    write_log error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
             fi
         done
@@ -846,14 +855,14 @@ post_dbbackup() {
 
     if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
         source /assets/defaults/03-monitoring
-        print_notice "Sending Backup Statistics to Zabbix"
-        cat <<EOF silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+        write_log notice "Sending Backup Statistics to Zabbix"
+        cat <<EOF | silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
 - dbbackup.size "${dbbackup_size}"
 - dbbackup.datetime "${dbbackup_date}"
 - dbbackup.status "${exit_code}"
 - dbbackup.backup_duration "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
 EOF
-        if [ "$?" != "0" ] ; then print_error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
+        if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi
 
     ### Post Script Support
@@ -862,17 +871,17 @@ EOF
             run_as_user eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
         else
             if [ -x "${POST_SCRIPT}" ] ; then
-                print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
+                write_log notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
                 run_as_user eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
-                print_error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
+                write_log error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
             fi
         fi
     fi
 
     ### Post Backup Custom Script Support
     if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
-        print_warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${SCRIPT_LOCATION_POST}'"
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${SCRIPT_LOCATION_POST}'"
         run_as_user mkdir -p "${SCRIPT_LOCATION_POST}"
         silent run_as_user cp /assets/custom-scripts/* "${SCRIPT_LOCATION_POST}"
     fi
@@ -883,17 +892,17 @@ EOF
                 run_as_user ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 if [ -x "${f}" ] ; then
-                    print_notice "Executing post backup custom script : '${f}'"
+                    write_log notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
                     run_as_user ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
                 else
-                    print_error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
+                    write_log error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
             fi
         done
     fi
 
-    print_notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+    write_log notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
     unset s3_ssl
     unset s3_ca_cert
 }
@@ -918,9 +927,9 @@ sanity_test() {
 
 setup_mode() {
     if [ "${MODE,,}" = "auto" ] || [ ${MODE,,} = "default" ] ; then
-        print_debug "Running in Auto / Default Mode - Letting Image control scheduling"
+        write_log debug "Running in Auto / Default Mode - Letting Image control scheduling"
     else
-        print_info "Running in Manual mode - Execute 'backup_now' or '/etc/services.available/10-db-backup/run' to perform a manual backup"
+        write_log info "Running in Manual mode - Execute 'backup_now' or '/etc/services.available/10-db-backup/run' to perform a manual backup"
         service_stop 10-db-backup
         if var_true "${MANUAL_RUN_FOREVER}" ; then
             mkdir -p /etc/services.d/99-run_forever
@@ -933,17 +942,63 @@ EOF
             chmod +x /etc/services.d/99-run_forever/run
         else
             if var_true "${CONTAINER_ENABLE_SCHEDULING}" ; then
-                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_SCHEDULING=TRUE'"
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_SCHEDULING=TRUE'"
                 exit 1
             fi
             if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
-                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_MONITORING=TRUE'"
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_MONITORING=TRUE'"
                 exit 1
             fi
             if var_true "${CONTAINER_ENABLE_LOGSHIPPING}" ; then
-                print_error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_LOGSHIPPING=TRUE'"
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_LOGSHIPPING=TRUE'"
                 exit 1
             fi
         fi
     fi
+}
+
+write_log() {
+    case "${1}" in
+        debug )
+            shift 1
+            case "${LOG_LEVEL,,}" in
+                "debug" )
+                    print_debug "$@"
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                ;;
+            esac
+        ;;
+        error )
+            shift 1
+            case "${LOG_LEVEL,,}" in
+                "debug" | "notice" | "warn" | "error")
+                    print_error "$@"
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                ;;
+            esac
+        ;;
+        info )
+            shift 1
+            print_info "$@"
+            echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+        ;;
+        notice )
+            shift 1
+            case "${LOG_LEVEL,,}" in
+                "debug" | "notice" )
+                    print_notice "$@"
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                ;;
+            esac
+        ;;
+        warn )
+            shift 1
+            case "${LOG_LEVEL,,}" in
+                "debug" | "notice" | "warn" )
+                    print_warn "$@"
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                ;;
+            esac
+        ;;
+    esac
 }

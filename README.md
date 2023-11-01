@@ -144,14 +144,17 @@ Be sure to view the following repositories to understand all the customizable op
 | `BACKUP_LOCATION`       | Backup to `FILESYSTEM`, `blobxfer` or `S3` compatible services like S3, Minio, Wasabi                                            | `FILESYSTEM`    |
 | `MODE`                  | `AUTO` mode to use internal scheduling routines or `MANUAL` to simply use this as manual backups only executed by your own means | `AUTO`          |
 | `MANUAL_RUN_FOREVER`    | `TRUE` or `FALSE` if you wish to try to make the container exit after the backup                                                 | `TRUE`          |
-| `TEMP_LOCATION`         | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
+
 | `DEBUG_MODE`            | If set to `true`, print copious shell script messages to the container log. Otherwise only basic messages are printed.           | `FALSE`         |
+| `LOG_PATH`              | Path to log files                                                                                                                | `/logs`         |
+| `LOG_FILE`              | Logfile name                                                                                                                     | `dbbackup.log`  |
 | `CREATE_LATEST_SYMLINK` | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)`                            | `TRUE`          |
 | `PRE_SCRIPT`            | Fill this variable in with a command to execute pre backing up                                                                   |                 |
 | `POST_SCRIPT`           | Fill this variable in with a command to execute post backing up                                                                  |                 |
 | `USER_DBBACKUP`         | The uid that the image should read and write files as (username is `dbbackup`)                                                   | `10000`         |
 | `GROUP_DBBACKUP`        | The gid that the image should read and write files as (groupname is `dbbackup`)                                                  | `10000`         |
 | `SPLIT_DB`              | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
+| `TEMP_LOCATION`         | Perform Backups and Compression in this temporary directory                                                                      | `/tmp/backups/` |
 
 ### Database Specific Options
 
