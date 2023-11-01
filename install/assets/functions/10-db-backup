@@ -844,13 +844,15 @@ post_dbbackup() {
     dbbackup_finish_time=$(run_as_user date +"%s")
     dbbackup_total_time=$(run_as_user echo $((dbbackup_finish_time-dbbackup_start_time)))
 
-    if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
+    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
+        source /assets/defaults/03-monitoring
         print_notice "Sending Backup Statistics to Zabbix"
-        ## TODO - Optimize this into one command
-        silent run_as_user zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.size -o "${dbbackup_size}"
-        silent run_as_user zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.datetime -o "${dbbackup_date}"
-        silent run_as_user zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.status -o "${exit_code}"
-        silent run_as_user zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -k dbbackup.backup_duration -o "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+        cat <<EOF silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+- dbbackup.size "${dbbackup_size}"
+- dbbackup.datetime "${dbbackup_date}"
+- dbbackup.status "${exit_code}"
+- dbbackup.backup_duration "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+EOF
         if [ "$?" != "0" ] ; then print_error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi
 
