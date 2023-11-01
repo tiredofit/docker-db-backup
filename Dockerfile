@@ -19,50 +19,53 @@ ENV INFLUX_VERSION=1.8.0 \
 ### Dependencies
 RUN source /assets/functions/00-container && \
     set -ex && \
+    addgroup -S -g 10000 dbbackup && \
+    adduser -S -D -H -u 10000 -G dbbackup -g "Tired of I.T! DB Backup" dbbackup && \
+    \
     package update && \
     package upgrade && \
     package install .db-backup-build-deps \
-               build-base \
-               bzip2-dev \
-               cargo \
-               git \
-               go \
-               libarchive-dev \
-               openssl-dev \
-               libffi-dev \
-               python3-dev \
-               py3-pip \
-               xz-dev \
-               && \
+                    build-base \
+                    bzip2-dev \
+                    cargo \
+                    git \
+                    go \
+                    libarchive-dev \
+                    openssl-dev \
+                    libffi-dev \
+                    python3-dev \
+                    py3-pip \
+                    xz-dev \
+                    && \
     \
     package install .db-backup-run-deps \
-               bzip2 \
-               groff \
-               libarchive \
-               mariadb-client \
-               mariadb-connector-c \
-               mongodb-tools \
-               openssl \
-               pigz \
-               postgresql16 \
-               postgresql16-client \
-               pv \
-               py3-botocore \
-               py3-colorama \
-               py3-cryptography \
-               py3-docutils \
-               py3-jmespath \
-               py3-rsa \
-               py3-setuptools \
-               py3-s3transfer \
-               py3-yaml \
-               python3 \
-               redis \
-               sqlite \
-               xz \
-               zip \
-               zstd \
-               && \
+                    bzip2 \
+                    groff \
+                    libarchive \
+                    mariadb-client \
+                    mariadb-connector-c \
+                    mongodb-tools \
+                    openssl \
+                    pigz \
+                    postgresql16 \
+                    postgresql16-client \
+                    pv \
+                    py3-botocore \
+                    py3-colorama \
+                    py3-cryptography \
+                    py3-docutils \
+                    py3-jmespath \
+                    py3-rsa \
+                    py3-setuptools \
+                    py3-s3transfer \
+                    py3-yaml \
+                    python3 \
+                    redis \
+                    sqlite \
+                    xz \
+                    zip \
+                    zstd \
+                    && \
     \
     apkArch="$(uname -m)"; \
     case "$apkArch" in \
@@ -105,6 +108,5 @@ RUN source /assets/functions/00-container && \
             /root/go \
             /tmp/* \
             /usr/src/*
-
 
 COPY install  /

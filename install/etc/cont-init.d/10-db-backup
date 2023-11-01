@@ -6,6 +6,7 @@ prepare_service 03-monitoring
 PROCESS_NAME="db-backup"
 output_off
 
+bootstrap_filesystem
 bootstrap_variables
 sanity_test
 setup_mode

@@ -35,41 +35,40 @@ Currently backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, R
 
 ## Table of Contents
 
-- [github.com/tiredofit/docker-db-backup](#githubcomtiredofitdocker-db-backup)
-  - [About](#about)
-  - [Maintainer](#maintainer)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites and Assumptions](#prerequisites-and-assumptions)
-  - [Installation](#installation)
-    - [Build from Source](#build-from-source)
-    - [Prebuilt Images](#prebuilt-images)
-      - [Multi Architecture](#multi-architecture)
-  - [Configuration](#configuration)
-    - [Quick Start](#quick-start)
-    - [Persistent Storage](#persistent-storage)
-    - [Environment Variables](#environment-variables)
-      - [Base Images used](#base-images-used)
-      - [Container Options](#container-options)
-    - [Database Specific Options](#database-specific-options)
-      - [For Influx DB2](#for-influx-db2)
-    - [Scheduling Options](#scheduling-options)
-    - [Backup Options](#backup-options)
-      - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
-      - [Upload to a Azure storage account by `blobxfer`](#upload-to-a-azure-storage-account-by-blobxfer)
-  - [Maintenance](#maintenance)
-    - [Shell Access](#shell-access)
-    - [Manual Backups](#manual-backups)
-    - [Restoring Databases](#restoring-databases)
-    - [Custom Scripts](#custom-scripts)
-      - [Path Options](#path-options)
-      - [Pre Backup](#pre-backup)
-      - [Post backup](#post-backup)
-  - [Support](#support)
-    - [Usage](#usage)
-    - [Bugfixes](#bugfixes)
-    - [Feature Requests](#feature-requests)
-    - [Updates](#updates)
-  - [License](#license)
+- [About](#about)
+- [Maintainer](#maintainer)
+- [Table of Contents](#table-of-contents)
+- [Prerequisites and Assumptions](#prerequisites-and-assumptions)
+- [Installation](#installation)
+  - [Build from Source](#build-from-source)
+  - [Prebuilt Images](#prebuilt-images)
+    - [Multi Architecture](#multi-architecture)
+- [Configuration](#configuration)
+  - [Quick Start](#quick-start)
+  - [Persistent Storage](#persistent-storage)
+  - [Environment Variables](#environment-variables)
+    - [Base Images used](#base-images-used)
+    - [Container Options](#container-options)
+  - [Database Specific Options](#database-specific-options)
+    - [For Influx DB2](#for-influx-db2)
+  - [Scheduling Options](#scheduling-options)
+  - [Backup Options](#backup-options)
+    - [Backing Up to S3 Compatible Services](#backing-up-to-s3-compatible-services)
+    - [Upload to a Azure storage account by `blobxfer`](#upload-to-a-azure-storage-account-by-blobxfer)
+- [Maintenance](#maintenance)
+  - [Shell Access](#shell-access)
+  - [Manual Backups](#manual-backups)
+  - [Restoring Databases](#restoring-databases)
+  - [Custom Scripts](#custom-scripts)
+    - [Path Options](#path-options)
+    - [Pre Backup](#pre-backup)
+    - [Post backup](#post-backup)
+- [Support](#support)
+  - [Usage](#usage)
+  - [Bugfixes](#bugfixes)
+  - [Feature Requests](#feature-requests)
+  - [Updates](#updates)
+- [License](#license)
 
 > **NOTE**: If you are using this with a docker-compose file along with a seperate SQL container, take care not to set the variables to backup immediately, more so have it delay execution for a minute, otherwise you will get a failed first backup.
 
@@ -150,6 +149,8 @@ Be sure to view the following repositories to understand all the customizable op
 | `CREATE_LATEST_SYMLINK` | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)`                            | `TRUE`          |
 | `PRE_SCRIPT`            | Fill this variable in with a command to execute pre backing up                                                                   |                 |
 | `POST_SCRIPT`           | Fill this variable in with a command to execute post backing up                                                                  |                 |
+| `USER_DBBACKUP`         | The uid that the image should read and write files as (username is `dbbackup`)                                                   | `10000`         |
+| `GROUP_DBBACKUP`        | The gid that the image should read and write files as (groupname is `dbbackup`)                                                  | `10000`         |
 | `SPLIT_DB`              | For each backup, create a new archive. `TRUE` or `FALSE` (MySQL and Postgresql Only)                                             | `TRUE`          |
 
 ### Database Specific Options
@@ -189,27 +190,27 @@ Your Organization will be mapped to `DB_USER` and your root token will need to b
 
 ### Backup Options
 
-| Parameter                      | Description                                                                                                                  | Default                   | `_FILE` |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
-| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                      | `ZSTD`                    |         |
-| `COMPRESSION_LEVEL`            | Numerical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` -  | `3`                       |         |
-| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
-| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                   | `autodetected`            |         |
-| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                   | `FALSE`                   |         |
-| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                                | `TRUE`                    |         |
-| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                       | `MD5`                     |         |
-| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command`     |                           |         |
-| `EXTRA_DUMP_OPTS`              | If you need to pass extra arguments to the backup command only, add them here e.g. `--extra-command`                         |                           |         |
-| `EXTRA_ENUMERATION_OPTS`       | If you need to pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`           |                           |         |
-| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                             | `512M`                    |         |
-| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                          | `TRUE`                    |         |
-| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                                | `TRUE`                    |         |
-| `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                    | `FALSE`                   |         |
-| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                               | `FALSE`                   |         |
-| `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                             | `TLSv1.1,TLSv1.2,TLSv1.3` |         |
-| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS                                                                | `/etc/ssl/cert.pem`       | x       |
-| `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                   |                           | x       |
-| `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                           |                           | x       |
+| Parameter                      | Description                                                                                                                 | Default                   | `_FILE` |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
+| `COMPRESSION`                  | Use either Gzip `GZ`, Bzip2 `BZ`, XZip `XZ`, ZSTD `ZSTD` or none `NONE`                                                     | `ZSTD`                    |         |
+| `COMPRESSION_LEVEL`            | Numerical value of what level of compression to use, most allow `1` to `9` except for `ZSTD` which allows for `1` to `19` - | `3`                       |         |
+| `ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                                               | `TRUE`                    |         |
+| `PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                                                  | `autodetected`            |         |
+| `GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. e.g. `TRUE`                  | `FALSE`                   |         |
+| `ENABLE_CHECKSUM`              | Generate either a MD5 or SHA1 in Directory, `TRUE` or `FALSE`                                                               | `TRUE`                    |         |
+| `CHECKSUM`                     | Either `MD5` or `SHA1`                                                                                                      | `MD5`                     |         |
+| `EXTRA_OPTS`                   | If you need to pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command`    |                           |         |
+| `EXTRA_DUMP_OPTS`              | If you need to pass extra arguments to the backup command only, add them here e.g. `--extra-command`                        |                           |         |
+| `EXTRA_ENUMERATION_OPTS`       | If you need to pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`          |                           |         |
+| `MYSQL_MAX_ALLOWED_PACKET`     | Max allowed packet if backing up MySQL / MariaDB                                                                            | `512M`                    |         |
+| `MYSQL_SINGLE_TRANSACTION`     | Backup in a single transaction with MySQL / MariaDB                                                                         | `TRUE`                    |         |
+| `MYSQL_STORED_PROCEDURES`      | Backup stored procedures with MySQL / MariaDB                                                                               | `TRUE`                    |         |
+| `MYSQL_ENABLE_TLS`             | Enable TLS functionality for MySQL client                                                                                   | `FALSE`                   |         |
+| `MYSQL_TLS_VERIFY`             | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                                              | `FALSE`                   |         |
+| `MYSQL_TLS_VERSION`            | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                                            | `TLSv1.1,TLSv1.2,TLSv1.3` |         |
+| `MYSQL_TLS_CA_FILE`            | Filename to load custom CA certificate for connecting via TLS                                                               | `/etc/ssl/cert.pem`       | x       |
+| `MYSQL_TLS_CERT_FILE`          | Filename to load client certificate for connecting via TLS                                                                  |                           | x       |
+| `MYSQL_TLS_KEY_FILE`           | Filename to load client key for connecting via TLS                                                                          |                           | x       |
 
 - When using compression with MongoDB, only `GZ` compression is possible.
 
