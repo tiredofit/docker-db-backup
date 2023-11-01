@@ -577,14 +577,14 @@ cleanup_old_data() {
                 "blobxfer" )
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${DB_DUMP_TARGET}"
-                    find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm -f {} \;
+                    find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "${ltarget}*" -exec rm -f {} \;
                     write_log info "Syncing changes via blobxfer"
                     silent run_as_user blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
                 ;;
                 "file" | "filesystem" )
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${DB_DUMP_TARGET}"
-                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "*" -exec rm -f {} \;
+                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "${ltarget}*" -exec rm -f {} \;
                 ;;
                 "s3" | "minio" )
                     write_log info "Cleaning up old backups on S3 storage"
@@ -599,7 +599,6 @@ cleanup_old_data() {
                                 run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
                             fi
                         fi
-
                     done
                 ;;
             esac
@@ -678,7 +677,7 @@ compression() {
 create_archive() {
     if [ "${exit_code}" = "0" ] ; then
         write_log notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
-        run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} > "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}"
+        run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}" > /dev/null
     else
         write_log error "Skipping creating archive file because backup did not complete successfully"
     fi
@@ -747,7 +746,7 @@ move_dbbackup() {
                 fi
                 if [ -n "${DB_ARCHIVE_TIME}" ] ; then
                     run_as_user mkdir -p "${DB_DUMP_TARGET_ARCHIVE}"
-                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "*" -exec mv {} "${DB_DUMP_TARGET_ARCHIVE}" \;
+                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "${ltarget}*" -exec mv {} "${DB_DUMP_TARGET_ARCHIVE}" \;
                 fi
             ;;
             "s3" | "minio" )
