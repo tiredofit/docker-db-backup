@@ -6,10 +6,9 @@ prepare_service 03-monitoring
 PROCESS_NAME="db-backup"
 output_off
 
-bootstrap_filesystem
-bootstrap_variables
-sanity_test
 setup_mode
+db_backup_container_init
+create_schedulers backup
 create_zabbix dbbackup
 
 liftoff
