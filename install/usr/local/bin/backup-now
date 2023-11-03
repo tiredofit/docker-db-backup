@@ -1,4 +1,0 @@
-#!/command/with-contenv bash
-
-echo '** Performing Manual Backup'
-/etc/services.available/10-db-backup/run manual
