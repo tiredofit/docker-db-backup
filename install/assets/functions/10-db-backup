@@ -564,7 +564,7 @@ backup_pgsql() {
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
-        pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g {backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+        pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code $target
         generate_checksum
@@ -1203,8 +1203,10 @@ move_dbbackup() {
                 run_as_user rm -rf "${TEMP_PATH}"/"${target}"
             ;;
             "blobxfer" )
-                write_log info "Moving backup to external storage with blobxfer"
+                write_log info "Synchronize local storage from S3 Bucket with blobxfer"
+                blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete
 
+                write_log info "Moving backup to external storage with blobxfer"
                 mkdir -p "${backup_job_filesystem_path}"
                 if [ "${backup_job_checksum}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/; fi
 
