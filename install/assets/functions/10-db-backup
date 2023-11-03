@@ -557,6 +557,20 @@ backup_pgsql() {
                 check_exit_code move $target
                 post_dbbackup $db
         done
+
+        prepare_dbbackup
+        target=pgsql_globals_${backup_job_db_host,,}_${now}.sql
+        ltarget=pgsql_globals_${backup_job_db_host,,}
+        compression
+        pre_dbbackup "globals"
+        print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
+        pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g {backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+        exit_code=$?
+        check_exit_code $target
+        generate_checksum
+        move_dbbackup
+        check_exit_code move $target
+        post_dbbackup "globals"
     else
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
