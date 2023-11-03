@@ -1,0 +1,114 @@
+#!/command/with-contenv bash
+
+source /assets/functions/00-container
+PROCESS_NAME="db-backup{{BACKUP_NUMBER}}-scheduler"
+check_container_initialized
+check_service_initialized init 10-db-backup
+source /assets/functions/10-db-backup
+source /assets/defaults/10-db-backup
+bootstrap_variables backup_init {{BACKUP_NUMBER}}
+bootstrap_variables parse_variables {{BACKUP_NUMBER}}
+PROCESS_NAME="{{BACKUP_NUMBER}}-${backup_job_db_host}__${backup_job_db_name}"
+
+
+trap ctrl_c INT
+
+if [[ "${MODE,,}" =~ "standalone" ]] || [ "${1,,}" = "manual" ] || [ "${1,,}" = "now" ]; then
+    print_debug "Detected Manual Mode"
+    persist=false
+    backup_job_backup_begin=+0
+else
+    silent sleep {{BACKUP_NUMBER}}
+    current_time=$(date +'%s')
+    today=$(date +"%Y%m%d")
+
+    if [[ ${backup_job_backup_begin} =~ ^\+(.*)$ ]]; then
+        waittime=$(( ${BASH_REMATCH[1]} * 60 ))
+        target_time=$(($current_time + $waittime))
+    else
+        target_time=$(date --date="${today} ${backup_job_backup_begin}" +'%s')
+        if [[ "$target_time" < "$current_time" ]]; then
+            target_time=$(($target_time + 24*60*60))
+        fi
+        waittime=$(($target_time - $current_time))
+    fi
+    print_debug "Wait Time: ${waittime} Target time: ${target_time} Current Time: ${current_time}"
+    print_info "Next Backup at $(date -d @${target_time} +'%Y-%m-%d %T %Z')"
+    silent sleep $waittime
+    set +x
+fi
+
+while true; do
+    if [ -n "${backup_job_blackout_start}" ] && [ -n "${backup_job_blackout_finish}" ] ; then
+        hour_minute=$(date +%H%M)
+        if [[ "${hour_minute}" > "${backup_job_blackout_start}" ]] && [[ "${hour_minute}" < "${backup_job_blackout_finish}" ]] ; then
+            blackout=true
+        else
+            blackout=false
+        fi
+    fi
+    if var_true "${blackout}" ; then
+        print_notice "Detected Blackout Period - Not performing backup operations"
+    else
+        process_limiter
+        backup_routines_start_time=$(date +'%s')
+        echo "{{BACKUP_NUMBER}}" >> /tmp/.container/db-backup-backups
+        print_debug "Backup {{BACKUP_NUMBER}} routines started time: $(date +'%Y-%m-%d %T %Z')"
+        bootstrap_filesystem
+        case "${dbtype,,}" in
+            "couch" )
+                check_availability
+                backup_couch
+            ;;
+            "influx" )
+                check_availability
+                backup_influx
+            ;;
+            "mssql" )
+                check_availability
+                backup_mssql
+            ;;
+            "mysql" )
+                check_availability
+                backup_mysql
+            ;;
+            "mongo" )
+                check_availability
+                backup_mongo
+            ;;
+            "pgsql" )
+                check_availability
+                backup_pgsql
+            ;;
+            "redis" )
+                check_availability
+                backup_redis
+            ;;
+            "sqlite3" )
+                check_availability
+                backup_sqlite3
+            ;;
+        esac
+        backup_routines_finish_time=$(date +'%s')
+        backup_routines_total_time=$(echo $((backup_routines_finish_time-backup_routines_start_time)))
+        if [ -z "${exitcode_backup}" ] ; then exitcode_backup="0" ; fi
+        print_info "Backup {{BACKUP_NUMBER}} routines finish time: $(date -d @${backup_routines_finish_time} +'%Y-%m-%d %T %Z') with exit code ${exitcode_backup}"
+        print_notice "Backup {{BACKUP_NUMBER}} routines time taken: $(echo ${backup_routines_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+        sed -i "/^{{BACKUP_NUMBER}}/d" /tmp/.container/db-backup-backups
+    fi
+
+    symlink_log
+
+    if var_false "${persist}" ; then
+        print_debug "Exiting due to manual mode"
+        exit ${exitcode_backup};
+    else
+        if var_true "${stop_scheduler_backup}" ; then
+            print_error "Stopping backup_scheduler {{BACKUP_NUMBER}} due to detected errors. Fix and restart container."
+            s6-svc -d /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}
+        else
+            print_notice "Sleeping for another $(($backup_job_backup_interval*60-backup_routines_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($backup_job_backup_interval*60-backup_routines_total_time))))" +'%Y-%m-%d %T %Z') "
+            silent sleep $(($backup_job_backup_interval*60-backup_routines_total_time))
+        fi
+    fi
+done
