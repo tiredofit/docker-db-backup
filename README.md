@@ -263,6 +263,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | Variable       | Description        | Default | `_FILE` |
 | -------------- | ------------------ | ------- | ------- |
 | `DEFAULT_PORT` | Microsoft SQL Port | `1433`  | x       |
+| `DEFAULT_MSSQL_MODE` | Backup `DATABASE` or `TRANSACTION` logs | `DATABASE` |
 
 ###### MongoDB
 
@@ -513,6 +514,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | Variable    | Description        | Default | `_FILE` |
 | ----------- | ------------------ | ------- | ------- |
 | `DB01_PORT` | Microsoft SQL Port | `1433`  | x       |
+| `DB01_MSSQL_MODE` | Backup `DATABASE` or `TRANSACTION` logs | `DATABASE` |
 
 ###### MongoDB
 

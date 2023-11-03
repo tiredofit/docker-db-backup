@@ -183,6 +183,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_KEY_FILE backup_job_mysql_tls_key_file
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_VERIFY backup_job_mysql_tls_verify
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_VERSION backup_job_mysql_tls_version
+        transform_backup_instance_variable "${backup_instance_number}" MSSQL_MODE backup_job_mssql_mode
         transform_backup_instance_variable "${backup_instance_number}" NAME backup_job_db_name
         transform_backup_instance_variable "${backup_instance_number}" NAME_EXCLUDE backup_job_db_name_exclude
         transform_backup_instance_variable "${backup_instance_number}" PARALLEL_COMPRESSION_THREADS backup_job_parallel_compression_threads
@@ -445,19 +446,38 @@ backup_mongo() {
 }
 
 backup_mssql() {
-    prepare_dbbackup
-    target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.bak
-    ltarget=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
-    compression
-    pre_dbbackup "${backup_job_db_name}"
-    write_log notice "Dumping MSSQL database: '${DB_NAME}'"
-    silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
-    exit_code=$?
-    check_exit_code backup $target
-    generate_checksum
-    move_dbbackup
-    check_exit_code move $target
-    ppost_dbbackup "${backup_job_db_name}"
+    case "${backup_job_mssql_mode,,}" in
+        db|database )
+            prepare_dbbackup
+            target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.bak
+            ltarget=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
+            compression
+            pre_dbbackup "${backup_job_db_name}"
+            write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+            exit_code=$?
+            check_exit_code backup $target
+            generate_checksum
+            move_dbbackup
+            check_exit_code move $target
+            post_dbbackup "${backup_job_db_name}"
+        ;;
+        trn|transaction )
+            prepare_dbbackup
+            target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.trn
+            ltarget=mssql_${backup_job_db_name,,}_trn_${backup_job_db_host,,}
+            compression
+            pre_dbbackup "${backup_job_db_name}"
+            write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+            exit_code=$?
+            check_exit_code backup $target
+            generate_checksum
+            move_dbbackup
+            check_exit_code move $target
+            post_dbbackup "${backup_job_db_name}"
+        ;;
+    };
 }
 
 backup_mysql() {
