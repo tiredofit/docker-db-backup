@@ -1,15 +1,15 @@
 #!/command/with-contenv bash
 
 bootstrap_filesystem() {
-    if [ ! -d "${DB_DUMP_TARGET}" ]; then
-        mkdir -p "${DB_DUMP_TARGET}"
+    if [ ! -d "${backup_job_filesystem_path}" ]; then
+        mkdir -p "${backup_job_filesystem_path}"
     fi
-    if [ "$(stat -c %U "${DB_DUMP_TARGET}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${DB_DUMP_TARGET}" ; fi
-    if [ "$(stat -c %a "${DB_DUMP_TARGET}")" != "${DB_DUMP_TARGET_PERMISSION}" ] ; then chmod -R ${DB_DUMP_TARGET_PERMISSION} "${DB_DUMP_TARGET}" ; fi
+    if [ "$(stat -c %U "${backup_job_filesystem_path}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_path}" ; fi
+    if [ "$(stat -c %a "${backup_job_filesystem_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R ${backup_job_filesystem_permission} "${backup_job_filesystem_path}" ; fi
 
-    if [ -d "${DB_DUMP_TARGET_ARCHIVE}" ]; then
-        if [ "$(stat -c %U "${DB_DUMP_TARGET_ARCHIVE}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${DB_DUMP_TARGET_ARCHIVE}" ; fi
-        if [ "$(stat -c %a "${DB_DUMP_TARGET_ARCHIVE}")" != "${DB_DUMP_TARGET_PERMISSION}" ] ; then chmod -R ${DB_DUMP_TARGET_PERMISSION} "${DB_DUMP_TARGET_ARCHIVE}" ; fi
+    if [ -d "${backup_job_filesystem_archive}" ]; then
+        if [ "$(stat -c %U "${backup_job_filesystem_archive}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_archive}" ; fi
+        if [ "$(stat -c %a "${backup_job_filesystem_archive}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R ${backup_job_filesystem_permission} "${backup_job_filesystem_archive}" ; fi
     fi
 
     if [ ! -d "${LOG_PATH}" ]; then
@@ -17,182 +17,375 @@ bootstrap_filesystem() {
     fi
 
     if [ "$(stat -c %U "${LOG_PATH}")" != "dbbackup" ] ; then chown dbbackup:dbbackup "${LOG_PATH}" ; fi
+    if [ ! -d "${LOG_PATH}"/$(date +'%Y%m%d') ]; then run_as_user mkdir -p "${LOG_PATH}"/$(date +'%Y%m%d'); fi
     if [ "$(stat -c %a "${LOG_PATH}")" != "755" ] ; then chmod -R 755 "${LOG_PATH}" ; fi
 
-    echo "0 0 * * * /usr/sbin/logrotate_dbbackup >/dev/null 2>&1" > /assets/cron/dbbackup_logrotate
-
-    if [ ! -d "${TEMP_LOCATION}" ]; then
-        mkdir -p "${TEMP_LOCATION}"
+    if [ ! -d "${TEMP_PATH}" ]; then
+        mkdir -p "${TEMP_PATH}"
     fi
-    if [ "$(stat -c %U "${TEMP_LOCATION}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${TEMP_LOCATION}" ; fi
+    if [ "$(stat -c %U "${TEMP_PATH}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${TEMP_PATH}" ; fi
 }
 
 bootstrap_variables() {
-    sanity_var DB_TYPE "Set appropriate DB_TYPE"
-    transform_file_var \
-                        DB_HOST \
-                        DB_NAME \
-                        DB_PORT \
-                        DB_USER \
-                        DB_PASS
+    backup_init() {
+        backup_instance_number=${1}
+        backup_instance_vars=$(mktemp)
+        set -o posix ; set | grep -oE "^backup_job_.*=" | tr " " "\n" | grep -oE ".*=" | sed "/--/d" > "${backup_instance_vars}"
+        while read -r backup_instance_var ; do
+            unset "$(echo "${backup_instance_var}" | cut -d = -f 1)"
+        done < "${backup_instance_vars}"
 
-    case "${DB_TYPE,,}" in
-        couch* )
-            dbtype=couch
-            DB_PORT=${DB_PORT:-5984}
-            sanity_var DB_USER
-            sanity_var DB_PASS
-        ;;
-        influx* )
-            dbtype=influx
-            case "${INFLUX_VERSION}" in
-                1) DB_PORT=${DB_PORT:-8088} ;;
-                2) DB_PORT=${DB_PORT:-8086} ;;
-            esac
-            sanity_var DB_USER
-            sanity_var DB_PASS
-            sanity_var INFLUX_VERSION "What InfluxDB version you are backing up from '1' or '2'"
-        ;;
-        mongo* )
-            dbtype=mongo
-            transform_file_var MONGO_CUSTOM_URI
-            if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-                mongo_uri_proto=$(echo "${MONGO_CUSTOM_URI}" | grep :// | sed -e's,^\(.*://\).*,\1,g')
-                mongo_uri_scratch="${MONGO_CUSTOM_URI/${mongo_uri_proto}/}"
-                mongo_uri_username_password="$(echo "${mongo_uri_scratch}" | grep @ | rev | cut -d@ -f2- | rev)"
-                if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch="$(echo "${mongo_uri_scratch}" | rev | cut -d@ -f1 | rev)" ; fi
-                mongo_uri_port="$(echo "${mongo_uri_scratch}" | grep : | rev | cut -d: -f2- | rev)"
-                if [ -n "${mongo_uri_port}" ]; then mongo_uri_port="$(echo "${mongo_uri_scratch}" | rev | cut -d: -f1 | cut -d/ -f2 | rev)" ; fi
-                mongo_uri_hostname="$(echo "${mongo_uri_scratch}" | cut -d/ -f1 | cut -d: -f1 )"
-                mongo_uri_database="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f1 )"
-                mongo_uri_options="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f2 )"
-                DB_NAME=${DB_NAME:-"${mongo_uri_database,,}"}
-                DB_HOST=${DB_HOST:-"${mongo_uri_hostname,,}"}
+        transform_file_var \
+                            DEFAULT_AUTH \
+                            DEFAULT_TYPE \
+                            DEFAULT_HOST \
+                            DEFAULT_PORT \
+                            DEFAULT_NAME \
+                            DEFAULT_NAME_EXCLUDE \
+                            DEFAULT_USER \
+                            DEFAULT_PASS \
+                            DEFAULT_MONGO_CUSTOM_URI \
+                            DEFAULT_MYSQL_TLS_CA_FILE \
+                            DEFAULT_MYSQL_TLS_CERT_FILE \
+                            DEFAULT_MYSQL_TLS_KEY_FILE \
+                            DEFAULT_S3_BUCKET \
+                            DEFAULT_S3_KEY_ID \
+                            DEFAULT_S3_KEY_SECRET \
+                            DEFAULT_S3_PATH \
+                            DEFAULT_S3_REGION \
+                            DEFAULT_S3_HOST \
+                            DEFAULT_S3_PROTOCOL \
+                            DEFAULT_S3_EXTRA_OPTS \
+                            DEFAULT_S3_CERT_CA_FILE \
+                            DEFAULT_BLOBXFER_STORAGE_ACCOUNT \
+                            DEFAULT_BLOBXFER_STORAGE_ACCOUNT_KEY \
+                            DEFAULT_BLOBXFER_REMOTE_PATH \
+                            DB"${backup_instance_number}"_AUTH \
+                            DB"${backup_instance_number}"_TYPE \
+                            DB"${backup_instance_number}"_HOST \
+                            DB"${backup_instance_number}"_PORT \
+                            DB"${backup_instance_number}"_MYSQL_TLS_CERT_FILE \
+                            DB"${backup_instance_number}"_MYSQL_TLS_KEY_FILE \
+                            DB"${backup_instance_number}"_S3_BUCKET \
+                            DB"${backup_instance_number}"_S3_KEY_ID \
+                            DB"${backup_instance_number}"_S3_KEY_SECRET \
+                            DB"${backup_instance_number}"_S3_PATH \
+                            DB"${backup_instance_number}"_S3_REGION \
+                            DB"${backup_instance_number}"_S3_HOST \
+                            DB"${backup_instance_number}"_S3_PROTOCOL \
+                            DB"${backup_instance_number}"_S3_EXTRA_OPTS \
+                            DB"${backup_instance_number}"_S3_CERT_CA_FILE \
+                            DB"${backup_instance_number}"_BLOBXFER_STORAGE_ACCOUNT \
+                            DB"${backup_instance_number}"_BLOBXFER_STORAGE_ACCOUNT_KEY \
+                            DB"${backup_instance_number}"_BLOBXFER_REMOTE_PATH \
+                            BLOBXFER_STORAGE_ACCOUNT \
+                            BLOBXFER_STORAGE_KEY \
+                            DB_HOST \
+                            DB_NAME \
+                            DB_PORT \
+                            DB_USER \
+                            DB_PASS \
+                            MONGO_CUSTOM_URI \
+                            DB_AUTH \
+                            S3_BUCKET \
+                            S3_KEY_ID \
+                            S3_KEY_SECRET \
+                            S3_PATH \
+                            S3_REGION \
+                            S3_HOST \
+                            S3_PROTOCOL \
+                            S3_EXTRA_OPTS
+                                                                                  ## Legacy after DEFAULT
+        set -o posix ; set | grep -E "^DB${backup_instance_number}_|^DEFAULT_|^DB_|^ARCHIVE|^BACKUP_|^BLOBXFER_|^CHECKSUM|^COMPRESSION|^CREATE_|^ENABLE_|^EXTRA_|^GZ_|^INFLUX_|^MYSQL_|^MONGO_|^PARALLEL|^PRE_|^POST_|^S3|^SKIP|^SPLIT"| tr " " "\n" > "${backup_instance_vars}"
+
+        ## Legacy checks from removed variables
+        if [ -n "${ENABLE_CHECKSUM}" ]; then
+            print_warn "Deprecated Variable 'ENABLE_CHECKSUM' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            if var_false "${ENABLE_CHECKSUM}" ; then
+                DEFAULT_CHECKSUM=NONE
+            fi
+        fi
+
+        #if [ -n "${DB_DUMP_FREQ}" ]; then
+        #    print_warn "Deprecated Variable 'DB_DUMP_FREQ' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+        #    DEFAULT_BACKUP_INTERVAL=${DB_DUMP_FREQ}
+        #fi
+
+        #if [ -n "${DB_DUMP_BEGIN}" ]; then
+        #    print_warn "Deprecated Variable 'DB_DUMP_BEGIN' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+        #    DEFAULT_BACKUP_BEGIN=${DB_DUMP_BEGIN}
+        #fi
+
+        if [ -n "${DB_DUMP_TARGET}" ]; then
+            print_warn "Deprecated Variable 'DB_DUMP_TARGET' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            DEFAULT_FILESYSTEM_PATH="${DB_DUMP_TARGET}"
+        fi
+
+        if [ -n "${DB_DUMP_TARGET_ARCHIVE}" ]; then
+            print_warn "Deprecated Variable 'DB_DUMP_TARGET_ACRHIVE' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            DEFAULT_FILESYSTEM_ARCHIVE_PATH="${DB_DUMP_TARGET_ARCHIVE}"
+        fi
+
+        if [ -n "${EXTRA_DUMP_OPTS}" ]; then
+            print_warn "Deprecated Variable 'EXTRA_DUMP_OPTS' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            DEFAULT_EXTRA_BACKUP_OPTS="${EXTRA_DUMP_OPTS}"
+        fi
+        ##
+
+        transform_backup_instance_variable() {
+            if grep -q "^DB${1}_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
+                export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+            elif grep -q "^DB_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
+                # Allow old legacy work, perhaps remove old DB_ functionality in future? This should allow for seamless upgrades
+                #print_warn "Legacy Variable 'DB_${2}'' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+                export "$3"="$(grep "^DB_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+            elif grep -q "^${2}=" "${backup_instance_vars}" && [ "$(grep "^${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
+                print_warn "Legacy Variable '${2}' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+                export "$3"="$(grep "^${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+            elif grep -q "^DEFAULT_${2}=" "${backup_instance_vars}" && [ "$(grep "^DEFAULT_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
+                export "$3"="$(grep "^DEFAULT_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+            fi
+        }
+
+        transform_backup_instance_variable "${backup_instance_number}" ARCHIVE_TIME backup_job_archive_time
+        transform_backup_instance_variable "${backup_instance_number}" AUTH backup_job_db_auth
+        transform_backup_instance_variable "${backup_instance_number}" BACKUP_BEGIN backup_job_backup_begin
+        transform_backup_instance_variable "${backup_instance_number}" BACKUP_INTERVAL backup_job_backup_interval
+        transform_backup_instance_variable "${backup_instance_number}" BACKUP_LOCATION backup_job_backup_location
+        transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_BEGIN backup_job_snapshot_blackout_start
+        transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_END backup_job_snapshot_blackout_finish
+        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_REMOTE_PATH backup_job_blobxfer_remote_path
+        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_ACCOUNT backup_job_blobxfer_storage_account
+        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_KEY backup_job_blobxfer_storage_key
+        transform_backup_instance_variable "${backup_instance_number}" CHECKSUM backup_job_checksum
+        transform_backup_instance_variable "${backup_instance_number}" CLEANUP_TIME backup_job_cleanup_time
+        transform_backup_instance_variable "${backup_instance_number}" COMPRESSION backup_job_compression
+        transform_backup_instance_variable "${backup_instance_number}" COMPRESSION_LEVEL backup_job_compression_level
+        transform_backup_instance_variable "${backup_instance_number}" CREATE_LATEST_SYMLINK backup_job_create_latest_symlink
+        transform_backup_instance_variable "${backup_instance_number}" ENABLE_PARALLEL_COMPRESSION backup_job_parallel_compression
+        transform_backup_instance_variable "${backup_instance_number}" EXTRA_DUMP_OPTS backup_job_extra_dump_opts
+        transform_backup_instance_variable "${backup_instance_number}" EXTRA_ENUMERATION_OPTS backup_job_extra_enumeration_opts
+        transform_backup_instance_variable "${backup_instance_number}" EXTRA_OPTS backup_job_extra_opts
+        transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_ARCHIVE_PATH backup_job_filesystem_archive_path
+        transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_PATH backup_job_filesystem_path
+        transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_PERMISSION backup_job_filesystem_permission
+        transform_backup_instance_variable "${backup_instance_number}" GZ_RSYNCABLE backup_job_gz_rsyncable
+        transform_backup_instance_variable "${backup_instance_number}" HOST backup_job_db_host
+        transform_backup_instance_variable "${backup_instance_number}" INFLUX_VERSION backup_job_influx_version
+        transform_backup_instance_variable "${backup_instance_number}" LOG_LEVEL backup_job_log_level
+        transform_backup_instance_variable "${backup_instance_number}" MONGO_CUSTOM_URI backup_job_mongo_custom_uri
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_ENABLE_TLS backup_job_mysql_enable_tls
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_MAX_ALLOWED_PACKET backup_job_mysql_max_allowed_packet
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_SINGLE_TRANSACTION backup_job_mysql_single_transaction
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_STORED_PROCEDURES backup_job_mysql_stored_procedures
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_CA_FILE backup_job_mysql_tls_ca_file
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_CERT_FILE backup_job_mysql_tls_cert_file
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_KEY_FILE backup_job_mysql_tls_key_file
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_VERIFY backup_job_mysql_tls_verify
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_TLS_VERSION backup_job_mysql_tls_version
+        transform_backup_instance_variable "${backup_instance_number}" NAME backup_job_db_name
+        transform_backup_instance_variable "${backup_instance_number}" NAME_EXCLUDE backup_job_db_name_exclude
+        transform_backup_instance_variable "${backup_instance_number}" PARALLEL_COMPRESSION_THREADS backup_job_parallel_compression_threads
+        transform_backup_instance_variable "${backup_instance_number}" PASS backup_job_db_pass
+        transform_backup_instance_variable "${backup_instance_number}" PORT backup_job_db_port
+        transform_backup_instance_variable "${backup_instance_number}" POST_SCRIPT_X_VERIFY backup_job_post_script_x_verify
+        transform_backup_instance_variable "${backup_instance_number}" POST_SCRIPT backup_job_post_script
+        transform_backup_instance_variable "${backup_instance_number}" PRE_SCRIPT backup_job_pre_script
+        transform_backup_instance_variable "${backup_instance_number}" PRE_SCRIPT_X_VERIFY backup_job_pre_script_x_verify
+        transform_backup_instance_variable "${backup_instance_number}" S3_BUCKET backup_job_s3_bucket
+        transform_backup_instance_variable "${backup_instance_number}" S3_CERT_CA_FILE backup_job_s3_cert_ca_file
+        transform_backup_instance_variable "${backup_instance_number}" S3_CERT_SKIP_VERIFY backup_job_s3_cert_skip_verify
+        transform_backup_instance_variable "${backup_instance_number}" S3_EXTRA_OPTS backup_job_s3_extra_opts
+        transform_backup_instance_variable "${backup_instance_number}" S3_HOST backup_job_s3_host
+        transform_backup_instance_variable "${backup_instance_number}" S3_KEY_ID backup_job_s3_key_id
+        transform_backup_instance_variable "${backup_instance_number}" S3_KEY_SECRET backup_job_s3_key_secret
+        transform_backup_instance_variable "${backup_instance_number}" S3_PATH backup_job_s3_path
+        transform_backup_instance_variable "${backup_instance_number}" S3_PROTOCOL backup_job_s3_protocol
+        transform_backup_instance_variable "${backup_instance_number}" S3_REGION backup_job_s3_region
+        transform_backup_instance_variable "${backup_instance_number}" SCRIPT_LOCATION_POST backup_job_script_location_post
+        transform_backup_instance_variable "${backup_instance_number}" SCRIPT_LOCATION_PRE backup_job_script_location_pre
+        transform_backup_instance_variable "${backup_instance_number}" SIZE_VALUE backup_job_size_value
+        transform_backup_instance_variable "${backup_instance_number}" SKIP_AVAILABILITY_CHECK backup_job_skip_availability_check
+        transform_backup_instance_variable "${backup_instance_number}" SPLIT_DB backup_job_split_db
+        transform_backup_instance_variable "${backup_instance_number}" TYPE backup_job_db_type
+        transform_backup_instance_variable "${backup_instance_number}" USER backup_job_db_user
+        rm -rf "${backup_instance_vars}"
+    }
+
+    upgrade_lonely_variables() {
+        upgrade_lonely_variables_tmp=$(mktemp)
+        set -o posix; set | grep "^$1" | grep -v "^$1[0-9]._" > "${upgrade_lonely_variables_tmp}"
+        while read -r exist_var ; do
+            if [ ! -v "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2)" ] ; then
+                export "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2-9)"="$(echo "${exist_var}" | cut -d = -f2)"
             else
-                DB_PORT=${DB_PORT:-27017}
-                [[ ( -n "${DB_USER}" ) ]] && MONGO_USER_STR=" --username ${DB_USER}"
-                [[ ( -n "${DB_PASS}" ) ]] && MONGO_PASS_STR=" --password ${DB_PASS}"
-                [[ ( -n "${DB_NAME}" ) ]] && MONGO_DB_STR=" --db ${DB_NAME}"
-                transform_file_var DB_AUTH
-                [[ ( -n "${DB_AUTH}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${DB_AUTH}"
+                print_error "Variable ${1}01_$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2) already exists, fix your variables and start again.."
+                exit 1
             fi
-        ;;
-        "mysql" | "mariadb" )
-            dbtype=mysql
-            DB_PORT=${DB_PORT:-3306}
-            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-            transform_file_var DB_PASS
-            if [ -n "${DB_PASS}" ] ; then export MYSQL_PWD=${DB_PASS} ; fi
-            if var_true "${MYSQL_ENABLE_TLS}" ; then
-                if [ -n "${MYSQL_TLS_CA_FILE}" ] ; then
-                    mysql_tls_args="--ssl_ca=${MYSQL_TLS_CA_FILE}"
-                fi
-                if [ -n "${MYSQL_TLS_CERT_FILE}" ] ; then
-                    mysql_tls_args="${mysql_tls_args} --ssl_cert=${MYSQL_TLS_CERT_FILE}"
-                fi
-                if [ -n "${MYSQL_TLS_KEY_FILE}" ] ; then
-                    mysql_tls_args="${mysql_tls_args} --ssl_key=${MYSQL_TLS_KEY_FILE}"
-                fi
+        done < "${upgrade_lonely_variables_tmp}"
+        rm -rf "${upgrade_lonely_variables_tmp}"
+    }
 
-                if var_true "${TLS_VERIFY}" ; then
-                    mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
-                fi
-
-                if [ -n "${MYSQL_TLS_VERSION}" ] ; then
-                    mysql_tls_args="${mysql_tls_args} --tls_version=${MYSQL_TLS_VERSION}"
-                fi
+    parse_variables() {
+        local v_instance=${1}
+        check_var() {
+            ## Check is Variable is Defined
+            ## Usage: check_var transformed_varname real_varname "Description"
+            output_off
+            print_debug "Looking for existence of $2 environment variable"
+            if [ ! -v "$1" ]; then
+                print_error "No '$3' Entered! - Set '\$$2' environment variable - Halting Backup Number ${v_instance}"
+                s6-svc -d /var/run/s6/legacy-services/dbbackup-${v_instance}
+                exit 1
             fi
-        ;;
-        "mssql" | "microsoftsql" )
-            apkArch="$(apk --print-arch)"; \
-            case "$apkArch" in
-                x86_64) mssql=true ;;
-                *) write_log error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
-            esac
-            dbtype=mssql
-            DB_PORT=${DB_PORT:-1433}
-        ;;
-        postgres* | "pgsql" )
-            dbtype=pgsql
-            DB_PORT=${DB_PORT:-5432}
-            [[ ( -n "${DB_PASS}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${DB_PASS}"
-            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-        ;;
-        "redis" )
-            dbtype=redis
-            DB_PORT=${DB_PORT:-6379}
-            [[ ( -n "${DB_PASS}" ) ]] && REDIS_PASS_STR=" -a ${DB_PASS}"
-        ;;
-        sqlite* )
-            dbtype=sqlite3
-        ;;
-        * )
-            write_log error "I don't recognize 'DB_TYPE=${DB_TYPE}' - Exitting.."
-            exit 99
-        ;;
+            output_on
+        }
+
+        check_var backup_job_db_type DB${v_instance}_TYPE "appropriate database type"
+
+        case "${backup_job_db_type,,}" in
+            couch* )
+                dbtype=couch
+                backup_job_backup_job_db_port=${backup_job_db_port:-5984}
+                check_var backup_job_db_user DB${v_instance}_USER "database username"
+                check_var backup_job_db_pass DB${v_instance}_PASS "database password"
+            ;;
+            influx* )
+                dbtype=influx
+                case "${backup_job_influx_version}" in
+                    1) backup_job_db_port=${backup_job_db_port:-8088} ;;
+                    2) backup_job_db_port=${backup_job_db_port:-8086} ;;
+                esac
+                check_var backup_job_db_user DB${v_instance}_USER "database username"
+                check_var backup_job_db_pass DB${v_instance}_PASS "database password"
+                check_var backup_job_influx_version DB${v_instance}_INFLUX_VERSION "InfluxDB version you are backing up from"
+            ;;
+            mongo* )
+                dbtype=mongo
+                if [ -n "${backup_job_mongo_custom_uri}" ] ; then
+                    mongo_uri_proto=$(echo "${backup_job_mongo_custom_uri}" | grep :// | sed -e's,^\(.*://\).*,\1,g')
+                    mongo_uri_scratch="${backup_job_mongo_custom_uri/${mongo_uri_proto}/}"
+                    mongo_uri_username_password="$(echo "${mongo_uri_scratch}" | grep @ | rev | cut -d@ -f2- | rev)"
+                    if [ -n "${mongo_uri_username_password}" ]; then mongo_uri_scratch="$(echo "${mongo_uri_scratch}" | rev | cut -d@ -f1 | rev)" ; fi
+                    mongo_uri_port="$(echo "${mongo_uri_scratch}" | grep : | rev | cut -d: -f2- | rev)"
+                    if [ -n "${mongo_uri_port}" ]; then mongo_uri_port="$(echo "${mongo_uri_scratch}" | rev | cut -d: -f1 | cut -d/ -f2 | rev)" ; fi
+                    mongo_uri_hostname="$(echo "${mongo_uri_scratch}" | cut -d/ -f1 | cut -d: -f1 )"
+                    mongo_uri_database="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f1 )"
+                    mongo_uri_options="$(echo "${mongo_uri_scratch}" | cut -d/ -f2 | cut -d? -f2 )"
+                    backup_job_db_name=${backup_job_db_name:-"${mongo_uri_database,,}"}
+                    backup_job_db_host=${backup_job_db_host:-"${mongo_uri_hostname,,}"}
+                else
+                    backup_job_db_port=${backup_job_db_port:-27017}
+                    [[ ( -n "${backup_job_db_user}" ) ]] && MONGO_USER_STR=" --username ${backup_job_db_user}"
+                    [[ ( -n "${backup_job_db_pass}" ) ]] && MONGO_PASS_STR=" --password ${backup_job_db_pass}"
+                    [[ ( -n "${backup_job_db_name}" ) ]] && MONGO_DB_STR=" --db ${backup_job_db_name}"
+                    [[ ( -n "${backup_job_db_auth}" ) ]] && MONGO_AUTH_STR=" --authenticationDatabase ${backup_job_db_auth}"
+                fi
+            ;;
+            "mysql" | "mariadb" )
+                dbtype=mysql
+                backup_job_db_port=${backup_job_db_port:-3306}
+                check_var backup_job_db_name DB${v_instance}_NAME "database name. Seperate multiple with commas"
+
+                if [ -n "${backup_job_db_pass}" ] ; then export MYSQL_PWD=${backup_job_db_pass} ; fi
+                if var_true "${backup_job_mysql_enable_tls}" ; then
+                    if [ -n "${backup_job_mysql_tls_ca_file}" ] ; then
+                        mysql_tls_args="--ssl_ca=${backup_job_mysql_tls_ca_file}"
+                    fi
+                    if [ -n "${backup_job_mysql_tls_cert_file}" ] ; then
+                        mysql_tls_args="${mysql_tls_args} --ssl_cert=${backup_job_mysql_tls_cert_file}"
+                    fi
+                    if [ -n "${backup_job_mysql_tls_key_file}" ] ; then
+                        mysql_tls_args="${mysql_tls_args} --ssl_key=${backup_job_mysql_tls_key_file}"
+                    fi
+
+                    if var_true "${backup_job_mysql_tls_verify}" ; then
+                        mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
+                    fi
+
+                    if [ -n "${backup_job_mysql_tls_version}" ] ; then
+                        mysql_tls_args="${mysql_tls_args} --tls_version=${backup_job_mysql_tls_version}"
+                    fi
+                fi
+            ;;
+            "mssql" | "microsoftsql" )
+                apkArch="$(apk --print-arch)"; \
+                case "$apkArch" in
+                    x86_64) mssql=true ;;
+                    *) write_log error "MSSQL cannot operate on $apkArch processor!" ; exit 1 ;;
+                esac
+                dbtype=mssql
+                backup_job_db_port=${backup_job_db_port:-1433}
+            ;;
+            postgres* | "pgsql" )
+                dbtype=pgsql
+                backup_job_db_port=${backup_job_db_port:-5432}
+                [[ ( -n "${backup_job_db_pass}" ) ]] && POSTGRES_PASS_STR="PGPASSWORD=${backup_job_db_pass}"
+                check_var backup_job_db_name DB${v_instance}_NAME "database name. Seperate multiple with commas"
+            ;;
+            "redis" )
+                dbtype=redis
+                backup_job_db_port=${backup_job_db_port:-6379}
+                [[ ( -n "${backup_job_db_pass}" ) ]] && REDIS_PASS_STR=" -a ${backup_job_db_pass}"
+            ;;
+            sqlite* )
+                dbtype=sqlite3
+            ;;
+            * )
+                write_log error "I don't recognize 'DB${v_instance}_TYPE=${backup_job_db_type}' - Exitting.."
+                exit 99
+            ;;
+        esac
+    }
+
+    case "${1}" in
+        backup_init ) backup_init "$2" ;;
+        parse_variables) parse_variables "$2" ;;
+        upgrade ) upgrade_lonely_variables "$2" ;;
     esac
-
-    if [ "${BACKUP_LOCATION,,}" = "s3" ] || [ "${BACKUP_LOCATION,,}" = "minio" ] ; then
-        transform_file_var \
-                        S3_BUCKET \
-                        S3_KEY_ID \
-                        S3_KEY_SECRET \
-                        S3_PATH \
-                        S3_REGION \
-                        S3_HOST \
-                        S3_PROTOCOL \
-                        S3_EXTRA_OPTS \
-                        S3_CERT_CA_FILE
-    fi
-
-    if [ "${BACKUP_LOCATION,,}" = "blobxfer" ] ; then
-        transform_file_var \
-                        BLOBXFER_STORAGE_ACCOUNT \
-                        BLOBXFER_STORAGE_KEY
-    fi
 }
 
 backup_couch() {
     prepare_dbbackup
-    target=couch_${DB_NAME}_${DB_HOST#*//}_${now}.txt
-    ltarget=couch_${DB_NAME}_${DB_HOST#*//}
+    target=couch_${backup_job_db_name}_${backup_job_db_host#*//}_${now}.txt
+    ltarget=couch_${backup_job_db_name}_${backup_job_db_host#*//}
     compression
-    pre_dbbackup ${DB_NAME}
-    write_log notice "Dumping CouchDB database: '${DB_NAME}' ${compression_string}"
-    run_as_user curl -sSL -X GET ${DB_HOST}:${DB_PORT}/${DB_NAME}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
+    pre_dbbackup ${backup_job_db_name}
+    write_log notice "Dumping CouchDB database: '${backup_job_db_name}' ${compression_string}"
+    run_as_user curl -sSL -X GET ${backup_job_db_host}:${backup_job_db_port}/${backup_job_db_name}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
     exit_code=$?
     check_exit_code backup $target
     generate_checksum
     move_dbbackup
     check_exit_code move $target
-    post_dbbackup ${DB_NAME}
+    post_dbbackup ${backup_job_db_name}
 }
 
 backup_influx() {
-    if [ "${DB_NAME,,}" = "all" ] ; then
+    if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything"
         db_names=justbackupeverything
     else
-        db_names=$(echo "${DB_NAME}" | tr ',' '\n')
+        db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
     fi
 
-    case "${INFLUX_VERSION,,}" in
+    case "${backup_job_db_influx_version,,}" in
         1 )
             for db in ${db_names}; do
                 prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
-                target=influx_${db}_${DB_HOST#*//}_${now}
-                ltarget=influx_${db}_${DB_HOST#*//}
+                target=influx_${db}_${backup_job_db_host#*//}_${now}
+                ltarget=influx_${db}_${backup_job_db_host#*//}
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping Influx database: '${db}'"
-                run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${DB_HOST}:${DB_PORT} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} "${TEMP_LOCATION}"/"${target_dir}"
+                run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${backup_job_db_host}:${backup_job_db_port} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} "${TEMP_PATH}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
                 write_log notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
-                run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}" > /dev/null
-                target=influx_${db}_${DB_HOST#*//}_${now}.tar${extension}
-                ltarget=influx_${db}_${DB_HOST#*//}
+                run_as_user tar cf - "${TEMP_PATH}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target_dir}".tar"${extension}" > /dev/null
+                target=influx_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
+                ltarget=influx_${db}_${backup_job_db_host#*//}
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target_dir
@@ -203,17 +396,17 @@ backup_influx() {
             for db in ${db_names}; do
                 prepare_dbbackup
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="--bucket $db" ; else db=all ; fi
-                target=influx2_${db}_${DB_HOST#*//}_${now}
-                ltarget=influx2_${db}_${DB_HOST#*//}
+                target=influx2_${db}_${backup_job_db_host#*//}_${now}
+                ltarget=influx2_${db}_${backup_job_db_host#*//}
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping Influx2 database: '${db}'"
-                run_as_user influx backup --org ${DB_USER} ${bucket} --host ${DB_HOST}:${DB_PORT} --token ${DB_PASS} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --compression none "${TEMP_LOCATION}"/"${target_dir}"
+                run_as_user influx backup --org ${backup_job_db_user} ${bucket} --host ${backup_job_db_host}:${backup_job_db_port} --token ${backup_job_db_pass} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --compression none "${TEMP_PATH}"/"${target_dir}"
                 exit_code=$?
                 check_exit_code backup $target_dir
                 create_archive
-                target=influx2_${db}_${DB_HOST#*//}_${now}.tar${extension}
-                ltarget=influx2_${db}_${DB_HOST#*//}
+                target=influx2_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
+                ltarget=influx2_${db}_${backup_job_db_host#*//}
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target_dir
@@ -225,80 +418,81 @@ backup_influx() {
 
 backup_mongo() {
     prepare_dbbackup
+    ## TODO REMOVE ENABLE_COMPRESSION
     if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
-        target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive
-        ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
+        target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.archive
+        ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
     else
-        target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.archive.gz
-        ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
+        target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.archive.gz
+        ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
         mongo_compression="--gzip"
         compression_string="and compressing with gzip"
     fi
-    if [ -n "${MONGO_CUSTOM_URI}" ] ; then
-        mongo_backup_parameter="--uri=${MONGO_CUSTOM_URI} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}"
+    if [ -n "${backup_job_mongo_custom_uri}" ] ; then
+        mongo_backup_parameter="--uri=${backup_job_mongo_custom_uri} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}"
     else
-        mongo_backup_parameter="--host ${DB_HOST} --port ${DB_PORT} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}"
+        mongo_backup_parameter="--host ${backup_job_db_host} --port ${backup_job_db_port} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}"
     fi
-    pre_dbbackup "${DB_NAME}"
+    pre_dbbackup "${backup_job_db_name}"
     write_log notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    silent run_as_user mongodump --archive=${TEMP_LOCATION}/${target} ${mongo_compression} ${mongo_backup_parameter}
+    silent run_as_user mongodump --archive=${TEMP_PATH}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code backup $target
     generate_checksum
     move_dbbackup
     check_exit_code move $target
-    post_dbbackup "${DB_NAME}"
+    post_dbbackup "${backup_job_db_name}"
 }
 
 backup_mssql() {
     prepare_dbbackup
-    target=mssql_${DB_NAME,,}_${DB_HOST,,}_${now}.bak
-    ltarget=mssql_${DB_NAME,,}_${DB_HOST,,}
+    target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.bak
+    ltarget=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
     compression
-    pre_dbbackup "${DB_NAME}"
+    pre_dbbackup "${backup_job_db_name}"
     write_log notice "Dumping MSSQL database: '${DB_NAME}'"
-    silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${DB_HOST}\,${DB_PORT} -U ${DB_USER} -P ${DB_PASS} -Q "BACKUP DATABASE [${DB_NAME}] TO DISK = N'${TEMP_LOCATION}/${target}' WITH NOFORMAT, NOINIT, NAME = '${DB_NAME}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+    silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
     exit_code=$?
     check_exit_code backup $target
     generate_checksum
     move_dbbackup
     check_exit_code move $target
-    post_dbbackup $DB_NAME
+    ppost_dbbackup "${backup_job_db_name}"
 }
 
 backup_mysql() {
-    if var_true "${MYSQL_SINGLE_TRANSACTION}" ; then
+    if var_true "${backup_job_mysql_single_transaction}" ; then
         single_transaction="--single-transaction"
     fi
-    if var_true "${MYSQL_STORED_PROCEDURES}" ; then
+    if var_true "${backup_job_mysql_stored_procedures}" ; then
         stored_procedures="--routines"
     fi
 
-    if [ "${DB_NAME,,}" = "all" ] ; then
+    if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(run_as_user mysql -h ${DB_HOST} -P $DB_PORT -u$DB_USER ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_ENUMERATION_OPTS} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
-        if [ -n "${DB_NAME_EXCLUDE}" ] ; then
-            db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
+        db_names=$(run_as_user mysql -h ${backup_job_db_host} -P $backup_job_db_port -u$backup_job_db_user ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        if [ -n "${backup_job_db_name_exclude}" ] ; then
+            db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
                 write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
         fi
     else
-        db_names=$(echo "${DB_NAME}" | tr ',' '\n')
+        db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
     fi
 
     write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
-    if var_true "${SPLIT_DB}" ; then
+    if var_true "${backup_job_split_db}" ; then
         for db in ${db_names} ; do
                 prepare_dbbackup
-                target=mysql_${db}_${DB_HOST,,}_${now}.sql
-                ltarget=mysql_${db}_${DB_HOST,,}
+                target=mysql_${db}_${backup_job_db_host,,}_${now}.sql
+                ltarget=mysql_${db}_${backup_job_db_host,,}
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                run_as_user mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} $db | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
+                run_as_user mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -309,12 +503,12 @@ backup_mysql() {
     else
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
-        target=mysql_all_${DB_HOST,,}_${now}.sql
-        ltarget=mysql_all_${DB_HOST,,}
+        target=mysql_all_${backup_job_db_host,,}_${now}.sql
+        ltarget=mysql_all_${backup_job_db_host,,}
         compression
         pre_dbbackup all
         write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        run_as_user mysqldump --max-allowed-packet=${MYSQL_MAX_ALLOWED_PACKET} -h ${DB_HOST} -P ${DB_PORT} -u${DB_USER} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
+        run_as_user mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -325,37 +519,37 @@ backup_mysql() {
 }
 
 backup_pgsql() {
-    export PGPASSWORD=${DB_PASS}
-    if [ -n "${DB_AUTH}" ] ; then
-        authdb=${DB_AUTH}
+    export PGPASSWORD=${backup_job_db_pass}
+    if [ -n "${backup_job_db_auth}" ] ; then
+        authdb=${backup_job_db_auth}
     else
-        authdb=${DB_USER}
+        authdb=${backup_job_db_user}
     fi
-    if [ "${DB_NAME,,}" = "all" ] ; then
+    if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up all databases"
-        db_names=$(run_as_user psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
-        if [ -n "${DB_NAME_EXCLUDE}" ] ; then
-            db_names_exclusions=$(echo "${DB_NAME_EXCLUDE}" | tr ',' '\n')
+        db_names=$(run_as_user psql -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        if [ -n "${backup_job_db_name_exclude}" ] ; then
+            db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
                 write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
         fi
     else
-        db_names=$(echo "${DB_NAME}" | tr ',' '\n')
+        db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
     fi
 
     write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
-    if var_true "${SPLIT_DB}" ; then
+    if var_true "${backup_job_split_db}" ; then
         for db in ${db_names} ; do
                 prepare_dbbackup
-                target=pgsql_${db}_${DB_HOST,,}_${now}.sql
-                ltarget=pgsql_${db}_${DB_HOST,,}
+                target=pgsql_${db}_${backup_job_db_host,,}_${now}.sql
+                ltarget=pgsql_${db}_${backup_job_db_host,,}
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
-                run_as_user pg_dump -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} $db ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
+                run_as_user pg_dump -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -366,12 +560,12 @@ backup_pgsql() {
     else
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
-        target=pgsql_all_${DB_HOST,,}_${now}.sql
-        ltarget=pgsql_${db}_${DB_HOST,,}
+        target=pgsql_all_${backup_job_db_host,,}_${now}.sql
+        ltarget=pgsql_${db}_${backup_job_db_host,,}
         compression
         pre_dbbackup all
         write_log notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        tmp_db_names=$(run_as_user psql -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        tmp_db_names=$(run_as_user psql -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names | xargs); do
             tmp_db_names=$(echo "$tmp_db_names" | xargs | sed "s|${r_db_name}||g"  )
         done
@@ -379,7 +573,7 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
-        run_as_user pg_dumpall -h ${DB_HOST} -U ${DB_USER} -p ${DB_PORT} ${pgexclude_arg} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS} | ${compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target}" > /dev/null
+        run_as_user pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -392,14 +586,14 @@ backup_pgsql() {
 backup_redis() {
     prepare_dbbackup
     write_log notice "Dumping Redis - Flushing Redis Cache First"
-    target=redis_all_${DB_HOST,,}_${now}.rdb
-    ltarget=redis_${DB_HOST,,}
-    echo bgsave | silent run_as_user redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} --rdb ${TEMP_LOCATION}/${target} ${EXTRA_OPTS} ${EXTRA_DUMP_OPTS}
+    target=redis_all_${backup_job_db_host,,}_${now}.rdb
+    ltarget=redis_${backup_job_db_host,,}
+    echo bgsave | silent run_as_user redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${TEMP_PATH}/${target} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
-        saved=$(echo 'info Persistence' | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
-        ok=$(echo 'info Persistence' | redis-cli -h ${DB_HOST} -p ${DB_PORT} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
+        saved=$(echo 'info Persistence' | redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} | awk '/rdb_bgsave_in_progress:0/{print "saved"}')
+        ok=$(echo 'info Persistence' | redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} | awk '/rdb_last_bgsave_status:ok/{print "ok"}')
         if [[ "$saved" = "saved" ]] && [[ "$ok" = "ok" ]]; then
             write_log notice "Redis Backup Complete"
             exit_code=0
@@ -412,7 +606,7 @@ backup_redis() {
     target_original=${target}
     compression
     pre_dbbackup all
-    run_as_user ${compress_cmd} "${TEMP_LOCATION}/${target_original}"
+    run_as_user ${compress_cmd} "${TEMP_PATH}/${target_original}"
     check_exit_code backup $target
     generate_checksum
     move_dbbackup
@@ -422,17 +616,17 @@ backup_redis() {
 
 backup_sqlite3() {
     prepare_dbbackup
-    db=$(basename "${DB_HOST}")
+    db=$(basename "${backup_job_db_host}")
     db="${db%.*}"
     target=sqlite3_${db}_${now}.sqlite3
     ltarget=sqlite3_${db}.sqlite3
     compression
     pre_dbbackup $db
-    write_log notice "Dumping sqlite3 database: '${DB_HOST}' ${compression_string}"
-    silent run_as_user sqlite3 "${DB_HOST}" ".backup '${TEMP_LOCATION}/backup.sqlite3'"
+    write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
+    silent run_as_user sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup.sqlite3'"
     exit_code=$?
     check_exit_code backup $target
-    run_as_user cat "${TEMP_LOCATION}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_LOCATION}/${target}" > /dev/null
+    run_as_user cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${target}" > /dev/null
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -441,99 +635,98 @@ backup_sqlite3() {
 
 check_availability() {
 ### Set the Database Type
-    if var_false "${SKIP_AVAILABILITY_CHECK}" ; then
+    if var_false "${backup_job_skip_availability_check}" ; then
         case "$dbtype" in
             "couch" )
                 counter=0
                 code_received=0
                 while [ "${code_received}" != "200" ]; do
-                    code_received=$(run_as_user curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${DB_HOST}:${DB_PORT})
+                    code_received=$(run_as_user curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${backup_job_db_host}:${backup_job_db_port})
                     if [ "${code_received}" = "200" ] ; then break ; fi
                     sleep 5
                     (( counter+=5 ))
-                    write_log warn "CouchDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "CouchDB Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "influx" )
                 counter=0
-                case "${INFLUX_VERSION,,}" in
+                case "${backup_job_influx_version,,}" in
                     1 )
-                        while ! (run_as_user nc -z ${DB_HOST#*//} ${DB_PORT}) ; do
+                        while ! (run_as_user nc -z ${backup_job_db_host#*//} ${backup_job_db_port}) ; do
                             sleep 5
                             (( counter+=5 ))
-                            write_log warn "InfluxDB Host '${DB_HOST#*//}' is not accessible, retrying.. ($counter seconds so far)"
+                            write_log warn "InfluxDB Host '${backup_job_db_host#*//}' is not accessible, retrying.. ($counter seconds so far)"
                         done
                     ;;
                     2 )
                         code_received=0
                         while [ "${code_received}" != "200" ]; do
-                            code_received=$(run_as_user curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${DB_HOST}:${DB_PORT}/health)
+                            code_received=$(run_as_user curl -XGET -sSL -o /dev/null -w ''%{http_code}'' ${backup_job_db_host}:${backup_job_db_port}/health)
                             if [ "${code_received}" = "200" ] ; then break ; fi
                             sleep 5
                             (( counter+=5 ))
-                            write_log warn "InfluxDB Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                            write_log warn "InfluxDB Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                         done
                     ;;
                 esac
             ;;
             "mongo" )
-                if [ -n "${MONGO_CUSTOM_URI}" ] ; then
+                if [ -n "${backup_job_mongo_custom_uri}" ] ; then
                     write_log debug "Skipping Connectivity Check"
                 else
                     counter=0
-                    while ! (run_as_user nc -z ${DB_HOST} ${DB_PORT}) ; do
+                    while ! (run_as_user nc -z ${backup_job_db_host} ${backup_job_db_port}) ; do
                         sleep 5
                         (( counter+=5 ))
-                        write_log warn "Mongo Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                        write_log warn "Mongo Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                     done
                 fi
             ;;
             "mysql" )
                 counter=0
-                transform_file_var DB_PASS
-                export MYSQL_PWD=${DB_PASS}
-                while ! (run_as_user mysqladmin -u"${DB_USER}" -P"${DB_PORT}" -h"${DB_HOST}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
+                export MYSQL_PWD=${backup_job_db_pass}
+                while ! (run_as_user mysqladmin -u"${backup_job_db_user}" -P"${backup_job_db_port}" -h"${backup_job_db_host}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
                     sleep 5
                     (( counter+=5 ))
-                    write_log warn "MySQL/MariaDB Server '${DB_HOST}' is not accessible, retrying.. (${counter} seconds so far)"
+                    write_log warn "MySQL/MariaDB Server '${backup_job_db_host}' is not accessible, retrying.. (${counter} seconds so far)"
                 done
             ;;
             "mssql" )
                 counter=0
-                while ! (run_as_user nc -z ${DB_HOST} ${DB_PORT}) ; do
+                while ! (run_as_user nc -z ${backup_job_db_host} ${backup_job_db_port}) ; do
                     sleep 5
                     (( counter+=5 ))
-                    write_log warn "MSSQL Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "MSSQL Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "pgsql" )
                 counter=0
-                until run_as_user pg_isready --host=${DB_HOST} --port=${DB_PORT} -q
+                until run_as_user pg_isready --host=${backup_job_db_host} --port=${backup_job_db_port} -q
                 do
                     sleep 5
                     (( counter+=5 ))
-                    write_log warn "Postgres Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "Postgres Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "redis" )
                 counter=0
-                while ! (run_as_user nc -z "${DB_HOST}" "${DB_PORT}") ; do
+                while ! (run_as_user nc -z "${backup_job_db_host}" "${backup_job_db_port}") ; do
                     sleep 5
                     (( counter+=5 ))
-                    write_log warn "Redis Host '${DB_HOST}' is not accessible, retrying.. ($counter seconds so far)"
+                    write_log warn "Redis Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "sqlite3" )
-                if [[ ! -e "${DB_HOST}" ]]; then
-                    write_log error "File '${DB_HOST}' does not exist."
+                if [[ ! -e "${backup_job_db_host}" ]]; then
+                    write_log error "File '${backup_job_db_host}' does not exist."
                     exit_code=2
                     exit $exit_code
-                elif [[ ! -f "${DB_HOST}" ]]; then
-                    write_log error "File '${DB_HOST}' is not a file."
+                elif [[ ! -f "${backup_job_db_host}" ]]; then
+                    write_log error "File '${backup_job_db_host}' is not a file."
                     exit_code=2
                     exit $exit_code
-                elif [[ ! -r "${DB_HOST}" ]]; then
-                    write_log error "File '${DB_HOST}' is not readable."
+                elif [[ ! -r "${backup_job_db_host}" ]]; then
+                    write_log error "File '${backup_job_db_host}' is not readable."
                     exit_code=2
                     exit $exit_code
                 fi
@@ -552,6 +745,12 @@ check_exit_code() {
                 ;;
                 * )
                     write_log error "DB Backup of '${2}' reported errors"
+                    notify \
+                        "$(date -d @"${backup_routines_start_time}" +'%Y%m%d_%H%M%S')" \
+                        "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" \
+                        "{exit_code}" \
+                        "[FATAL] Host: ${backup_job_db_host} Name: ${backup_job_db_name} - Backup failed completely" \
+                        "DB Backup is failing to backup the '${backup_job_db_host}-${backup_job_db_name}' job."
                     master_exit_code=1
                 ;;
             esac
@@ -563,6 +762,12 @@ check_exit_code() {
                 ;;
                 * )
                     write_log error "Moving of backup '${2}' reported errors"
+                    notify \
+                        "$(date -d @"${backup_routines_start_time}" +'%Y%m%d_%H%M%S')" \
+                        "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" \
+                        "{exit_code}" \
+                        "[FATAL] Host: ${backup_job_db_host} Name: ${backup_job_db_name} - Backup failed to move to destination" \
+                        "DB Backup is failing to backup the '${backup_job_db_host}-${backup_job_db_name}' job."
                     master_exit_code=1
                 ;;
             esac
@@ -571,32 +776,32 @@ check_exit_code() {
 }
 
 cleanup_old_data() {
-    if [ -n "${DB_CLEANUP_TIME}" ]; then
+    if [ -n "${backup_job_cleanup_time}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
-            case "${BACKUP_LOCATION,,}" in
+            case "${backup_job_backup_location,,}" in
                 "blobxfer" )
                     write_log info "Cleaning up old backups on filesystem"
-                    run_as_user mkdir -p "${DB_DUMP_TARGET}"
-                    find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "${ltarget}*" -exec rm -f {} \;
+                    run_as_user mkdir -p "${backup_job_filesystem_path}"
+                    find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${ltarget}*" -exec rm -f {} \;
                     write_log info "Syncing changes via blobxfer"
-                    silent run_as_user blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET} --delete --delete-only
+                    silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete --delete-only
                 ;;
                 "file" | "filesystem" )
                     write_log info "Cleaning up old backups on filesystem"
-                    run_as_user mkdir -p "${DB_DUMP_TARGET}"
-                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -mmin +"${DB_CLEANUP_TIME}" -iname "${ltarget}*" -exec rm -f {} \;
+                    run_as_user mkdir -p "${backup_job_filesystem_path}"
+                    run_as_user find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${ltarget}*" -exec rm -f {} \;
                 ;;
                 "s3" | "minio" )
                     write_log info "Cleaning up old backups on S3 storage"
-                    run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
+                    run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 ls s3://${backup_job_s3_bucket}/${backup_job_s3_path}/ ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts} | grep " DIR " -v | grep " PRE " -v | while read -r s3_file; do
                         s3_createdate=$(echo $s3_file | awk {'print $1" "$2'})
                         s3_createdate=$(date -d "$s3_createdate" "+%s")
-                        s3_olderthan=$(echo $(( $(date +%s)-${DB_CLEANUP_TIME}*60 )))
+                        s3_olderthan=$(echo $(( $(date +%s)-${backup_job_cleanup_time}*60 )))
                         if [[ $s3_createdate -le $s3_olderthan ]] ; then
                             s3_filename=$(echo $s3_file | awk {'print $4'})
                             if [ "$s3_filename" != "" ] ; then
                                 write_log debug "Deleting $s3_filename"
-                                run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${S3_BUCKET}/${S3_PATH}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                                run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 rm s3://${backup_job_s3_bucket}/${backup_job_s3_path}/${s3_filename} ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
                             fi
                         fi
                     done
@@ -609,17 +814,17 @@ cleanup_old_data() {
 }
 
 compression() {
-    if var_false "${ENABLE_PARALLEL_COMPRESSION}" ; then
-        PARALLEL_COMPRESSION_THREADS=1
+    if var_false "${backup_job_parallel_compression}" ; then
+        backup_job_parallel_compression_threads=1
     fi
 
-    if var_true "${GZ_RSYNCABLE}" ; then
+    if var_true "${backup_job_gz_rsyncable}" ; then
         gz_rsyncable=--rsyncable
     fi
 
-    case "${COMPRESSION,,}" in
+    case "${backup_job_compression,,}" in
         bz* )
-            compress_cmd="pbzip2 -q -${COMPRESSION_LEVEL} -p${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="pbzip2 -q -${backup_job_compression_level} -p${backup_job_parallel_compression_threads} "
             compression_type="bzip2"
             dir_compress_cmd=${compress_cmd}
             extension=".bz2"
@@ -627,7 +832,7 @@ compression() {
             target=${target}.bz2
         ;;
         gz* )
-            compress_cmd="pigz -q -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
+            compress_cmd="pigz -q -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
@@ -635,7 +840,7 @@ compression() {
             target=${target}.gz
         ;;
         xz* )
-            compress_cmd="pixz -${COMPRESSION_LEVEL} -p ${PARALLEL_COMPRESSION_THREADS} "
+            compress_cmd="pixz -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} "
             compression_type="xzip"
             dir_compress_cmd=${compress_cmd}
             extension=".xz"
@@ -643,7 +848,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="zstd -q -q --rm -${COMPRESSION_LEVEL} -T${PARALLEL_COMPRESSION_THREADS} ${gz_rsyncable}"
+            compress_cmd="zstd -q -q --rm -${backup_job_compression_level} -T${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
@@ -661,9 +866,9 @@ compression() {
     case "${CONTAINER_LOG_LEVEL,,}" in
         "debug" )
             if [ "${compression_type}" = "none" ] ; then
-                compression_string="with '${PARALLEL_COMPRESSION_THREADS}' threads"
+                compression_string="with '${backup_job_parallel_compression_threads}' threads"
             else
-                compression_string="and compressing with '${compression_type}:${COMPRESSION_LEVEL}' with '${PARALLEL_COMPRESSION_THREADS}' threads"
+                compression_string="and compressing with '${compression_type}:${backup_job_compression_level}' with '${backup_job_parallel_compression_threads}' threads"
             fi
         ;;
         * )
@@ -677,127 +882,332 @@ compression() {
 create_archive() {
     if [ "${exit_code}" = "0" ] ; then
         write_log notice "Creating archive file of '${target_dir}' with tar ${compression_string}"
-        run_as_user tar cf - "${TEMP_LOCATION}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_LOCATION}"/"${target_dir}".tar"${extension}" > /dev/null
+        run_as_user tar cf - "${TEMP_PATH}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target_dir}".tar"${extension}" > /dev/null
     else
         write_log error "Skipping creating archive file because backup did not complete successfully"
     fi
 }
 
+create_schedulers() {
+    backup() {
+        bootstrap_variables upgrade BACKUP
+        local backup_instances=$(printenv | sort | grep -c "^DB[0-9]._HOST")
+        if [ -n "${DB_HOST}" ] && [ "${backup_instances}" ]; then
+          backup_instances=1;
+          print_debug "Detected using old DB_ variables"
+        fi
+
+        for (( instance = 01; instance <= backup_instances; )) ; do
+            instance=$(printf "%02d" $instance)
+            cp -R /assets/dbbackup/template-dbbackup /etc/services.available/dbbackup-"${instance}"
+            sed -i "s|{{BACKUP_NUMBER}}|${instance}|g" /etc/services.available/dbbackup-"${instance}"/run
+
+            cat <<EOF >> /usr/bin/backup"${instance}"-now
+#!/bin/bash
+source /assets/functions/00-container
+PROCESS_NAME=db-backup${instance}
+print_info "Starting Manual Backup for db-backup${instance}"
+/var/run/s6/legacy-services/dbbackup-${instance}/run now
+
+EOF
+            chmod +x /usr/bin/backup"${instance}"-now
+            if [ "${instance}" = "01" ] ; then
+                touch /usr/bin/backup-now
+                chmod +x /usr/bin/backup-now
+                cat <<EOF > /usr/bin/backup-now
+#!/bin/bash
+
+/usr/bin/backup${instance}-now
+
+EOF
+            else
+                echo "/usr/bin/backup${instance}-now" >> /usr/bin/backup-now
+            fi
+
+            instance=$(echo "${instance} +1" | bc)
+        done
+    }
+
+    case "${1}" in
+        backup ) backup ;;
+    esac
+}
+
+ctrl_c() {
+    sed -i "/^{{BACKUP_NUMBER}}/d" /tmp/.container/db-backup-backups
+    symlink_log
+    print_warn "User aborted"
+    exit
+}
+
+db_backup_container_init() {
+    rm -rf /tmp/.container/db-backup-backups
+    echo "0 0 * * * /usr/sbin/logrotate_dbbackup >/dev/null 2>&1" > /assets/cron/dbbackup_logrotate
+    touch /tmp/.container/db-backup-backups
+}
+
 generate_checksum() {
-    if var_true "${ENABLE_CHECKSUM}" ; then
-        if [ "${exit_code}" = "0" ] ; then
-            case "${CHECKSUM,,}" in
-                "md5" )
-                    checksum_command="md5sum"
-                    checksum_extension="md5"
+    if [ "${exit_code}" = "0" ] ; then
+        case "${backup_job_checksum,,}" in
+            "md5" )
+                checksum_command="md5sum"
+                checksum_extension="md5"
+            ;;
+            "sha1" )
+                checksum_command="sha1sum"
+                checksum_extension="sha1"
+            ;;
+            "none" )
+                return
+            ;;
+        esac
+
+        write_log notice "Generating ${checksum_extension^^} for '${target}'"
+        cd "${TEMP_PATH}"
+        run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
+        chmod ${backup_job_filesystem_permission} "${target}"."${checksum_extension}"
+        checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
+        write_log debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+    else
+        write_log error "Skipping Checksum creation because backup did not complete successfully"
+    fi
+}
+
+notify() {
+    notification_custom() {
+        if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
+            if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
+                eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
+            else
+                if [ -x "${NOTIFICATION_SCRIPT}" ] ; then
+                    write_log notice "Found NOTIFICATION_SCRIPT environment variable. Executing '${NOTIFICATION_SCRIPT}"
+                    # script timestamp logfile errorcode subject body
+                    eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
+                else
+                    write_log error "Can't execute NOTIFICATION_SCRIPT environment variable '${NOTIFICATION_SCRIPT}' as its filesystem bit is not executible!"
+                fi
+            fi
+        else
+            print_error "[notifications] No NOTIFICATION_SCRIPT variable set - Skipping sending Custom notifications"
+        fi
+    }
+
+    notification_email() {
+        transform_file_var \
+                                SMTP_HOST \
+                                SMTP_PORT
+        if [ -z "${MAIL_FROM}" ] ; then write_log error "[notifications] No MAIL_FROM variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${MAIL_TO}" ] ; then write_log error "[notifications] No MAIL_TO variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${SMTP_HOST}" ] ; then write_log error "[notifications] No SMTP_HOST variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${SMTP_PORT}" ] ; then write_log error "[notifications] No SMTP_PORT variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if var_nottrue "${skip_mail}" ; then
+            mail_recipients=$(echo "${MAIL_TO}" | tr "," "\n")
+            for mail_recipient in $mail_recipients ; do
+                cat <<EOF | s-nail -v \
+                                        -r "${MAIL_FROM}" \
+                                        -s "[db-backup] [${DOMAIN}] ${3}" \
+                                        -S smtp="${SMTP_HOST}":"${SMTP_PORT}" \
+                                        "${mail_recipient}"
+Time: ${1}
+Log File: {2}
+Error Code: ${3}
+
+${4}
+EOF
+            done
+        fi
+    }
+
+    notification_mattermost() {
+        transform_file_var \
+                                MATTERMOST_RECIPIENT \
+                                MATTERMOST_USERNAME \
+                                MATTERMOST_WEBHOOK_URL
+        if [ -z "${MATTERMOST_RECIPIENT}" ] ; then write_log error "[notifications] No MATTERMOST_RECIPIENT variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if [ -z "${MATTERMOST_USERNAME}" ] ; then write_log error "[notifications] No MATTERMOST_USERNAME variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if [ -z "${MATTERMOST_WEBHOOK_URL}" ] ; then write_log error "[notifications] No MATTERMOST_WEBHOOK_URL variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if var_nottrue "${skip_mattermost}" ; then
+        emoji=":bomb:"
+        message="*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+        mattermost_recipients=$(echo "${MATTERMOST_RECIPIENT}" | tr "," "\n")
+            for mattermost_recipient in $mattermost_recipients ; do
+                payload="payload={\"channel\": \"${mattermost_recipient//\"/\\\"}\", \"username\": \"${MATTERMOST_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
+                silent /usr/bin/curl \
+                                        -m 5 \
+                                        --data-urlencode "${payload}" \
+                                        "${MATTERMOST_WEBHOOK_URL}"
+            done
+        fi
+    }
+
+    notification_matrix() {
+        transform_file_var \
+                                MATRIX_HOST \
+                                MATRIX_ROOM \
+                                MATRIX_ACCESS_TOKEN
+        if [ -z "${MATRIX_HOST}" ] ; then write_log error "[notifications] No MATRIX_HOST variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ROOM}" ] ; then write_log error "[notifications] No MATRIX_ROOM variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ACCESS_TOKEN}" ] ; then write_log error "[notifications] No MATRIX_ACCESS_TOKEN variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if var_nottrue "${skip_matrix}" ; then
+            matrix_rooms=$(echo "${MATRIX_ROOM}" | tr "," "\n")
+            for matrix_room in $matrix_rooms ; do
+                curl \
+                        -XPOST \
+                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}*\"}" \
+                        "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
+            done
+        fi
+    }
+
+    notification_rocketchat() {
+        transform_file_var \
+                                ROCKETCHAT_RECIPIENT \
+                                ROCKETCHAT_USERNAME \
+                                ROCKETCHAT_WEBHOOK_URL
+        if [ -z "${ROCKETCHAT_RECIPIENT}" ] ; then write_log error "[notifications] No ROCKETCHAT_RECIPIENT variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if [ -z "${ROCKETCHAT_USERNAME}" ] ; then write_log error "[notifications] No ROCKETCHAT_USERNAME variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if [ -z "${ROCKETCHAT_WEBHOOK_URL}" ] ; then write_log error "[notifications] No ROCKETCHAT_WEBHOOK_URL variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if var_nottrue "${skip_rocketchat}" ; then
+            emoji=":bomb:"
+            message="*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+            rocketchat_recipients=$(echo "${ROCKETCHAT_RECIPIENT}" | tr "," "\n")
+            for rocketchat_recipient in $rocketchat_recipients ; do
+                payload="payload={\"channel\": \"${rocketchat_recipient//\"/\\\"}\", \"username\": \"${ROCKETCHAT_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
+                silent /usr/bin/curl \
+                                        -m 5 \
+                                        --data-urlencode "${payload}" \
+                                        "${ROCKETCHAT_WEBHOOK_URL}"
+            done
+        fi
+    }
+
+    # $1 timeststamp
+    # $2 logfile
+    # $2 errorcode
+    # $3 subject
+    # $4 body
+
+    if var_true "${ENABLE_NOTIFICATIONS}" ; then
+        notification_types=$(echo "${NOTIIFICATION_TYPE}" | tr "," "\n")
+        for notification_type in $notification_types ; do
+            case "${notification_type,,}" in
+                "custom" )
+                    print_debug "Sending Notification via custom"
+                    notification_custom "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
-                "sha1" )
-                    checksum_command="sha1sum"
-                    checksum_extension="sha1"
+                "email" | "mail" )
+                    print_debug "Sending Notification via email"
+                    notification_email "${1}" "${2}" "${3}" "${4}" "${5}"
+                ;;
+                "matrix" )
+                    print_debug "Sending Notification via Matrix"
+                    notification_matrix "${1}" "${2}" "${3}" "${4}" "${5}"
+                ;;
+                "mattermost" )
+                    print_debug "Sending Notification via Mattermost"
+                    notification_mattermost "${1}" "${2}" "${3}" "${4}" "${5}"
+                ;;
+                "rocketchat" )
+                    print_debug "Sending Notification via Rocketchat"
+                    notification_rocketchat "${1}" "${2}" "${3}" "${4}" "${5}"
+                ;;
+                * )
+                    print_error "Unknown 'NOTIFICATION_TYPE=${notification_type}' environment value. "
                 ;;
             esac
-
-            write_log notice "Generating ${checksum_extension^^} for '${target}'"
-            cd "${TEMP_LOCATION}"
-            run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
-            chmod ${DB_DUMP_TARGET_PERMISSION} "${target}"."${checksum_extension}"
-            checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
-            write_log debug "${checksum_extension^^}: ${checksum_value} - ${target}"
-        else
-            write_log error "Skipping Checksum creation because backup did not complete successfully"
-        fi
+        done
     fi
 }
 
 move_dbbackup() {
     if [ "${exit_code}" = "0" ] ; then
-        dbbackup_size="$(run_as_user stat -c%s "${TEMP_LOCATION}"/"${target}")"
-        dbbackup_date="$(run_as_user date -r  "${TEMP_LOCATION}"/"${target}" +'%s')"
+        dbbackup_size="$(run_as_user stat -c%s "${TEMP_PATH}"/"${target}")"
+        dbbackup_date="$(run_as_user date -r  "${TEMP_PATH}"/"${target}" +'%s')"
 
-        case "${SIZE_VALUE,,}" in
+        case "${backup_job_size_value,,}" in
             "b" | "bytes" )
-                SIZE_VALUE=1
+                backup_job_size_value=1
             ;;
             "[kK]" | "[kK][bB]" | "kilobytes" | "[mM]" | "[mM][bB]" | "megabytes" )
-                SIZE_VALUE="-h"
+                backup_job_size_value="-h"
             ;;
             *)
-                SIZE_VALUE=1
+                backup_job_size_value=1
             ;;
         esac
-        if [ "$SIZE_VALUE" = "1" ] ; then
-            filesize=$(run_as_user stat -c%s "${TEMP_LOCATION}"/"${target}")
-            write_log notice "Backup of ${target} created with the size of ${filesize} bytes"
+        if [ "${backup_job_size_value}" = "1" ] ; then
+            filesize=$(run_as_user stat -c%s "${TEMP_PATH}"/"${target}")
+            write_log notice "Backup of '${target}' created with the size of ${filesize} bytes"
         else
-            filesize=$(run_as_user du -h "${TEMP_LOCATION}"/"${target}" | awk '{ print $1}')
-            write_log notice "Backup of ${target} created with the size of ${filesize}"
+            filesize=$(run_as_user du -h "${TEMP_PATH}"/"${target}" | awk '{ print $1}')
+            write_log notice "Backup of '${target}' created with the size of ${filesize}"
         fi
 
-        chmod ${DB_DUMP_TARGET_PERMISSION} "${TEMP_LOCATION}"/"${target}"
-        case "${BACKUP_LOCATION,,}" in
+        chmod ${backup_job_filesystem_permission} "${TEMP_PATH}"/"${target}"
+        case "${backup_job_backup_location,,}" in
             "file" | "filesystem" )
                 write_log debug "Moving backup to filesystem"
-                run_as_user mkdir -p "${DB_DUMP_TARGET}"
-                if var_true "${ENABLE_CHECKSUM}" ; then run_as_user mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/ ; fi
-                run_as_user mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+                run_as_user mkdir -p "${backup_job_filesystem_path}"
+                if [ "${backup_job_checksum,,}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/ ; fi
+                run_as_user mv "${TEMP_PATH}"/"${target}" "${backup_job_filesystem_path}"/"${target}"
                 move_exit_code=$?
-                if var_true "${CREATE_LATEST_SYMLINK}" ; then
-                    run_as_user ln -sf "${DB_DUMP_TARGET}"/"${target}" "${DB_DUMP_TARGET}"/latest-"${ltarget}"
+                if var_true "${backup_job_create_latest_symlink}" ; then
+                    run_as_user ln -sf "${backup_job_filesystem_path}"/"${target}" "${backup_job_filesystem_path}"/latest-"${ltarget}"
                 fi
-                if [ -n "${DB_ARCHIVE_TIME}" ] ; then
-                    run_as_user mkdir -p "${DB_DUMP_TARGET_ARCHIVE}"
-                    run_as_user find "${DB_DUMP_TARGET}"/  -type f -maxdepth 1 -mmin +"${DB_ARCHIVE_TIME}" -iname "${ltarget}*" -exec mv {} "${DB_DUMP_TARGET_ARCHIVE}" \;
+                if [ -n "${backup_job_archive_time}" ] ; then
+                    run_as_user mkdir -p "${backup_job_filesystem_archive}"
+                    run_as_user find "${backup_job_filesystem_path}"/  -type f -maxdepth 1 -mmin +"${backup_job_archive_time}" -iname "${ltarget}*" -exec mv {} "${backup_job_filesystem_archive}" \;
                 fi
             ;;
             "s3" | "minio" )
                 write_log debug "Moving backup to S3 Bucket"
-                if [ -n "${S3_KEY_ID}" ] && [ -n "${S3_KEY_SECRET}" ]; then
-                    export AWS_ACCESS_KEY_ID=${S3_KEY_ID}
-                    export AWS_SECRET_ACCESS_KEY=${S3_KEY_SECRET}
+                if [ -n "${backup_job_s3_key_id}" ] && [ -n "${backup_job_s3_key_secret}" ]; then
+                    export AWS_ACCESS_KEY_ID=${backup_job_s3_key_id}
+                    export AWS_SECRET_ACCESS_KEY=${backup_job_s3_key_secret}
                 else
                     write_log debug "Variable S3_KEY_ID or S3_KEY_SECRET is not set. Please ensure sufficiant IAM role is assigned."
                 fi
-                export AWS_DEFAULT_REGION=${S3_REGION}
-                if [ -f "${S3_CERT_CA_FILE}" ] ; then
+                export AWS_DEFAULT_REGION=${backup_job_s3_region}
+                if [ -f "${backup_job_s3_cert_ca_file}" ] ; then
                     write_log debug "Using Custom CA for S3 Backups"
-                    s3_ca_cert="--ca-bundle ${S3_CERT_CA_FILE}"
+                    s3_ca_cert="--ca-bundle ${backup_job_s3_cert_ca_file}"
                 fi
-                if var_true "${S3_CERT_SKIP_VERIFY}" ; then
+                if var_true "${backup_job_s3_cert_skip_verify}" ; then
                     write_log debug "Skipping SSL verification for HTTPS S3 Hosts"
                     s3_ssl="--no-verify-ssl"
                 fi
 
-                [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${S3_PROTOCOL}://${S3_HOST}"
+                [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${backup_job_s3_protocol}://${backup_job_s3_host}"
 
-                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/${target} s3://${S3_BUCKET}/${S3_PATH}/${target} ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/${target} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/${target} ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
                 move_exit_code=$?
-                if var_true "${ENABLE_CHECKSUM}" ; then
-                    silent run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_LOCATION}/*.${checksum_extension} s3://${S3_BUCKET}/${S3_PATH}/ ${s3_ssl} ${s3_ca_cert} ${S3_EXTRA_OPTS}
+                if [ "${backup_job_checksum}" != "none" ] ; then
+                    silent run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/*.${checksum_extension} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/ ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
+                    run_as_user rm -rf "${TEMP_PATH}"/"${target}"."${checksum_extension}"
                 fi
 
-                if var_true "${ENABLE_CHECKSUM}" ; then run_as_user rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}"; fi
-                run_as_user rm -rf "${TEMP_LOCATION}"/"${target}"
+                run_as_user rm -rf "${TEMP_PATH}"/"${target}"
             ;;
             "blobxfer" )
                 write_log info "Moving backup to external storage with blobxfer"
 
-                mkdir -p "${DB_DUMP_TARGET}"
-                if var_true "${ENABLE_CHECKSUM}" ; then run_as_user mv "${TEMP_LOCATION}"/*."${checksum_extension}" "${DB_DUMP_TARGET}"/; fi
+                mkdir -p "${backup_job_filesystem_path}"
+                if [ "${backup_job_checksum}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/; fi
 
-                run_as_user mv "${TEMP_LOCATION}"/"${target}" "${DB_DUMP_TARGET}"/"${target}"
+                run_as_user mv "${TEMP_PATH}"/"${target}" "${backup_job_filesystem_path}"/"${target}"
 
-                silent run_as_user blobxfer upload --mode file --remote-path ${BLOBXFER_REMOTE_PATH} --local-path ${DB_DUMP_TARGET}
+                silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path}
                 move_exit_code=$?
 
-                if var_true "${ENABLE_CHECKSUM}" ; then run_as_user rm -rf "${TEMP_LOCATION}"/*."${checksum_extension}" ; fi
-                run_as_user rm -rf "${TEMP_LOCATION}"/"${target}"
+                if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${TEMP_PATH}"/"${target}"."${checksum_extension}" ; fi
+                run_as_user rm -rf "${TEMP_PATH}"/"${target}"
             ;;
         esac
     else
         write_log error "Skipping moving DB Backup to final location because backup did not complete successfully"
     fi
 
-    run_as_user rm -rf "${TEMP_LOCATION}"/*
+    run_as_user rm -rf "${TEMP_PATH}"/"${target}"
 }
 
 prepare_dbbackup() {
@@ -805,41 +1215,41 @@ prepare_dbbackup() {
     now=$(run_as_user date +"%Y%m%d-%H%M%S")
     now_time=$(run_as_user date +"%H:%M:%S")
     now_date=$(run_as_user date +"%Y-%m-%d")
-    ltarget=${dbtype}_${DB_NAME,,}_${DB_HOST,,}
-    target=${dbtype}_${DB_NAME,,}_${DB_HOST,,}_${now}.sql
+    ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
+    target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.sql
 }
 
 pre_dbbackup() {
     ### Pre Script Support
-    if [ -n "${PRE_SCRIPT}" ] ; then
-        if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
-            run_as_user eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+    if [ -n "${backup_job_pre_script}" ] ; then
+        if var_true "${backup_job_pre_script_x_verify}" ; then
+            run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
         else
-            if [ -x "${PRE_SCRIPT}" ] ; then
-                write_log notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
-                run_as_user eval "${PRE_SCRIPT}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+            if [ -x "${backup_job_pre_script}" ] ; then
+                write_log notice "Found PRE_SCRIPT environment variable. Executing '${backup_job_pre_script}"
+                run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
             else
-                write_log error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
+                write_log error "Can't execute PRE_SCRIPT environment variable '${backup_job_pre_script}' as its filesystem bit is not executible!"
             fi
         fi
     fi
 
     ### Pre Backup Custom Script Support
     if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${SCRIPT_LOCATION_PRE}'"
-        run_as_user mkdir -p "${SCRIPT_LOCATION_PRE}"
-        silent run_as_user cp /assets/custom-scripts/pre/* "${SCRIPT_LOCATION_PRE}"
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
+        run_as_user mkdir -p "${backup_job_script_location_pre}"
+        silent run_as_user cp /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
     fi
 
-    if [ -d "${SCRIPT_LOCATION_PRE}" ] && dir_notempty "${SCRIPT_LOCATION_PRE}" ; then
-        for f in $(find ${SCRIPT_LOCATION_PRE} -name \*.sh -type f); do
-            if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
-                run_as_user ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+    if [ -d "${backup_job_script_location_pre}" ] && dir_notempty "${backup_job_script_location_pre}" ; then
+        for f in $(find ${backup_job_script_location_pre} -name \*.sh -type f); do
+            if var_true "${backup_job_pre_script_x_verify}" ; then
+                run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
             else
                 if [ -x "${f}" ] ; then
                     write_log notice "Executing pre backup custom script : '${f}'"
                     ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
-                    run_as_user ${f} "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${target}"
+                    run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
                 else
                     write_log error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
@@ -855,45 +1265,46 @@ post_dbbackup() {
     if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
         source /assets/defaults/03-monitoring
         write_log notice "Sending Backup Statistics to Zabbix"
+        silent zabbix_sender -c -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
         cat <<EOF | silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
-- dbbackup.size "${dbbackup_size}"
-- dbbackup.datetime "${dbbackup_date}"
-- dbbackup.status "${exit_code}"
-- dbbackup.backup_duration "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+- dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
+- dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
+- dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
+- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
 EOF
         if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi
 
     ### Post Script Support
-    if [ -n "${POST_SCRIPT}" ] ; then
-        if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-            run_as_user eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+    if [ -n "${backup_job_post_script}" ] ; then
+        if var_true "${backup_job_post_script_x_verify}" ; then
+            run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
         else
-            if [ -x "${POST_SCRIPT}" ] ; then
-                write_log notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
-                run_as_user eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+            if [ -x "${backup_job_post_script}" ] ; then
+                write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}"
+                run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
-                write_log error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
+                write_log error "Can't execute POST_SCRIPT environment variable '${backup_job_post_script}' as its filesystem bit is not executible!"
             fi
         fi
     fi
 
     ### Post Backup Custom Script Support
     if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${SCRIPT_LOCATION_POST}'"
-        run_as_user mkdir -p "${SCRIPT_LOCATION_POST}"
-        silent run_as_user cp /assets/custom-scripts/* "${SCRIPT_LOCATION_POST}"
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
+        run_as_user mkdir -p "${backup_job_script_location_post}"
+        silent run_as_user cp /assets/custom-scripts/* "${backup_job_script_location_post}"
     fi
 
-    if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
-        for f in $(run_as_user find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
-            if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
-                run_as_user ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+    if [ -d "${backup_job_script_location_post}" ] && dir_notempty "${backup_job_script_location_post}" ; then
+        for f in $(run_as_user find ${backup_job_script_location_post} -name \*.sh -type f); do
+            if var_true "${backup_job_post_script_x_verify}" ; then
+                run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 if [ -x "${f}" ] ; then
                     write_log notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    run_as_user ${f} "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+                    run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
                 else
                     write_log error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
@@ -902,33 +1313,38 @@ EOF
     fi
 
     write_log notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
-    unset s3_ssl
-    unset s3_ca_cert
+}
+
+process_limiter() {
+    while true ; do
+        counter=0
+        process_amount="$(wc -l /tmp/.container/db-backup-backups | awk '{print $1}')"
+        if [ "${process_amount}" -ge "${BACKUP_JOB_CONCURRENCY}" ] ; then
+            if [ -z $text_concurrency_limit_initial ] ; then
+                print_notice "Backup concurrency limit reached (${BACKUP_JOB_CONCURRENCY}). Waiting for other tasks to finish before backing up."
+                text_concurrency_limit_initial=done
+            fi
+            if [[ "${counter}" =~ 45|90|135|180|225|270|315|360|405|450|495|540|585|630|675|720|765|810|855|900|945|990|1035|1080|1125|1170|1215|1260|1305|1350|1395|1440|1485|1530|1575|1620|1665|1710|1755|1800|1845|1890|1935|1980|2025|2070|2115|2160|2205|2250|2295|2340|2385|2430|2475|2520|2565|2610|2655|2700|2745|2790|2835|2880|2925|2970|3015|3060|3105|3150|3195|3240|3285|3330|3375|3420|3465|3510|3555|3600 ]] ; then
+                if [ "${counter}" != 0 ] ; then counter_verbose=" (${counter} seconds so far)" ; fi
+                print_notice "Still waiting for other jobs to finish..${counter_verbose}"
+            fi
+            sleep 1
+            (( counter+=1))
+        else
+            break
+        fi
+    done
 }
 
 run_as_user() {
     s6-setuidgid dbbackup $@
 }
 
-sanity_test() {
-    sanity_var DB_TYPE "Database Type"
-    sanity_var DB_HOST "Database Host"
-
-    case "${DB_TYPE,,}" in
-        "mysql" | "mariadb" )
-            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-        ;;
-        postgres* | "pgsql" )
-            sanity_var DB_NAME "Database Name to backup. Multiple seperated by commas"
-        ;;
-    esac
-}
-
 setup_mode() {
     if [ "${MODE,,}" = "auto" ] || [ ${MODE,,} = "default" ] ; then
         write_log debug "Running in Auto / Default Mode - Letting Image control scheduling"
     else
-        write_log info "Running in Manual mode - Execute 'backup_now' or '/etc/services.available/10-db-backup/run' to perform a manual backup"
+        write_log info "Running in Manual mode - Execute 'backup_now' to perform a manual backup"
         service_stop 10-db-backup
         if var_true "${MANUAL_RUN_FOREVER}" ; then
             mkdir -p /etc/services.d/99-run_forever
@@ -956,46 +1372,81 @@ EOF
     fi
 }
 
+symlink_log () {
+    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+        local oldpwd=$(pwd)
+        cd "${LOG_PATH}"/"$(date +'%Y%m%d')"
+        ln -sf $(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log ../latest-"${ltarget}".log
+        cd "${oldpwd}"
+    fi
+}
+
 write_log() {
     case "${1}" in
         debug )
+            CONTAINER_LOG_LEVEL=DEBUG
             shift 1
-            case "${LOG_LEVEL,,}" in
+            case "${backup_job_log_level,,}" in
                 "debug" )
+
                     print_debug "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
+                    output_off
+                    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    fi
+                    output_on
                 ;;
             esac
         ;;
         error )
+            CONTAINER_LOG_LEVEL=ERROR
             shift 1
-            case "${LOG_LEVEL,,}" in
+            case "${backup_job_log_level,,}" in
                 "debug" | "notice" | "warn" | "error")
+                    output_off
                     print_error "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
+                    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    fi
+                    output_on
                 ;;
             esac
         ;;
         info )
+            CONTAINER_LOG_LEVEL=INFO
             shift 1
             print_info "$@"
-            echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
+            output_off
+            if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+                echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+            fi
+            output_on
         ;;
         notice )
+            CONTAINER_LOG_LEVEL=NOTICE
             shift 1
-            case "${LOG_LEVEL,,}" in
+            case "${backup_job_log_level,,}" in
                 "debug" | "notice" )
                     print_notice "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
+                    output_off
+                    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    fi
+                    output_on
                 ;;
             esac
         ;;
         warn )
+            CONTAINER_LOG_LEVEL=WARN
             shift 1
-            case "${LOG_LEVEL,,}" in
+            case "${backup_job_log_level,,}" in
                 "debug" | "notice" | "warn" )
                     print_warn "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
+                    output_off
+                    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_routines_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    fi
+                    output_on
                 ;;
             esac
         ;;
