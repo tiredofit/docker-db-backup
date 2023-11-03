@@ -19,7 +19,7 @@ bootstrap_filesystem() {
     if [ "$(stat -c %U "${LOG_PATH}")" != "dbbackup" ] ; then chown dbbackup:dbbackup "${LOG_PATH}" ; fi
     if [ "$(stat -c %a "${LOG_PATH}")" != "755" ] ; then chmod -R 755 "${LOG_PATH}" ; fi
 
-    create_logrotate dbbackup "${LOG_PATH}"/"${LOG_FILE}" none dbbackup dbbackup
+    echo "0 0 * * * /usr/sbin/logrotate_dbbackup >/dev/null 2>&1" > /assets/cron/dbbackup_logrotate
 
     if [ ! -d "${TEMP_LOCATION}" ]; then
         mkdir -p "${TEMP_LOCATION}"
@@ -963,7 +963,7 @@ write_log() {
             case "${LOG_LEVEL,,}" in
                 "debug" )
                     print_debug "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
                 ;;
             esac
         ;;
@@ -972,21 +972,21 @@ write_log() {
             case "${LOG_LEVEL,,}" in
                 "debug" | "notice" | "warn" | "error")
                     print_error "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
                 ;;
             esac
         ;;
         info )
             shift 1
             print_info "$@"
-            echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+            echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
         ;;
         notice )
             shift 1
             case "${LOG_LEVEL,,}" in
                 "debug" | "notice" )
                     print_notice "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
                 ;;
             esac
         ;;
@@ -995,7 +995,7 @@ write_log() {
             case "${LOG_LEVEL,,}" in
                 "debug" | "notice" | "warn" )
                     print_warn "$@"
-                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}"/"${LOG_FILE}" > /dev/null
+                    echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}"/"${DB_TYPE}"_"${DB_NAME}"_"${DB_HOST}"_"${now}".log > /dev/null
                 ;;
             esac
         ;;
