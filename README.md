@@ -207,17 +207,18 @@ If these are set and no other defaults or variables are set explicitly, they wil
 
 ##### Scheduling Options
 
-| Variable                      | Description                                                                                                                                    | Default                         |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `DEFAULT_BACKUP_INTERVAL`     | How often to do a backup, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                        | `1440`                          |
-| `DEFAULT_BACKUP_BEGIN`        | What time to do the initial backup. Defaults to immediate. (`+1`)                                                                              | `+0`                            |
-|                               | Must be in one of two formats:                                                                                                                 |                                 |
-|                               | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |                                 |
-|                               | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |                                 |
-| `DEFAULT_CLEANUP_TIME`        | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE`                         |
-|                               | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |                                 |
-| `DEFAULT_ARCHIVE_TIME`        | Value in minutes to move all files files older than (x) from                                                                                   | `DEFAULT_BACKUP_BLACKOUT_BEGIN` | Use `HHMM` notation to start a blackout period where no backups occur eg `0420` |  |
-| `DEFAULT_BACKUP_BLACKOUT_END` | Use `HHMM` notation to set the end period where no backups occur eg `0430`                                                                     |                                 |
+| Variable                        | Description                                                                                                                                    | Default |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `DEFAULT_BACKUP_INTERVAL`       | How often to do a backup, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                        | `1440`  |
+| `DEFAULT_BACKUP_BEGIN`          | What time to do the initial backup. Defaults to immediate. (`+1`)                                                                              | `+0`    |
+|                                 | Must be in one of two formats:                                                                                                                 |         |
+|                                 | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
+|                                 | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
+| `DEFAULT_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
+|                                 | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
+| `DEFAULT_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from                                                                                   |         |
+| `DEFAULT_BACKUP_BLACKOUT_BEGIN` | Use `HHMM` notation to start a blackout period where no backups occur eg `0420`                                                                |         |
+| `DEFAULT_BACKUP_BLACKOUT_END`   | Use `HHMM` notation to set the end period where no backups occur eg `0430`                                                                     |         |
 
 > You may need to wrap your `DEFAULT_BACKUP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
@@ -260,9 +261,9 @@ If these are set and no other defaults or variables are set explicitly, they wil
 
 ###### Microsoft SQL
 
-| Variable       | Description        | Default | `_FILE` |
-| -------------- | ------------------ | ------- | ------- |
-| `DEFAULT_PORT` | Microsoft SQL Port | `1433`  | x       |
+| Variable             | Description                             | Default    | `_FILE` |
+| -------------------- | --------------------------------------- | ---------- | ------- |
+| `DEFAULT_PORT`       | Microsoft SQL Port                      | `1433`     | x       |
 | `DEFAULT_MSSQL_MODE` | Backup `DATABASE` or `TRANSACTION` logs | `DATABASE` |
 
 ###### MongoDB
@@ -511,9 +512,9 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 ###### Microsoft SQL
 
-| Variable    | Description        | Default | `_FILE` |
-| ----------- | ------------------ | ------- | ------- |
-| `DB01_PORT` | Microsoft SQL Port | `1433`  | x       |
+| Variable          | Description                             | Default    | `_FILE` |
+| ----------------- | --------------------------------------- | ---------- | ------- |
+| `DB01_PORT`       | Microsoft SQL Port                      | `1433`     | x       |
 | `DB01_MSSQL_MODE` | Backup `DATABASE` or `TRANSACTION` logs | `DATABASE` |
 
 ###### MongoDB
