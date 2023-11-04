@@ -998,12 +998,16 @@ generate_checksum() {
             ;;
         esac
 
+        checksum_routines_start_time=$(date +'%s')
         write_log notice "Generating ${checksum_extension^^} for '${target}'"
         cd "${TEMP_PATH}"
         run_as_user ${checksum_command} "${target}" | run_as_user tee "${target}"."${checksum_extension}" > /dev/null
         chmod ${backup_job_filesystem_permission} "${target}"."${checksum_extension}"
         checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
+        checksum_routines_finish_time=$(date +'%s')
+        checksum_routines_total_time=$(echo $((checksum_routines_finish_time-checksum_routines_start_time)))
         write_log debug "${checksum_extension^^}: ${checksum_value} - ${target}"
+        write_log debug "Checksum routines time taken: $(echo ${checksum_routines_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
     else
         write_log error "Skipping Checksum creation because backup did not complete successfully"
     fi
