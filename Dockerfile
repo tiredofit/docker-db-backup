@@ -41,6 +41,7 @@ RUN source /assets/functions/00-container && \
     package install .db-backup-run-deps \
                     bzip2 \
                     coreutils \
+                    gpg \
                     groff \
                     libarchive \
                     mariadb-client \
