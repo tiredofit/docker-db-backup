@@ -192,6 +192,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | `DEFAULT_BACKUP_LOCATION`         | Backup to `FILESYSTEM`, `blobxfer` or `S3` compatible services like S3, Minio, Wasabi | `FILESYSTEM` |
 | `DEFAULT_CHECKSUM`                | Either `MD5` or `SHA1` or `NONE`                                                      | `MD5`        |
 | `DEFAULT_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`              | `notice`     |
+| `DEFAULT_RESOURCE_OPTIMIZED` | Perform operations at a lower priority to the CPU scheduler                                | `FALSE`      |
 | `DEFAULT_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                           | `FALSE`      |
 
 ##### Compression Options
@@ -437,6 +438,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_EXTRA_ENUMERATION_OPTS`  | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |              |
 | `DB01_EXTRA_OPTS`              | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |              |
 | `DB01_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`                                  | `debug`      |
+| `DEFAULT_RESOURCE_OPTIMIZED` | Perform operations at a lower priority to the CPU scheduler                                | `FALSE`      |
 | `DB01_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                                               | `FALSE`      |
 
 ##### Compression Options

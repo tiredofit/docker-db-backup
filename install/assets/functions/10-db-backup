@@ -193,6 +193,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" POST_SCRIPT backup_job_post_script
         transform_backup_instance_variable "${backup_instance_number}" PRE_SCRIPT backup_job_pre_script
         transform_backup_instance_variable "${backup_instance_number}" PRE_SCRIPT_X_VERIFY backup_job_pre_script_x_verify
+        transform_backup_instance_variable "${backup_instance_number}" RESOURCE_OPTIMIZED backup_job_resource_optimized
         transform_backup_instance_variable "${backup_instance_number}" S3_BUCKET backup_job_s3_bucket
         transform_backup_instance_variable "${backup_instance_number}" S3_CERT_CA_FILE backup_job_s3_cert_ca_file
         transform_backup_instance_variable "${backup_instance_number}" S3_CERT_SKIP_VERIFY backup_job_s3_cert_skip_verify
@@ -337,6 +338,8 @@ bootstrap_variables() {
                 exit 99
             ;;
         esac
+
+        if var_true "${backup_job_resource_optimized}" ; then nice="nice" ; fi
     }
 
     case "${1}" in
@@ -436,7 +439,7 @@ backup_mongo() {
     fi
     pre_dbbackup "${backup_job_db_name}"
     write_log notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
-    silent run_as_user mongodump --archive=${TEMP_PATH}/${target} ${mongo_compression} ${mongo_backup_parameter}
+    silent run_as_user ${nice} mongodump --archive=${TEMP_PATH}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code backup $target
     generate_checksum
@@ -454,7 +457,7 @@ backup_mssql() {
             compression
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
-            silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+            silent run_as_user ${nice} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
             check_exit_code backup $target
             generate_checksum
@@ -469,7 +472,7 @@ backup_mssql() {
             compression
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
-            silent run_as_user /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+            silent run_as_user ${nice} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
             check_exit_code backup $target
             generate_checksum
@@ -512,7 +515,7 @@ backup_mysql() {
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
-                run_as_user mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+                run_as_user ${nice} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -528,7 +531,7 @@ backup_mysql() {
         compression
         pre_dbbackup all
         write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
-        run_as_user mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+        run_as_user ${nice} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -569,7 +572,7 @@ backup_pgsql() {
                 compression
                 pre_dbbackup $db
                 write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
-                run_as_user pg_dump -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+                run_as_user ${nice} pg_dump -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
                 generate_checksum
@@ -577,14 +580,13 @@ backup_pgsql() {
                 check_exit_code move $target
                 post_dbbackup $db
         done
-
         prepare_dbbackup
         target=pgsql_globals_${backup_job_db_host,,}_${now}.sql
         ltarget=pgsql_globals_${backup_job_db_host,,}
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
-        pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+        run_as_user ${nice} pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code $target
         generate_checksum
@@ -607,7 +609,7 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
-        run_as_user pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
+        run_as_user ${nice} pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
         generate_checksum
@@ -622,7 +624,7 @@ backup_redis() {
     write_log notice "Dumping Redis - Flushing Redis Cache First"
     target=redis_all_${backup_job_db_host,,}_${now}.rdb
     ltarget=redis_${backup_job_db_host,,}
-    echo bgsave | silent run_as_user redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${TEMP_PATH}/${target} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}
+    echo bgsave | silent run_as_user ${nice} redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${TEMP_PATH}/${target} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
@@ -657,10 +659,10 @@ backup_sqlite3() {
     compression
     pre_dbbackup $db
     write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
-    silent run_as_user sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup.sqlite3'"
+    silent run_as_user ${nice} sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup.sqlite3'"
     exit_code=$?
     check_exit_code backup $target
-    run_as_user cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${target}" > /dev/null
+    run_as_user ${nice} cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${target}" > /dev/null
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -858,7 +860,7 @@ compression() {
 
     case "${backup_job_compression,,}" in
         bz* )
-            compress_cmd="pbzip2 -q -${backup_job_compression_level} -p${backup_job_parallel_compression_threads} "
+            compress_cmd="${nice} pbzip2 -q -${backup_job_compression_level} -p${backup_job_parallel_compression_threads} "
             compression_type="bzip2"
             dir_compress_cmd=${compress_cmd}
             extension=".bz2"
@@ -866,7 +868,7 @@ compression() {
             target=${target}.bz2
         ;;
         gz* )
-            compress_cmd="pigz -q -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} ${gz_rsyncable}"
+            compress_cmd="${nice} pigz -q -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
             dir_compress_cmd=${compress_cmd}
@@ -874,7 +876,7 @@ compression() {
             target=${target}.gz
         ;;
         xz* )
-            compress_cmd="pixz -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} "
+            compress_cmd="${nice} pixz -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} "
             compression_type="xzip"
             dir_compress_cmd=${compress_cmd}
             extension=".xz"
@@ -882,7 +884,7 @@ compression() {
             target=${target}.xz
         ;;
         zst* )
-            compress_cmd="zstd -q -q --rm -${backup_job_compression_level} -T${backup_job_parallel_compression_threads} ${gz_rsyncable}"
+            compress_cmd="${nice} zstd -q -q --rm -${backup_job_compression_level} -T${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
             extension=".zst"
@@ -984,11 +986,11 @@ generate_checksum() {
     if [ "${exit_code}" = "0" ] ; then
         case "${backup_job_checksum,,}" in
             "md5" )
-                checksum_command="md5sum"
+                checksum_command="${nice} md5sum"
                 checksum_extension="md5"
             ;;
             "sha1" )
-                checksum_command="sha1sum"
+                checksum_command="${nice} sha1sum"
                 checksum_extension="sha1"
             ;;
             "none" )
@@ -1216,7 +1218,7 @@ move_dbbackup() {
                 silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/${target} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/${target} ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
                 move_exit_code=$?
                 if [ "${backup_job_checksum}" != "none" ] ; then
-                    silent run_as_user aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/*.${checksum_extension} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/ ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
+                    silent run_as_user ${nice} aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/*.${checksum_extension} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/ ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
                     run_as_user rm -rf "${TEMP_PATH}"/"${target}"."${checksum_extension}"
                 fi
 
@@ -1224,7 +1226,7 @@ move_dbbackup() {
             ;;
             "blobxfer" )
                 write_log info "Synchronize local storage from S3 Bucket with blobxfer"
-                blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete
+                ${nice} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete
 
                 write_log info "Moving backup to external storage with blobxfer"
                 mkdir -p "${backup_job_filesystem_path}"
@@ -1232,7 +1234,7 @@ move_dbbackup() {
 
                 run_as_user mv "${TEMP_PATH}"/"${target}" "${backup_job_filesystem_path}"/"${target}"
 
-                silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path}
+                silent run_as_user ${nice} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path}
                 move_exit_code=$?
 
                 if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${TEMP_PATH}"/"${target}"."${checksum_extension}" ; fi
