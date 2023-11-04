@@ -1006,6 +1006,11 @@ generate_checksum() {
         checksum_value=$(run_as_user cat "${target}"."${checksum_extension}" | awk '{print $1}')
         checksum_routines_finish_time=$(date +'%s')
         checksum_routines_total_time=$(echo $((checksum_routines_finish_time-checksum_routines_start_time)))
+        zabbix_checksum_time=$(cat <<EOF
+- dbbackup.backup.checksum.duration.[${backup_job_db_host}.${backup_job_db_name}] ${checksum_routines_total_time}
+- dbbackup.backup.checksum.hash.[${backup_job_db_host}.${backup_job_db_name}] ${checksum_value}
+EOF
+        )
         write_log debug "${checksum_extension^^}: ${checksum_value} - ${target}"
         write_log debug "Checksum routines time taken: $(echo ${checksum_routines_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
     else
@@ -1313,6 +1318,7 @@ post_dbbackup() {
 - dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
 - dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
 - dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+${zabbix_checksum_time}
 EOF
         if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi

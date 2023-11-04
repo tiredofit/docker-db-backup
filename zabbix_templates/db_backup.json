@@ -34,6 +34,25 @@
                         "delay": "0",
                         "item_prototypes": [
                             {
+                                "uuid": "5a2c4d1cacf844829bc1fbf912e071c5",
+                                "name": "[{#NAME}] Checksum duration",
+                                "type": "TRAP",
+                                "key": "dbbackup.backup.checksum.duration.[{#NAME}]",
+                                "delay": "0",
+                                "history": "7d",
+                                "units": "unixtime"
+                            },
+                            {
+                                "uuid": "6e49769ec07344a4974b13dab00c3539",
+                                "name": "[{#NAME}] Checksum Hash",
+                                "type": "TRAP",
+                                "key": "dbbackup.backup.checksum.hash.[{#NAME}]",
+                                "delay": "0",
+                                "history": "30d",
+                                "trends": "0",
+                                "value_type": "TEXT"
+                            },
+                            {
                                 "uuid": "bb6472e30bff4d9c908b1d34b893e622",
                                 "name": "[{#NAME}] Last Backup",
                                 "type": "TRAP",
