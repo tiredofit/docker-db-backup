@@ -352,7 +352,7 @@ bootstrap_variables() {
             ;;
         esac
 
-        if var_true "${backup_job_resource_optimized}" ; then nice="nice" ; fi
+        if var_true "${backup_job_resource_optimized}" ; then nice="nice -19 ionice -c2" ; fi
     }
 
     case "${1}" in
