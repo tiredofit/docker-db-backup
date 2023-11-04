@@ -42,6 +42,7 @@ RUN source /assets/functions/00-container && \
                     bzip2 \
                     coreutils \
                     gpg \
+                    gpg-agent \
                     groff \
                     libarchive \
                     mariadb-client \

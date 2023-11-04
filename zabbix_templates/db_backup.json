@@ -103,6 +103,25 @@
                                 "description": "How long the DB Backup job took"
                             },
                             {
+                                "uuid": "3f0dc3c75261447c93482815c3d69524",
+                                "name": "[{#NAME}] Encrypt Duration",
+                                "type": "TRAP",
+                                "key": "dbbackup.backup.encrypt.duration.[{#NAME}]",
+                                "delay": "0",
+                                "history": "7d",
+                                "units": "unixtime"
+                            },
+                            {
+                                "uuid": "c3d5ad0789c443859d6a673e03db9cec",
+                                "name": "[{#NAME}] Filename",
+                                "type": "TRAP",
+                                "key": "dbbackup.backup.filename.[{#NAME}]",
+                                "delay": "0",
+                                "history": "30d",
+                                "trends": "0",
+                                "value_type": "TEXT"
+                            },
+                            {
                                 "uuid": "43b700c03897465eb7e49bbfe8fc9fc5",
                                 "name": "[{#NAME}] Size",
                                 "type": "TRAP",

@@ -44,6 +44,8 @@ bootstrap_variables() {
                             DEFAULT_NAME_EXCLUDE \
                             DEFAULT_USER \
                             DEFAULT_PASS \
+                            DEFAULT_ENCRYPT_PASSPHRASE \
+                            DEFAULT_ENCRYPT_PUBKEY \
                             DEFAULT_MONGO_CUSTOM_URI \
                             DEFAULT_MYSQL_TLS_CA_FILE \
                             DEFAULT_MYSQL_TLS_CERT_FILE \
@@ -64,6 +66,14 @@ bootstrap_variables() {
                             DB"${backup_instance_number}"_TYPE \
                             DB"${backup_instance_number}"_HOST \
                             DB"${backup_instance_number}"_PORT \
+                            DB"${backup_instance_number}"_NAME \
+                            DB"${backup_instance_number}"_NAME_EXCLUDE \
+                            DB"${backup_instance_number}"_USER \
+                            DB"${backup_instance_number}"_PASS \
+                            DB"${backup_instance_number}"_ENCRYPT_PASSPHRASE \
+                            DB"${backup_instance_number}"_ENCRYPT_PUBKEY \
+                            DB"${backup_instance_number}"_MONGO_CUSTOM_URI \
+                            DB"${backup_instance_number}"_MYSQL_TLS_CA_FILE \
                             DB"${backup_instance_number}"_MYSQL_TLS_CERT_FILE \
                             DB"${backup_instance_number}"_MYSQL_TLS_KEY_FILE \
                             DB"${backup_instance_number}"_S3_BUCKET \
@@ -163,6 +173,9 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" COMPRESSION_LEVEL backup_job_compression_level
         transform_backup_instance_variable "${backup_instance_number}" CREATE_LATEST_SYMLINK backup_job_create_latest_symlink
         transform_backup_instance_variable "${backup_instance_number}" ENABLE_PARALLEL_COMPRESSION backup_job_parallel_compression
+        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT backup_job_encrypt
+        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PASSPHRASE backup_job_encrypt_passphrase
+        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PUBKEY backup_job_encrypt_pubkey
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_DUMP_OPTS backup_job_extra_dump_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_ENUMERATION_OPTS backup_job_extra_enumeration_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_OPTS backup_job_extra_opts
@@ -359,6 +372,7 @@ backup_couch() {
     run_as_user curl -sSL -X GET ${backup_job_db_host}:${backup_job_db_port}/${backup_job_db_name}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
     exit_code=$?
     check_exit_code backup $target
+    file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -390,6 +404,7 @@ backup_influx() {
                 run_as_user tar cf - "${TEMP_PATH}"/"${target_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target_dir}".tar"${extension}" > /dev/null
                 target=influx_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 ltarget=influx_${db}_${backup_job_db_host#*//}
+                file_encryption
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target_dir
@@ -411,6 +426,7 @@ backup_influx() {
                 create_archive
                 target=influx2_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 ltarget=influx2_${db}_${backup_job_db_host#*//}
+                file_encryption
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target_dir
@@ -442,6 +458,7 @@ backup_mongo() {
     silent run_as_user ${nice} mongodump --archive=${TEMP_PATH}/${target} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
     check_exit_code backup $target
+    file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -460,6 +477,7 @@ backup_mssql() {
             silent run_as_user ${nice} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
             check_exit_code backup $target
+            file_encryption
             generate_checksum
             move_dbbackup
             check_exit_code move $target
@@ -475,12 +493,13 @@ backup_mssql() {
             silent run_as_user ${nice} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
             check_exit_code backup $target
+            file_encryption
             generate_checksum
             move_dbbackup
             check_exit_code move $target
             post_dbbackup "${backup_job_db_name}"
         ;;
-    };
+    esac
 }
 
 backup_mysql() {
@@ -518,6 +537,7 @@ backup_mysql() {
                 run_as_user ${nice} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
+                file_encryption
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target
@@ -534,6 +554,7 @@ backup_mysql() {
         run_as_user ${nice} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
+        file_encryption
         generate_checksum
         move_dbbackup
         check_exit_code move $target
@@ -575,6 +596,7 @@ backup_pgsql() {
                 run_as_user ${nice} pg_dump -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
                 exit_code=$?
                 check_exit_code backup $target
+                file_encryption
                 generate_checksum
                 move_dbbackup
                 check_exit_code move $target
@@ -582,13 +604,13 @@ backup_pgsql() {
         done
         prepare_dbbackup
         target=pgsql_globals_${backup_job_db_host,,}_${now}.sql
-        ltarget=pgsql_globals_${backup_job_db_host,,}
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
         run_as_user ${nice} pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code $target
+        file_encryption
         generate_checksum
         move_dbbackup
         check_exit_code move $target
@@ -612,6 +634,7 @@ backup_pgsql() {
         run_as_user ${nice} pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${target}" > /dev/null
         exit_code=$?
         check_exit_code backup $target
+        file_encryption
         generate_checksum
         move_dbbackup
         check_exit_code move $target
@@ -644,6 +667,7 @@ backup_redis() {
     pre_dbbackup all
     run_as_user ${compress_cmd} "${TEMP_PATH}/${target_original}"
     check_exit_code backup $target
+    file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -663,6 +687,7 @@ backup_sqlite3() {
     exit_code=$?
     check_exit_code backup $target
     run_as_user ${nice} cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${target}" > /dev/null
+    file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move $target
@@ -980,6 +1005,46 @@ db_backup_container_init() {
     rm -rf /tmp/.container/db-backup-backups
     echo "0 0 * * * /usr/sbin/logrotate_dbbackup >/dev/null 2>&1" > /assets/cron/dbbackup_logrotate
     touch /tmp/.container/db-backup-backups
+}
+
+file_encryption() {
+    if var_true "${backup_job_encrypt}" ; then
+        if [ "${exit_code}" = "0" ] ; then
+            print_debug "Encrypting"
+            output_off
+            if [ -n "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_pubkey}" ]; then
+                print_error "Can't encrypt as both ENCRYPT_PASSPHRASE and ENCRYPT_PUBKEY exist!"
+                return
+            elif [ -n "${backup_job_encrypt_passphrase}" ] && [ -z "${backup_job_encrypt_pubkey}" ]; then
+                print_notice "Encrypting with GPG Passphrase"
+                encrypt_routines_start_time=$(date +'%s')
+                encrypt_tmp_dir=$(run_as_user mktemp -d)
+                echo "${backup_job_encrypt_passphrase}" | silent run_as_user ${nice} gpg --batch --home ${encrypt_tmp_dir} --yes --passphrase-fd 0 -c "${TEMP_PATH}"/"${target}"
+                rm -rf "${encrypt_tmp_dir}"
+            elif [ -z "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_pubkey}" ]; then
+                if [ -f "${backup_job_encrypt_pubkey}" ]; then
+                    encrypt_routines_start_time=$(date +'%s')
+                    print_notice "Encrypting with GPG Public Key"
+                    encrypt_tmp_dir=$(run_as_user mktemp -d)
+                    silent run_as_user ${nice} gpg --batch --yes --home "${encrypt_tmp_dir}" --recipient-file "${backup_job_encrypt_pubkey}" -c "${TEMP_PATH}"/"${target}"
+                    rm -rf "${encrypt_tmp_dir}"
+                fi
+            fi
+            if [ -f "${TEMP_PATH}"/"${target}".gpg ]; then
+                rm -rf "${TEMP_PATH}"/"${target}"
+                target="${target}.gpg"
+
+                encrypt_routines_finish_time=$(date +'%s')
+                encrypt_routines_total_time=$(echo $((encrypt_routines_finish_time-encrypt_routines_start_time)))
+                zabbix_encrypt_time=$(cat <<EOF
+- dbbackup.backup.encrypt.duration.[${backup_job_db_host}.${backup_job_db_name}] ${encrypt_routines_total_time}
+EOF
+                )
+            fi
+        else
+            write_log error "Skipping encryption because backup did not complete successfully"
+        fi
+    fi
 }
 
 generate_checksum() {
@@ -1318,6 +1383,8 @@ post_dbbackup() {
 - dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
 - dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
 - dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+- dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${target}"
+${zabbix_encrypt_time}
 ${zabbix_checksum_time}
 EOF
         if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi

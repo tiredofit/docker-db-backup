@@ -26,6 +26,7 @@ Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis serve
   - backup all to separate files or one singular file
 - checksum support choose to have an MD5 or SHA1 hash generated after backup for verification
 - compression support (none, gz, bz, xz, zstd)
+- encryption support (passphrase and public key)
 - Zabbix Metrics support
 - Hooks to execute pre and post backup job for customization purposes
 - Companion script to aid in restores
@@ -52,6 +53,7 @@ Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis serve
     - [Container Options](#container-options)
     - [Job Defaults](#job-defaults)
       - [Compression Options](#compression-options)
+      - [Encryption Options](#encryption-options)
       - [Scheduling Options](#scheduling-options)
       - [Default Database Options](#default-database-options)
         - [CouchDB](#couchdb)
@@ -71,6 +73,7 @@ Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis serve
         - [Post backup](#post-backup)
     - [Job Backup Options](#job-backup-options)
       - [Compression Options](#compression-options-1)
+      - [Encryption Options](#encryption-options-1)
       - [Scheduling Options](#scheduling-options-1)
       - [Specific Database Options](#specific-database-options)
         - [CouchDB](#couchdb-1)
@@ -192,7 +195,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | `DEFAULT_BACKUP_LOCATION`         | Backup to `FILESYSTEM`, `blobxfer` or `S3` compatible services like S3, Minio, Wasabi | `FILESYSTEM` |
 | `DEFAULT_CHECKSUM`                | Either `MD5` or `SHA1` or `NONE`                                                      | `MD5`        |
 | `DEFAULT_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`              | `notice`     |
-| `DEFAULT_RESOURCE_OPTIMIZED` | Perform operations at a lower priority to the CPU scheduler                                | `FALSE`      |
+| `DEFAULT_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU scheduler                           | `FALSE`      |
 | `DEFAULT_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                           | `FALSE`      |
 
 ##### Compression Options
@@ -205,6 +208,15 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | `DEFAULT_GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. | `FALSE`        |
 | `DEFAULT_ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                  | `TRUE`         |
 | `DEFAULT_PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                     | `autodetected` |
+
+##### Encryption Options
+
+| Variable                     | Description                                 | Default |
+| ---------------------------- | ------------------------------------------- | ------- |
+| `DEFAULT_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
+| `DEFAULT_ENCRYPT_PASSPHRASE` | Passphrase to encrypt file with GPG         |         |
+| *or*                         |                                             |         |
+| `DEFAULT_ENCRYPT_PUBKEY`     | Path of public key to encrypt file with GPG |         |
 
 ##### Scheduling Options
 
@@ -438,7 +450,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_EXTRA_ENUMERATION_OPTS`  | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |              |
 | `DB01_EXTRA_OPTS`              | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |              |
 | `DB01_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`                                  | `debug`      |
-| `DB01_RESOURCE_OPTIMIZED` | Perform operations at a lower priority to the CPU scheduler                                | `FALSE`      |
+| `DB01_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU scheduler                                               | `FALSE`      |
 | `DB01_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                                               | `FALSE`      |
 
 ##### Compression Options
@@ -451,6 +463,15 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_GZ_RSYNCABLE`                 | Use `--rsyncable` (gzip only) for faster rsync transfers and incremental backup deduplication. | `FALSE`        |
 | `DB01_ENABLE_PARALLEL_COMPRESSION`  | Use multiple cores when compressing backups `TRUE` or `FALSE`                                  | `TRUE`         |
 | `DB01_PARALLEL_COMPRESSION_THREADS` | Maximum amount of threads to use when compressing - Integer value e.g. `8`                     | `autodetected` |
+
+##### Encryption Options
+
+| Variable                  | Description                                 | Default |
+| ------------------------- | ------------------------------------------- | ------- |
+| `DB01_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
+| `DB01_ENCRYPT_PASSPHRASE` | Passphrase to encrypt file with GPG         |         |
+| *or*                      |                                             |         |
+| `DB01_ENCRYPT_PUBKEY`     | Path of public key to encrypt file with GPG |         |
 
 ##### Scheduling Options
 
@@ -494,9 +515,9 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 | Variable                        | Description                                                                                               | Default                   | `_FILE` |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
-| `DB01_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           |
-| `DB01_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           |
-| `DB01_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           |
+| `DB01_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           ||
+| `DB01_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           ||
+| `DB01_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           ||
 | `DB01_NAME`                     | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |                           |         |
 |                                 | Backup multiple by separating with commas eg `db1,db2`                                                    |                           | x       |
 | `DB01_NAME_EXCLUDE`             | If using `ALL` - use this as to exclude databases separated via commas from being backed up               |                           | x       |
@@ -534,9 +555,9 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | Variable                      | Description                                                                                               | Default | `_FILE` |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
 | `DB01_AUTH`                   | (Optional) Authentication Database                                                                        |         |         |
-| `DB01_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |
-| `DB01_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |
-| `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |
+| `DB01_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         | |
+| `DB01_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         | |
+| `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         | |
 | `DB01_NAME`                   | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |         |         |
 |                               | Backup multiple by separating with commas eg `db1,db2`                                                    |         | x       |
 | `DB01_PORT`                   | PostgreSQL Port                                                                                           | `5432`  | x       |
@@ -545,8 +566,8 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 | Variable                 | Description                                                                                               | Default | `_FILE` |
 | ------------------------ | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
-| `DB01_EXTRA_OPTS`        | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |
-| `DB01_EXTRA_BACKUP_OPTS` | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |
+| `DB01_EXTRA_OPTS`        | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         ||
+| `DB01_EXTRA_BACKUP_OPTS` | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         ||
 | `DB01_PORT`              | Redis Port                                                                                                | `6379`  | x       |
 
 ###### SQLite
