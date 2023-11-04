@@ -50,8 +50,8 @@ while true; do
     if var_true "${blackout}" ; then
         print_notice "Detected Blackout Period - Not performing backup operations"
     else
+        timer job start
         process_limiter
-        backup_routines_start_time=$(date +'%s')
         echo "{{BACKUP_NUMBER}}" >> /tmp/.container/db-backup-backups
         print_debug "Backup {{BACKUP_NUMBER}} routines started time: $(date +'%Y-%m-%d %T %Z')"
         bootstrap_filesystem
@@ -89,11 +89,10 @@ while true; do
                 backup_sqlite3
             ;;
         esac
-        backup_routines_finish_time=$(date +'%s')
-        backup_routines_total_time=$(echo $((backup_routines_finish_time-backup_routines_start_time)))
+        timer job stop
         if [ -z "${exitcode_backup}" ] ; then exitcode_backup="0" ; fi
-        print_info "Backup {{BACKUP_NUMBER}} routines finish time: $(date -d @${backup_routines_finish_time} +'%Y-%m-%d %T %Z') with exit code ${exitcode_backup}"
-        print_notice "Backup {{BACKUP_NUMBER}} routines time taken: $(echo ${backup_routines_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+        print_info "Backup {{BACKUP_NUMBER}} routines finish time: $(date -d @${backup_job_finish_time} +'%Y-%m-%d %T %Z') with exit code ${exitcode_backup}"
+        print_notice "Backup {{BACKUP_NUMBER}} routines time taken: $(echo ${backup_job_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
         sed -i "/^{{BACKUP_NUMBER}}/d" /tmp/.container/db-backup-backups
     fi
 
@@ -107,8 +106,8 @@ while true; do
             print_error "Stopping backup_scheduler {{BACKUP_NUMBER}} due to detected errors. Fix and restart container."
             s6-svc -d /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}
         else
-            print_notice "Sleeping for another $(($backup_job_backup_interval*60-backup_routines_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($backup_job_backup_interval*60-backup_routines_total_time))))" +'%Y-%m-%d %T %Z') "
-            silent sleep $(($backup_job_backup_interval*60-backup_routines_total_time))
+            print_notice "Sleeping for another $(($backup_job_backup_interval*60-backup_job_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($backup_job_backup_interval*60-backup_job_total_time))))" +'%Y-%m-%d %T %Z') "
+            silent sleep $(($backup_job_backup_interval*60-backup_job_total_time))
         fi
     fi
 done
