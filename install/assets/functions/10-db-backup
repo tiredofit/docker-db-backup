@@ -476,11 +476,14 @@ backup_mssql() {
             prepare_dbbackup
             target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.bak
             ltarget=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
-            compression
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
+            target_original=${target}
+            compression
+            pre_dbbackup all
+            run_as_user ${compress_cmd} "${TEMP_PATH}/${target_original}"
             check_exit_code backup $target
             timer backup finish
             file_encryption
@@ -493,11 +496,14 @@ backup_mssql() {
             prepare_dbbackup
             target=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.trn
             ltarget=mssql_${backup_job_db_name,,}_trn_${backup_job_db_host,,}
-            compression
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${target}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
+            target_original=${target}
+            compression
+            pre_dbbackup all
+            run_as_user ${compress_cmd} "${TEMP_PATH}/${target_original}"
             check_exit_code backup $target
             file_encryption
             timer backup finish
