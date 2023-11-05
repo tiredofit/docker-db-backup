@@ -1665,7 +1665,7 @@ EOF
     fi
 
     if [ -d "${backup_job_script_location_post}" ] && dir_notempty "${backup_job_script_location_post}" ; then
-        for f in $(run_as_user find ${backup_job_script_location_post} -name \*.sh -type f); do
+        for f in $(run_as_user find "${backup_job_script_location_post}" -name \*.sh -type f); do
             if var_true "${backup_job_post_script_x_verify}" ; then
                 run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
@@ -1709,7 +1709,7 @@ run_as_user() {
 }
 
 setup_mode() {
-    if [ "${MODE,,}" = "auto" ] || [ ${MODE,,} = "default" ] ; then
+    if [ "${MODE,,}" = "auto" ] || [ "${MODE,,}" = "default" ] ; then
         write_log debug "Running in Auto / Default Mode - Letting Image control scheduling"
     else
         write_log info "Running in Manual mode - Execute 'backup_now' to perform a manual backup"
@@ -1750,29 +1750,31 @@ symlink_log () {
 }
 
 write_log() {
+    local CONTAINER_LOG_LEVEL_ORIGINAL=${CONTAINER_LOG_LEVEL}
+    local _arg_log_level=${1}
+    shift 1
+    local _arg_log_message="$@"
     case "${1}" in
         debug )
+            output_off
             CONTAINER_LOG_LEVEL=DEBUG
-            shift 1
             case "${backup_job_log_level,,}" in
                 "debug" )
-
-                    print_debug "$@"
-                    output_off
+                    print_debug "${_arg_log_message}"
                     if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     fi
-                    output_on
                 ;;
             esac
+            CONTAINER_LOG_LEVEL=${CONTAINER_LOG_LEVEL_ORIGINAL}
+            output_on
         ;;
         error )
+            output_off
             CONTAINER_LOG_LEVEL=ERROR
-            shift 1
             case "${backup_job_log_level,,}" in
                 "debug" | "notice" | "warn" | "error")
-                    output_off
-                    print_error "$@"
+                    print_error "${_arg_log_message}"
                     if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     fi
@@ -1781,40 +1783,35 @@ write_log() {
             esac
         ;;
         info )
+        output_off
             CONTAINER_LOG_LEVEL=INFO
-            shift 1
-            print_info "$@"
-            output_off
+            print_info "${_arg_log_message}"
             if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
                 echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
             fi
-            output_on
+
         ;;
         notice )
+            output_off
             CONTAINER_LOG_LEVEL=NOTICE
-            shift 1
             case "${backup_job_log_level,,}" in
                 "debug" | "notice" )
-                    print_notice "$@"
-                    output_off
+                    print_notice "${_arg_log_message}"
                     if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     fi
-                    output_on
                 ;;
             esac
         ;;
         warn )
+            output_off
             CONTAINER_LOG_LEVEL=WARN
-            shift 1
             case "${backup_job_log_level,,}" in
                 "debug" | "notice" | "warn" )
-                    print_warn "$@"
-                    output_off
+                    print_warn "${_arg_log_message}"
                     if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] $@" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     fi
-                    output_on
                 ;;
             esac
         ;;
