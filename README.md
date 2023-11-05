@@ -195,7 +195,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | `DEFAULT_BACKUP_LOCATION`         | Backup to `FILESYSTEM`, `blobxfer` or `S3` compatible services like S3, Minio, Wasabi | `FILESYSTEM` |
 | `DEFAULT_CHECKSUM`                | Either `MD5` or `SHA1` or `NONE`                                                      | `MD5`        |
 | `DEFAULT_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`              | `notice`     |
-| `DEFAULT_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU and IO scheduler                           | `FALSE`      |
+| `DEFAULT_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU and IO scheduler                    | `FALSE`      |
 | `DEFAULT_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                           | `FALSE`      |
 
 ##### Compression Options
@@ -224,9 +224,11 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `DEFAULT_BACKUP_INTERVAL`       | How often to do a backup, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                        | `1440`  |
 | `DEFAULT_BACKUP_BEGIN`          | What time to do the initial backup. Defaults to immediate. (`+1`)                                                                              | `+0`    |
-|                                 | Must be in one of two formats:                                                                                                                 |         |
+|                                 | Must be in one of four formats:                                                                                                                |         |
 |                                 | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
 |                                 | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
+|                                 | Full datestamp e.g. `2023-12-21 23:30:00`                                                                                                      |         |
+|                                 | Cron expression e.g. `30 23 * * *`  - [Understand the format](https://en.wikipedia.org/wiki/ Cron) - *BACKUP_INTERVAL is ignored*              |         |
 | `DEFAULT_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
 |                                 | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
 | `DEFAULT_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from                                                                                   |         |
@@ -450,7 +452,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_EXTRA_ENUMERATION_OPTS`  | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |              |
 | `DB01_EXTRA_OPTS`              | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |              |
 | `DB01_LOG_LEVEL`               | Log output on screen and in files `INFO` `NOTICE` `ERROR` `WARN` `DEBUG`                                  | `debug`      |
-| `DB01_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU and IO scheduler                                               | `FALSE`      |
+| `DB01_RESOURCE_OPTIMIZED`      | Perform operations at a lower priority to the CPU and IO scheduler                                        | `FALSE`      |
 | `DB01_SKIP_AVAILABILITY_CHECK` | Before backing up - skip connectivity check                                                               | `FALSE`      |
 
 ##### Compression Options
@@ -479,9 +481,11 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `DB01_BACKUP_INTERVAL`       | How often to do a backup, in minutes after the first backup. Defaults to 1440 minutes, or once per day.                                        | `1440`  |
 | `DB01_BACKUP_BEGIN`          | What time to do the initial backup. Defaults to immediate. (`+1`)                                                                              | `+0`    |
-|                              | Must be in one of two formats:                                                                                                                 |         |
+|                              | Must be in one of four formats:                                                                                                                |         |
 |                              | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
 |                              | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
+|                              | Full datestamp e.g. `2023-12-21 23:30:00`                                                                                                      |         |
+|                              | Cron expression e.g. `30 23 * * *`  - [Understand the format](https://en.wikipedia.org/wiki/ Cron) - *BACKUP_INTERVAL is ignored*              |         |
 | `DB01_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
 |                              | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
 | `DB01_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from `DB01_BACKUP_FILESYSTEM_PATH`                                                     |         |
@@ -515,9 +519,9 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 | Variable                        | Description                                                                                               | Default                   | `_FILE` |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
-| `DB01_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           ||
-| `DB01_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           ||
-| `DB01_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           ||
+| `DB01_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           |         |
+| `DB01_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           |         |
+| `DB01_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           |         |
 | `DB01_NAME`                     | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |                           |         |
 |                                 | Backup multiple by separating with commas eg `db1,db2`                                                    |                           | x       |
 | `DB01_NAME_EXCLUDE`             | If using `ALL` - use this as to exclude databases separated via commas from being backed up               |                           | x       |
@@ -555,9 +559,9 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | Variable                      | Description                                                                                               | Default | `_FILE` |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
 | `DB01_AUTH`                   | (Optional) Authentication Database                                                                        |         |         |
-| `DB01_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         | |
-| `DB01_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         | |
-| `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         | |
+| `DB01_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
+| `DB01_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
+| `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |         |
 | `DB01_NAME`                   | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |         |         |
 |                               | Backup multiple by separating with commas eg `db1,db2`                                                    |         | x       |
 | `DB01_PORT`                   | PostgreSQL Port                                                                                           | `5432`  | x       |
@@ -566,8 +570,8 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 | Variable                 | Description                                                                                               | Default | `_FILE` |
 | ------------------------ | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
-| `DB01_EXTRA_OPTS`        | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         ||
-| `DB01_EXTRA_BACKUP_OPTS` | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         ||
+| `DB01_EXTRA_OPTS`        | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
+| `DB01_EXTRA_BACKUP_OPTS` | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
 | `DB01_PORT`              | Redis Port                                                                                                | `6379`  | x       |
 
 ###### SQLite

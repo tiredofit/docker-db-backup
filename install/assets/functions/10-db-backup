@@ -30,7 +30,7 @@ bootstrap_variables() {
     backup_init() {
         backup_instance_number=${1}
         backup_instance_vars=$(mktemp)
-        set -o posix ; set | grep -oE "^backup_job_.*=" | tr " " "\n" | grep -oE ".*=" | sed "/--/d" > "${backup_instance_vars}"
+        set -o posix ; set | grep -oE "^backup_job_.*=" | grep -oE ".*=" | sed "/--/d" > "${backup_instance_vars}"
         while read -r backup_instance_var ; do
             unset "$(echo "${backup_instance_var}" | cut -d = -f 1)"
         done < "${backup_instance_vars}"
@@ -106,32 +106,38 @@ bootstrap_variables() {
                             S3_PROTOCOL \
                             S3_EXTRA_OPTS
                                                                                   ## Legacy after DEFAULT
-        set -o posix ; set | grep -E "^DB${backup_instance_number}_|^DEFAULT_|^DB_|^ARCHIVE|^BACKUP_|^BLOBXFER_|^CHECKSUM|^COMPRESSION|^CREATE_|^ENABLE_|^EXTRA_|^GZ_|^INFLUX_|^MYSQL_|^MONGO_|^PARALLEL|^PRE_|^POST_|^S3|^SKIP|^SPLIT"| tr " " "\n" > "${backup_instance_vars}"
+        set -o posix ; set | grep -E "^DB${backup_instance_number}_|^DEFAULT_|^DB_|^ARCHIVE|^BACKUP_|^BLOBXFER_|^CHECKSUM|^COMPRESSION|^CREATE_|^ENABLE_|^EXTRA_|^GZ_|^INFLUX_|^MYSQL_|^MONGO_|^PARALLEL|^PRE_|^POST_|^S3|^SKIP|^SPLIT" > "${backup_instance_vars}"
 
         ## Legacy checks from removed variables
         if [ -n "${ENABLE_CHECKSUM}" ]; then
-            print_warn "Deprecated Variable 'ENABLE_CHECKSUM' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            print_warn "Deprecated and unsupported variable 'ENABLE_CHECKSUM' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
             if var_false "${ENABLE_CHECKSUM}" ; then
                 DEFAULT_CHECKSUM=NONE
             fi
         fi
 
-        #if [ -n "${DB_DUMP_FREQ}" ]; then
-        #    print_warn "Deprecated Variable 'DB_DUMP_FREQ' dnow_date=$(run_as_user date +"%Y-%m-%d")
-        #fi
+        if [ -n "${DB_DUMP_BEGIN}" ]; then
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_BEGIN' dnow_date=$(run_as_user date +"%Y-%m-%d")
+            DEFAULT_BACKUP_BEGIN=${DB_BACKUP_BEGIN}
+        fi
+
+        if [ -n "${DB_DUMP_FREQ}" ]; then
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_FREQ' dnow_date=$(run_as_user date +"%Y-%m-%d")
+            DEFAULT_BACKUP_INTERVAL=${DB_BACKUP_INTERVAL}
+        fi
 
         if [ -n "${DB_DUMP_TARGET}" ]; then
-            print_warn "Deprecated Variable 'DB_DUMP_TARGET' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
             DEFAULT_FILESYSTEM_PATH="${DB_DUMP_TARGET}"
         fi
 
         if [ -n "${DB_DUMP_TARGET_ARCHIVE}" ]; then
-            print_warn "Deprecated Variable 'DB_DUMP_TARGET_ACRHIVE' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET_ACRHIVE' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
             DEFAULT_FILESYSTEM_ARCHIVE_PATH="${DB_DUMP_TARGET_ARCHIVE}"
         fi
 
         if [ -n "${EXTRA_DUMP_OPTS}" ]; then
-            print_warn "Deprecated Variable 'EXTRA_DUMP_OPTS' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
+            print_warn "Deprecated and unsupported variable 'EXTRA_DUMP_OPTS' detected being used - Please upgrade your variables as they will be removed in version 4.3.0"
             DEFAULT_EXTRA_BACKUP_OPTS="${EXTRA_DUMP_OPTS}"
         fi
         ##
@@ -218,7 +224,8 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" SPLIT_DB backup_job_split_db
         transform_backup_instance_variable "${backup_instance_number}" TYPE backup_job_db_type
         transform_backup_instance_variable "${backup_instance_number}" USER backup_job_db_user
-        rm -rf "${backup_instance_vars}"
+
+        backup_job_backup_begin=$(echo "${backup_job_backup_begin}" | sed -e "s|'||g" -e 's|"||g')
     }
 
     upgrade_lonely_variables() {
@@ -704,7 +711,7 @@ backup_sqlite3() {
 check_availability() {
 ### Set the Database Type
     if var_false "${backup_job_skip_availability_check}" ; then
-        case "$dbtype" in
+        case "${dbtype}" in
             "couch" )
                 counter=0
                 code_received=0
@@ -1343,6 +1350,201 @@ timer() {
             esac
         ;;
         cron)
+            parse_expression() {
+                local expressions=${1//,/ }
+                expressions=${expressions//\*/#}
+
+                local validate_all=""
+                local validate_temp=""
+
+                for expression in ${expressions}; do
+                    if [ "${expression}" = "#" ] || [ "${expression}" = "${3}" ]; then
+                        echo "${3}"
+                        return 0
+                    fi
+
+                    expression_step=${expression##*\/}
+                    expression_number=${expression%%\/*}
+                    validate_temp=""
+                    local expression_start=
+                    local expression_end=
+                    if [ "${expression_number}" = "#" ]; then
+                        expression_start=0
+                        expression_end="${2}"
+                    else
+                        expression_start=${expression_number%%-*}
+                        expression_end=${expression_number##*-}
+                    fi
+
+                    validate_temp=$(seq ${expression_start} ${expression_end})
+
+                    if [ "${expression_step}" != "${expression}" ]; then
+                        for step in ${validate_temp}; do
+                            if [ $(( (${step} - ${expression_start}) % ${expression_step} )) -eq 0 ]; then
+                              validate_all="$validate_all ${step}"
+                            fi
+                        done
+                    else
+                        validate_all="${validate_all} ${validate_temp}"
+                    fi
+                done
+
+                validate_all=$(echo $validate_all | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
+                for entry in $validate_all; do
+                    if [ "${entry}" -ge "${3}" ]; then
+                      echo "${entry}"
+                      return 0
+                    fi
+                done
+
+                echo ${validate_all%% *}
+            }
+
+            local cron_compare="${3}"
+            local cron_compare_seconds=${cron_compare}
+            local cron_compare_difference=$((${cron_compare} - ${4}))
+
+            if [ "${cron_compare_difference}" -lt 60 ]; then
+                cron_compare=$((${cron_compare} + $(( 60-${cron_compare_difference} )) ))
+            fi
+
+            local cron_current_seconds=$(date --date="@${cron_compare_seconds}" +"%-S")
+            if [ $cron_current_seconds -ne 0 ]; then
+                cron_compare_seconds=$(( ${cron_compare_seconds} - ${cron_current_seconds} ))
+            fi
+
+            local cron_minute=$(echo -n "${2}" | awk '{print $1}')
+            local cron_hour=$(echo -n "${2}" | awk '{print $2}')
+            local cron_day_of_month=$(echo -n "${2}" | awk '{print $3}')
+            local cron_month=$(echo -n "${2}" | awk '{print $4}')
+            local cron_day_of_week=$(echo -n "${2}" | awk '{print $5}')
+
+            local cron_parsed=1
+
+            local cron_next_minute=$(date --date="@${cron_compare}" +"%-M")
+            local cron_next_hour=$(date --date="@${cron_compare}" +"%-H")
+            local cron_next_day_of_month=$(date --date="@${cron_compare}" +"%-d")
+            local cron_next_month=$(date --date="@${cron_compare}" +"%-m")
+            local cron_next_day_of_week=$(date --date="@${cron_compare}" +"%-u")
+            cron_next_day_of_week=$(( ${cron_next_day_of_week} % 7 ))
+            local cron_next_year=$(date --date="@${cron_compare}" +"%-Y")
+
+            local cron_next=
+
+            while [ "$cron_parsed" != "0" ]; do
+                cron_next=$(parse_expression "${cron_minute}" 59 "${cron_next_minute}")
+                if [ "${cron_next}" != "${cron_next_minute}" ]; then
+                    if [ "${cron_next_minute}" -gt "${cron_next}" ]; then
+                        cron_next_hour=$(( ${cron_next_hour} + 1 ))
+                    fi
+
+                    cron_next_minute="${cron_next}"
+                fi
+
+                cron_next=$(parse_expression "${cron_hour}" 23 "${cron_next_hour}")
+                if [ "${cron_next}" != "${cron_next_hour}" ]; then
+                    if [ "${cron_next_hour}" -gt "${cron_next}" ]; then
+                        cron_next_day_of_month=$(( ${cron_next_day_of_month} + 1 ))
+                    fi
+                    cron_next_hour="${cron_next}"
+                    #cron_next_minute=0
+                fi
+
+                cron_next=$(parse_expression "${cron_day_of_week}" 6 "${cron_next_day_of_week}")
+                if [ "${cron_next}" != "${cron_next_day_of_week}" ]; then
+                    day_of_week_difference=$(( ${cron_next} - ${cron_next_day_of_week} ))
+
+                    if [ "${day_of_week_difference}" -lt "0" ]; then
+                        day_of_week_difference=$(( ${day_of_week_difference} + 7 ))
+                    fi
+
+                    cron_next_day_of_month=$(( ${cron_next_day_of_month} + ${day_of_week_difference} ))
+                    cron_next_hour=0
+                    cron_next_minute=0
+                fi
+
+                case "${cron_next_month}" in
+                    1|3|5|7|8|10|12)
+                        last_day_of_month="31"
+                    ;;
+                    "2")
+                        local divide_by_4=$(( ${cron_next_year} % 4 ))
+                        local divide_by_100=$(( ${cron_next_year} % 100 ))
+                        local divide_by_400=$(( ${cron_next_year} % 400 ))
+                        last_day_of_month=28
+                        if [ "${divide_by_4}" = "0" ] && [ "${divide_by_100}" != "0" ]; then
+                            last_day_of_month="29"
+                        fi
+                        if [ "${divide_by_400}" = "0" ]; then
+                            last_day_of_month="29"
+                        fi
+                    ;;
+                    *)
+                        last_day_of_month="30"
+                    ;;
+                esac
+
+                cron_next=$(parse_expression "${cron_day_of_month}" 30 "${cron_next_day_of_month}")
+
+                if [ "${cron_next}" != "${cron_next_day_of_month}" ]; then
+                    cron_next_hour=0
+                    cron_next_minute=0
+                fi
+
+                if [ "${cron_next_day_of_month}" -gt "${cron_next}" ] || [ "${cron_next_day_of_month}" -gt "${last_day_of_month}" ]; then
+                    cron_next_month=$(( ${cron_next_month} + 1 ))
+                    if [ ${cron_next_month} -gt 12 ]; then
+                        cron_next_month=$(( ${cron_next_month} - 12))
+                        cron_next_year=$(( ${cron_next_year} + 1 ))
+                    fi
+                    cron_next_day_of_month=1
+                else
+                    cron_next_day_of_month=$cron_next
+                fi
+
+                cron_next=$(parse_expression "${cron_month}" 12 "${cron_next_month}")
+                if [ "${cron_next}" != "${cron_next_month}" ]; then
+                    if [ "${cron_next}" -gt "12" ]; then
+                        cron_next_year=$(( ${cron_next_year} + 1 ))
+                        cron_next=$(( ${cron_next} - 12 ))
+                    fi
+                    if [ "${cron_next_month}" -gt "${cron_next}" ]; then
+                        cron_next_year=$(( ${cron_next_year} + 1 ))
+                    fi
+                    cron_next_month="${cron_next}"
+                    cron_next_day=1
+                    cron_next_minute=0
+                    cron_next_hour=0
+                fi
+                cron_parsed=0
+            done
+
+            local cron_future=$(date --date="${cron_next_year}-$(printf "%02d" ${cron_next_month})-$(printf "%02d" ${cron_next_day_of_month})T$(printf "%02d" ${cron_next_hour}):$(printf "%02d" ${cron_next_minute}):00" "+%s")
+            local cron_future_difference=$((${cron_future} - ${cron_compare_seconds}))
+            time_cron=true
+            time_wait="${cron_future_difference}"
+            time_future=${cron_future}
+        ;;
+        datetime)
+            time_begin_year=${BASH_REMATCH[1]}
+            time_begin_month=${BASH_REMATCH[2]}
+            time_begin_day=${BASH_REMATCH[3]}
+            time_begin_hour=${BASH_REMATCH[4]}
+            time_begin_minute=${BASH_REMATCH[5]}
+            time_begin_second=${BASH_REMATCH[6]}
+            time_begin=$(date -d "${time_begin_year}-${time_begin_month}-${time_begin_day} ${time_begin_hour}:${time_begin_minute}:${time_begin_second}" +%s)
+            print_debug "BACKUP_BEGIN time = ${time_begin}"
+            time_wait=$((time_begin - time_current))
+            print_debug "Difference in seconds: ${time_wait}"
+
+            if (( ${time_wait} < 0 )); then
+                time_wait=$(( (${time_wait} + (${backup_job_backup_interval - 1)) / (${backup_job_backup_interval} * 60) ))
+                time_wait=$(( ${time_wait} * -1 ))
+                print_debug "Difference in seconds (rounded) time_wait is in the past : ${time_wait}"
+            fi
+
+            time_future=$((${time_current} + ${time_wait}))
+            print_debug "Future execution time = ${time_future}"
         ;;
         job)
             case "${2}" in
@@ -1355,9 +1557,20 @@ timer() {
                 ;;
             esac
         ;;
+        plusvalue)
+            time_wait=$(( ${BASH_REMATCH[1]} * 60 ))
+            time_future=$(($time_current} + $time_wait))
+        ;;
+        time)
+            time_future=$(date --date="$(date +"%Y%m%d") ${backup_job_backup_begin}" +"%s")
+            if [[ "${future_time}" < "${time_current}" ]]; then
+                time_future=$(($time_future + 24*60*60))
+            fi
+            time_wait=$((${time_future} - ${time_current}))
+        ;;
     esac
-
 }
+
 prepare_dbbackup() {
     timer backup start
     now=$(run_as_user date +"%Y%m%d-%H%M%S")
