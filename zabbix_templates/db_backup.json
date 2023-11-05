@@ -94,7 +94,7 @@
                             },
                             {
                                 "uuid": "8ec2b2f44ddf4f36b3dbb2aa15e3a32f",
-                                "name": "[{#NAME}] Duration",
+                                "name": "[{#NAME}] Backup Duration",
                                 "type": "TRAP",
                                 "key": "dbbackup.backup.duration.[{#NAME}]",
                                 "delay": "0",
@@ -198,6 +198,34 @@
                                         "item": {
                                             "host": "DB Backup",
                                             "key": "dbbackup.backup.size.[{#NAME}]"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "uuid": "8c641e33659e4c8b866da64e252cfc2a",
+                                "name": "[{#NAME}] Checksum Duration",
+                                "graph_items": [
+                                    {
+                                        "color": "199C0D",
+                                        "calc_fnc": "ALL",
+                                        "item": {
+                                            "host": "DB Backup",
+                                            "key": "dbbackup.backup.checksum.duration.[{#NAME}]"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "uuid": "65b8770f71ed4cff9111b82c42b17571",
+                                "name": "[{#NAME}] Encrypt Duration",
+                                "graph_items": [
+                                    {
+                                        "color": "199C0D",
+                                        "calc_fnc": "ALL",
+                                        "item": {
+                                            "host": "DB Backup",
+                                            "key": "dbbackup.backup.encrypt.duration.[{#NAME}]"
                                         }
                                     }
                                 ]
