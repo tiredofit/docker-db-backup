@@ -4,7 +4,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/tiredofit/docker-db-backup/main.yml?branch=main&style=flat-square)](https://github.com/tiredofit/docker-db-backup/actions)
 [![Docker Stars](https://img.shields.io/docker/stars/tiredofit/db-backup.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/tiredofit/db-backup/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/db-backup.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/tiredofit/db-backup/)
-[![Become a sponsor](https://img.shields.io/badge/sponsor-tiredofit-181717.svg?logo=github&style=flat-square)](https://github.com/sponsors/tiredofit)
+[![Become a sponsor](https://img.shields.io/badge/sponsor-tiredofit-181717.svg?logo=github&style=flat-square)](https://www.tiredofit.ca/sponsor)
 [![Paypal Donate](https://img.shields.io/badge/donate-paypal-00457c.svg?logo=paypal&style=flat-square)](https://www.paypal.me/tiredofit)
 
 ---
@@ -13,7 +13,7 @@
 
 This will build a container for backing up multiple types of DB Servers
 
-Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis servers.
+Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Postgres, Redis servers.
 
 - dump to local filesystem or backup to S3 Compatible services, and Azure.
 - multiple backup job support
@@ -27,9 +27,10 @@ Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis serve
 - checksum support choose to have an MD5 or SHA1 hash generated after backup for verification
 - compression support (none, gz, bz, xz, zstd)
 - encryption support (passphrase and public key)
-- Zabbix Metrics support
-- Hooks to execute pre and post backup job for customization purposes
-- Companion script to aid in restores
+- notify upon job failure to email, matrix, mattermost, rocketchat, custom script
+- zabbix metrics support
+- hooks to execute pre and post backup job for customization purposes
+- companion script to aid in restores
 
 ## Maintainer
 
@@ -101,7 +102,6 @@ Backs up CouchDB, InfluxDB, MySQL, Microsoft SQL, MongoDB, Postgres, Redis serve
 - [Maintenance](#maintenance)
   - [Shell Access](#shell-access)
   - [Manual Backups](#manual-backups)
-  - [Manual Backups](#manual-backups-1)
   - [Restoring Databases](#restoring-databases)
 - [Support](#support)
   - [Usage](#usage)
@@ -142,7 +142,7 @@ docker pull docker.io/tiredofit/db-backup:(imagetag)
 
 #### Multi Architecture
 
-Images are built primarily for `amd64` architecture, and may also include builds for `arm/v7`, `arm64` and others. These variants are all unsupported. Consider [sponsoring](https://github.com/sponsors/tiredofit) my work so that I can work with various hardware. To see if this image supports multiple architectures, type `docker manifest (image):(tag)`
+Images are built primarily for `amd64` architecture, and may also include builds for `arm/v7`, `arm64` and others. These variants are all unsupported. Consider [sponsoring](https://www.tiredofit.ca/sponsor) my work so that I can work with various hardware. To see if this image supports multiple architectures, type `docker manifest (image):(tag)`
 
 ## Configuration
 
@@ -161,6 +161,7 @@ The following directories are used for configuration and can be mapped for persi
 | `/backup`              | Backups                                                                             |
 | `/assets/scripts/pre`  | _Optional_ Put custom scripts in this directory to execute before backup operations |
 | `/assets/scripts/post` | _Optional_ Put custom scripts in this directory to execute after backup operations  |
+| `/logs`                | _Optional_ Logfiles for backup jobs                                                 |
 
 ### Environment Variables
 
@@ -444,7 +445,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_NAME` | Schema Name e.g. `database`                                                                    |         | x       |
 | `DB01_USER` | username for the database(s) - Can use `root` for MySQL                                        |         | x       |
 | `DB01_PASS` | (optional if DB doesn't require it) password for the database                                  |         | x       |
-|             |                                                                                                |
+
 
 | Variable                       | Description                                                                                               | Default      |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------ |
@@ -784,12 +785,9 @@ docker exec -it (whatever your container name is) bash
 
 ### Manual Backups
 
-Manual Backups can be performed by entering the container and typing `backup-now`
+Manual Backups can be performed by entering the container and typing `backup-now`. This will execute all the backup tasks that are scheduled by means of the `BACKUPXX_` variables. Alternatively if you wanted to execute a job on its own you could simply type `backup01-now` (or whatever your number would be). There is no concurrency, and jobs will be executed sequentially.
 
 - Recently there was a request to have the container work with Kubernetes cron scheduling. This can theoretically be accomplished by setting the container `MODE=MANUAL` and then setting `MANUAL_RUN_FOREVER=FALSE` - You would also want to disable a few features from the upstream base images specifically `CONTAINER_ENABLE_SCHEDULING` and `CONTAINER_ENABLE_MONITORING`. This should allow the container to start, execute a backup by executing and then exit cleanly. An alternative way to running the script is to execute `/etc/services.available/10-db-backup/run`.
-
-### Manual Backups
-Manual Backups can be performed by entering the container and typing `backup-now`. This will execute all the backup tasks that are scheduled by means of the `BACKUPXX_` variables. Alternatively if you wanted to execute a job on its own you could simply type `backup01-now` (or whatever your number would be). There is no concurrency, and jobs will be executed sequentially.
 
 ### Restoring Databases
 
@@ -823,7 +821,7 @@ These images were built to serve a specific need in a production environment and
 ### Usage
 
 - The [Discussions board](../../discussions) is a great place for working with the community on tips and tricks of using this image.
-- Consider [sponsoring me](https://github.com/sponsors/tiredofit) for personalized support
+- [Sponsor me](https://www.tiredofit.ca/sponsor) for personalized support
 
 ### Bugfixes
 
@@ -832,12 +830,12 @@ These images were built to serve a specific need in a production environment and
 ### Feature Requests
 
 - Feel free to submit a feature request, however there is no guarantee that it will be added, or at what timeline.
-- Consider [sponsoring me](https://github.com/sponsors/tiredofit) regarding development of features.
+- [Sponsor me](https://www.tiredofit.ca/sponsor) regarding development of features.
 
 ### Updates
 
 - Best effort to track upstream changes, More priority if I am actively using the image in a production environment.
-- Consider [sponsoring me](https://github.com/sponsors/tiredofit) for up to date releases.
+- [Sponsor me](https://www.tiredofit.ca/sponsor) for up to date releases.
 
 ## License
 
