@@ -1536,13 +1536,7 @@ timer() {
             time_future=${cron_future}
         ;;
         datetime)
-            time_begin_year=${BASH_REMATCH[1]}
-            time_begin_month=${BASH_REMATCH[2]}
-            time_begin_day=${BASH_REMATCH[3]}
-            time_begin_hour=${BASH_REMATCH[4]}
-            time_begin_minute=${BASH_REMATCH[5]}
-            time_begin_second=${BASH_REMATCH[6]}
-            time_begin=$(date -d "${time_begin_year}-${time_begin_month}-${time_begin_day} ${time_begin_hour}:${time_begin_minute}:${time_begin_second}" +%s)
+            time_begin=$(date -d "${backup_job_backup_begin}" +%s)
             print_debug "BACKUP_BEGIN time = ${time_begin}"
             time_wait=$((time_begin - time_current))
             print_debug "Difference in seconds: ${time_wait}"
