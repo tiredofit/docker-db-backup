@@ -443,8 +443,7 @@ backup_influx() {
 
 backup_mongo() {
     prepare_dbbackup
-    ## TODO REMOVE ENABLE_COMPRESSION
-    if [ "${ENABLE_COMPRESSION,,}" = "none" ] || [ "${ENABLE_COMPRESSION,,}" = "false" ] ; then
+    if [ "$backup_job_compression,,}" = "none" ] ; then
         target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.archive
         ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
     else
