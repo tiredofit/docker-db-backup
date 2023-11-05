@@ -1542,7 +1542,7 @@ timer() {
             print_debug "Difference in seconds: ${time_wait}"
 
             if (( ${time_wait} < 0 )); then
-                time_wait=$(( (${time_wait} + (${backup_job_backup_interval - 1)) / (${backup_job_backup_interval} * 60) ))
+                time_wait=$(( (${time_wait} + (${backup_job_backup_interval} - 1)) / (${backup_job_backup_interval} * 60) ))
                 time_wait=$(( ${time_wait} * -1 ))
                 print_debug "Difference in seconds (rounded) time_wait is in the past : ${time_wait}"
             fi
