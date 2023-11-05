@@ -257,16 +257,18 @@ If these are set and no other defaults or variables are set explicitly, they wil
 
 ###### MariaDB/MySQL
 
-| Variable                           | Description                                                                                               | Default                   | `_FILE` |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------- | ------- |
-| `DEFAULT_PORT`                     | MariaDB Port                                                                                              | `3306`                    | x       |
-| `DEFAULT_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           |         |
-| `DEFAULT_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           |         |
-| `DEFAULT_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           |         |
-| `DEFAULT_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet if backing up MySQL / MariaDB                                                          | `512M`                    |         |
-| `DEFAULT_MYSQL_SINGLE_TRANSACTION` | Backup in a single transaction with MySQL / MariaDB                                                       | `TRUE`                    |         |
-| `DEFAULT_MYSQL_STORED_PROCEDURES`  | Backup stored procedures with MySQL / MariaDB                                                             | `TRUE`                    |         |
-| `DEFAULT_MYSQL_ENABLE_TLS`         | Enable TLS functionality for MySQL/MariaDB client                                                         | `FALSE`                   |         |
+| Variable                           | Description                                                                                               | Default | `_FILE` |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
+| `DEFAULT_PORT`                     | MySQL / MariaDB Port                                                                                      | `3306`  | x       |
+| `DEFAULT_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
+| `DEFAULT_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |         |
+| `DEFAULT_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
+| `DEFAULT_MYSQL_EVENTS`             | Backup Events                                                                                             | `TRUE`  |         |
+| `DEFAULT_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet                                                                                        | `512M`  |         |
+| `DEFAULT_MYSQL_SINGLE_TRANSACTION` | Backup in a single transaction                                                                            | `TRUE`  |         |
+| `DEFAULT_MYSQL_STORED_PROCEDURES`  | Backup stored procedures                                                                                  | `TRUE`  |         |
+| `DEFAULT_MYSQL_ENABLE_TLS`         | Enable TLS functionality                                                                                  | `FALSE` |         |
+
 | `DEFAULT_MYSQL_TLS_VERIFY`         | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                            | `FALSE`                   |         |
 | `DEFAULT_MYSQL_TLS_VERSION`        | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                          | `TLSv1.1,TLSv1.2,TLSv1.3` |         |
 | `DEFAULT_MYSQL_TLS_CA_FILE`        | Filename to load custom CA certificate for connecting via TLS                                             | `/etc/ssl/cert.pem`       | x       |
@@ -525,11 +527,12 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | `DB01_NAME`                     | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |                           |         |
 |                                 | Backup multiple by separating with commas eg `db1,db2`                                                    |                           | x       |
 | `DB01_NAME_EXCLUDE`             | If using `ALL` - use this as to exclude databases separated via commas from being backed up               |                           | x       |
-| `DB01_PORT`                     | MariaDB Port                                                                                              | `3306`                    | x       |
-| `DB01_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet if backing up MySQL / MariaDB                                                          | `512M`                    |         |
-| `DB01_MYSQL_SINGLE_TRANSACTION` | Backup in a single transaction with MySQL / MariaDB                                                       | `TRUE`                    |         |
-| `DB01_MYSQL_STORED_PROCEDURES`  | Backup stored procedures with MySQL / MariaDB                                                             | `TRUE`                    |         |
-| `DB01_MYSQL_ENABLE_TLS`         | Enable TLS functionality for MySQL/MariaDB client                                                         | `FALSE`                   |         |
+| `DB01_PORT`                     | MySQL / MariaDB Port                                                                                      | `3306`                    | x       |
+| `DB01_MYSQL_EVENTS`             | Backup Events for                                                                                         | `TRUE`                    |         |
+| `DB01_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet                                                                                        | `512M`                    |         |
+| `DB01_MYSQL_SINGLE_TRANSACTION` | Backup in a single transaction                                                                            | `TRUE`                    |         |
+| `DB01_MYSQL_STORED_PROCEDURES`  | Backup stored procedures                                                                                  | `TRUE`                    |         |
+| `DB01_MYSQL_ENABLE_TLS`         | Enable TLS functionality                                                                                  | `FALSE`                   |         |
 | `DB01_MYSQL_TLS_VERIFY`         | (optional) If using TLS (by means of MYSQL_TLS_* variables) verify remote host                            | `FALSE`                   |         |
 | `DB01_MYSQL_TLS_VERSION`        | What TLS `v1.1` `v1.2` `v1.3` version to utilize                                                          | `TLSv1.1,TLSv1.2,TLSv1.3` |         |
 | `DB01_MYSQL_TLS_CA_FILE`        | Filename to load custom CA certificate for connecting via TLS                                             | `/etc/ssl/cert.pem`       | x       |
