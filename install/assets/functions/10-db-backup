@@ -1353,6 +1353,180 @@ move_dbbackup() {
     run_as_user rm -rf "${TEMP_PATH}"/"${target}"
 }
 
+prepare_dbbackup() {
+    timer backup start
+    now=$(run_as_user date +"%Y%m%d-%H%M%S")
+    now_date=$(run_as_user date +"%Y-%m-%d")
+    now_time=$(run_as_user date +"%H:%M:%S")
+    ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
+    target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.sql
+}
+
+pre_dbbackup() {
+    ### Pre Script Support
+    if [ -n "${backup_job_pre_script}" ] ; then
+        if var_true "${backup_job_pre_script_x_verify}" ; then
+            run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
+        else
+            if [ -x "${backup_job_pre_script}" ] ; then
+                write_log notice "Found PRE_SCRIPT environment variable. Executing '${backup_job_pre_script}"
+                run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                write_log error "Can't execute PRE_SCRIPT environment variable '${backup_job_pre_script}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Pre Backup Custom Script Support
+    if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
+        run_as_user mkdir -p "${backup_job_script_location_pre}"
+        silent run_as_user cp /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
+    fi
+
+    if [ -d "${backup_job_script_location_pre}" ] && dir_notempty "${backup_job_script_location_pre}" ; then
+        for f in $(find ${backup_job_script_location_pre} -name \*.sh -type f); do
+            if var_true "${backup_job_pre_script_x_verify}" ; then
+                run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
+            else
+                if [ -x "${f}" ] ; then
+                    write_log notice "Executing pre backup custom script : '${f}'"
+                    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
+                    run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
+                else
+                    write_log error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
+}
+
+post_dbbackup() {
+    dbbackup_finish_time=$(run_as_user date +"%s")
+    dbbackup_total_time=$(run_as_user echo $((dbbackup_finish_time-dbbackup_start_time)))
+
+    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
+        source /assets/defaults/03-monitoring
+        write_log notice "Sending Backup Statistics to Zabbix"
+        silent zabbix_sender -c -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
+        cat <<EOF | silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+- dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
+- dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
+- dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
+- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+- dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${target}"
+${zabbix_encrypt_time}
+${zabbix_checksum_time}
+EOF
+        if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
+    fi
+
+    ### Post Script Support
+    if [ -n "${backup_job_post_script}" ] ; then
+        if var_true "${backup_job_post_script_x_verify}" ; then
+            run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+        else
+            if [ -x "${backup_job_post_script}" ] ; then
+                write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}"
+                run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+            else
+                write_log error "Can't execute POST_SCRIPT environment variable '${backup_job_post_script}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Post Backup Custom Script Support
+    if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
+        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
+        run_as_user mkdir -p "${backup_job_script_location_post}"
+        silent run_as_user cp /assets/custom-scripts/* "${backup_job_script_location_post}"
+    fi
+
+    if [ -d "${backup_job_script_location_post}" ] && dir_notempty "${backup_job_script_location_post}" ; then
+        for f in $(run_as_user find "${backup_job_script_location_post}" -name \*.sh -type f); do
+            if var_true "${backup_job_post_script_x_verify}" ; then
+                run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+            else
+                if [ -x "${f}" ] ; then
+                    write_log notice "Executing post backup custom script : '${f}'"
+                    ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
+                    run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+                else
+                    write_log error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
+
+    write_log notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+}
+
+process_limiter() {
+    while true ; do
+        counter=0
+        process_amount="$(wc -l /tmp/.container/db-backup-backups | awk '{print $1}')"
+        if [ "${process_amount}" -ge "${BACKUP_JOB_CONCURRENCY}" ] ; then
+            if [ -z $text_concurrency_limit_initial ] ; then
+                print_notice "Backup concurrency limit reached (${BACKUP_JOB_CONCURRENCY}). Waiting for other tasks to finish before backing up."
+                text_concurrency_limit_initial=true
+            fi
+            if [[ "${counter}" =~ 45|90|135|180|225|270|315|360|405|450|495|540|585|630|675|720|765|810|855|900|945|990|1035|1080|1125|1170|1215|1260|1305|1350|1395|1440|1485|1530|1575|1620|1665|1710|1755|1800|1845|1890|1935|1980|2025|2070|2115|2160|2205|2250|2295|2340|2385|2430|2475|2520|2565|2610|2655|2700|2745|2790|2835|2880|2925|2970|3015|3060|3105|3150|3195|3240|3285|3330|3375|3420|3465|3510|3555|3600 ]] ; then
+                if [ "${counter}" != 0 ] ; then counter_verbose=" (${counter} seconds so far)" ; fi
+                print_notice "Still waiting for other jobs to finish..${counter_verbose}"
+            fi
+            sleep 1
+            (( counter+=1))
+        else
+            break
+        fi
+    done
+}
+
+run_as_user() {
+    s6-setuidgid dbbackup $@
+}
+
+setup_mode() {
+    if [ "${MODE,,}" = "auto" ] || [ "${MODE,,}" = "default" ] ; then
+        write_log debug "Running in Auto / Default Mode - Letting Image control scheduling"
+    else
+        write_log info "Running in Manual mode - Execute 'backup_now' to perform a manual backup"
+        service_stop 10-db-backup
+        if var_true "${MANUAL_RUN_FOREVER}" ; then
+            mkdir -p /etc/services.d/99-run_forever
+            cat <<EOF > /etc/services.d/99-run_forever/run
+#!/bin/bash
+while true; do
+	sleep 86400
+done
+EOF
+            chmod +x /etc/services.d/99-run_forever/run
+        else
+            if var_true "${CONTAINER_ENABLE_SCHEDULING}" ; then
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_SCHEDULING=TRUE'"
+                exit 1
+            fi
+            if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_MONITORING=TRUE'"
+                exit 1
+            fi
+            if var_true "${CONTAINER_ENABLE_LOGSHIPPING}" ; then
+                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_LOGSHIPPING=TRUE'"
+                exit 1
+            fi
+        fi
+    fi
+}
+
+symlink_log () {
+    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
+        local oldpwd=$(pwd)
+        cd "${LOG_PATH}"/"$(date +'%Y%m%d')"
+        ln -sf "$(date +'%Y%m%d')"/"$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')"-"${ltarget}".log ../latest-"${ltarget}".log
+        cd "${oldpwd}"
+    fi
+}
+
 timer() {
     case "${1}" in
         backup)
@@ -1582,180 +1756,6 @@ timer() {
     esac
 }
 
-prepare_dbbackup() {
-    timer backup start
-    now=$(run_as_user date +"%Y%m%d-%H%M%S")
-    now_date=$(run_as_user date +"%Y-%m-%d")
-    now_time=$(run_as_user date +"%H:%M:%S")
-    ltarget=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
-    target=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.sql
-}
-
-pre_dbbackup() {
-    ### Pre Script Support
-    if [ -n "${backup_job_pre_script}" ] ; then
-        if var_true "${backup_job_pre_script_x_verify}" ; then
-            run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
-        else
-            if [ -x "${backup_job_pre_script}" ] ; then
-                write_log notice "Found PRE_SCRIPT environment variable. Executing '${backup_job_pre_script}"
-                run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
-            else
-                write_log error "Can't execute PRE_SCRIPT environment variable '${backup_job_pre_script}' as its filesystem bit is not executible!"
-            fi
-        fi
-    fi
-
-    ### Pre Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
-        run_as_user mkdir -p "${backup_job_script_location_pre}"
-        silent run_as_user cp /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
-    fi
-
-    if [ -d "${backup_job_script_location_pre}" ] && dir_notempty "${backup_job_script_location_pre}" ; then
-        for f in $(find ${backup_job_script_location_pre} -name \*.sh -type f); do
-            if var_true "${backup_job_pre_script_x_verify}" ; then
-                run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
-            else
-                if [ -x "${f}" ] ; then
-                    write_log notice "Executing pre backup custom script : '${f}'"
-                    ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
-                    run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${target}"
-                else
-                    write_log error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
-                fi
-            fi
-        done
-    fi
-}
-
-post_dbbackup() {
-    dbbackup_finish_time=$(run_as_user date +"%s")
-    dbbackup_total_time=$(run_as_user echo $((dbbackup_finish_time-dbbackup_start_time)))
-
-    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
-        source /assets/defaults/03-monitoring
-        write_log notice "Sending Backup Statistics to Zabbix"
-        silent zabbix_sender -c -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
-        cat <<EOF | silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
-- dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
-- dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
-- dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
-- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
-- dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${target}"
-${zabbix_encrypt_time}
-${zabbix_checksum_time}
-EOF
-        if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
-    fi
-
-    ### Post Script Support
-    if [ -n "${backup_job_post_script}" ] ; then
-        if var_true "${backup_job_post_script_x_verify}" ; then
-            run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
-        else
-            if [ -x "${backup_job_post_script}" ] ; then
-                write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}"
-                run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
-            else
-                write_log error "Can't execute POST_SCRIPT environment variable '${backup_job_post_script}' as its filesystem bit is not executible!"
-            fi
-        fi
-    fi
-
-    ### Post Backup Custom Script Support
-    if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
-        run_as_user mkdir -p "${backup_job_script_location_post}"
-        silent run_as_user cp /assets/custom-scripts/* "${backup_job_script_location_post}"
-    fi
-
-    if [ -d "${backup_job_script_location_post}" ] && dir_notempty "${backup_job_script_location_post}" ; then
-        for f in $(run_as_user find "${backup_job_script_location_post}" -name \*.sh -type f); do
-            if var_true "${backup_job_post_script_x_verify}" ; then
-                run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
-            else
-                if [ -x "${f}" ] ; then
-                    write_log notice "Executing post backup custom script : '${f}'"
-                    ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${target}" "${filesize}" "${checksum_value}" "${move_exit_code}"
-                else
-                    write_log error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
-                fi
-            fi
-        done
-    fi
-
-    write_log notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
-}
-
-process_limiter() {
-    while true ; do
-        counter=0
-        process_amount="$(wc -l /tmp/.container/db-backup-backups | awk '{print $1}')"
-        if [ "${process_amount}" -ge "${BACKUP_JOB_CONCURRENCY}" ] ; then
-            if [ -z $text_concurrency_limit_initial ] ; then
-                print_notice "Backup concurrency limit reached (${BACKUP_JOB_CONCURRENCY}). Waiting for other tasks to finish before backing up."
-                text_concurrency_limit_initial=true
-            fi
-            if [[ "${counter}" =~ 45|90|135|180|225|270|315|360|405|450|495|540|585|630|675|720|765|810|855|900|945|990|1035|1080|1125|1170|1215|1260|1305|1350|1395|1440|1485|1530|1575|1620|1665|1710|1755|1800|1845|1890|1935|1980|2025|2070|2115|2160|2205|2250|2295|2340|2385|2430|2475|2520|2565|2610|2655|2700|2745|2790|2835|2880|2925|2970|3015|3060|3105|3150|3195|3240|3285|3330|3375|3420|3465|3510|3555|3600 ]] ; then
-                if [ "${counter}" != 0 ] ; then counter_verbose=" (${counter} seconds so far)" ; fi
-                print_notice "Still waiting for other jobs to finish..${counter_verbose}"
-            fi
-            sleep 1
-            (( counter+=1))
-        else
-            break
-        fi
-    done
-}
-
-run_as_user() {
-    s6-setuidgid dbbackup $@
-}
-
-setup_mode() {
-    if [ "${MODE,,}" = "auto" ] || [ "${MODE,,}" = "default" ] ; then
-        write_log debug "Running in Auto / Default Mode - Letting Image control scheduling"
-    else
-        write_log info "Running in Manual mode - Execute 'backup_now' to perform a manual backup"
-        service_stop 10-db-backup
-        if var_true "${MANUAL_RUN_FOREVER}" ; then
-            mkdir -p /etc/services.d/99-run_forever
-            cat <<EOF > /etc/services.d/99-run_forever/run
-#!/bin/bash
-while true; do
-	sleep 86400
-done
-EOF
-            chmod +x /etc/services.d/99-run_forever/run
-        else
-            if var_true "${CONTAINER_ENABLE_SCHEDULING}" ; then
-                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_SCHEDULING=TRUE'"
-                exit 1
-            fi
-            if var_true "${CONTAINER_ENABLE_MONITORING}" ; then
-                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_MONITORING=TRUE'"
-                exit 1
-            fi
-            if var_true "${CONTAINER_ENABLE_LOGSHIPPING}" ; then
-                write_log error "Manual / Exit after execution mode doesn't work with 'CONTAINER_ENABLE_LOGSHIPPING=TRUE'"
-                exit 1
-            fi
-        fi
-    fi
-}
-
-symlink_log () {
-    if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
-        local oldpwd=$(pwd)
-        cd "${LOG_PATH}"/"$(date +'%Y%m%d')"
-        ln -sf "$(date +'%Y%m%d')"/"$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')"-"${ltarget}".log ../latest-"${ltarget}".log
-        cd "${oldpwd}"
-    fi
-}
-
 write_log() {
     output_off
     local _arg_log_level=${1}
@@ -1776,13 +1776,7 @@ write_log() {
                     "debug" | "notice" | "warn" | "error")
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     ;;
-                esac
-            ;;
-            info )
-                echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-            ;;
-            notice )
-                case "${_arg_log_level,,}" in
+                esacexterna
                     "debug" | "notice" )
                         echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
                     ;;
