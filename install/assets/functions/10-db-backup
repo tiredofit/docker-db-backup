@@ -832,7 +832,7 @@ check_exit_code() {
                     notify \
                         "$(date -d @"${backup_job_start_time}" +'%Y%m%d_%H%M%S')" \
                         "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" \
-                        "{exit_code}" \
+                        "${exit_code}" \
                         "[FATAL] Host: ${backup_job_db_host} Name: ${backup_job_db_name} - Backup failed completely" \
                         "DB Backup is failing to backup the '${backup_job_db_host}-${backup_job_db_name}' job."
                     master_exit_code=1
@@ -849,7 +849,7 @@ check_exit_code() {
                     notify \
                         "$(date -d @"${backup_job_start_time}" +'%Y%m%d_%H%M%S')" \
                         "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" \
-                        "{exit_code}" \
+                        "${move_exit_code}" \
                         "[FATAL] Host: ${backup_job_db_host} Name: ${backup_job_db_name} - Backup failed to move to destination" \
                         "DB Backup is failing to backup the '${backup_job_db_host}-${backup_job_db_name}' job."
                     master_exit_code=1
