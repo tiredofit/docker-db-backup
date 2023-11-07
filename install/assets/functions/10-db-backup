@@ -820,9 +820,9 @@ check_availability() {
 }
 
 check_exit_code() {
-    write_log debug "DB Backup Exit Code is ${exit_code}"
     case "${1}" in
         backup )
+            write_log debug "DB Backup exit Code is ${exit_code}"
             case "${exit_code}" in
                 0 )
                     write_log info "DB Backup of '${2}' completed successfully"
@@ -840,6 +840,7 @@ check_exit_code() {
             esac
             ;;
         move )
+            write_log debug "Move exit Code is ${exit_code}"
             case "${move_exit_code}" in
                 0 )
                     write_log debug "Moving of backup '${2}' completed successfully"
