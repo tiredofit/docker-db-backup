@@ -112,32 +112,38 @@ bootstrap_variables() {
         if [ -n "${ENABLE_CHECKSUM}" ]; then
             print_warn "Deprecated and unsupported variable 'ENABLE_CHECKSUM' detected - Please upgrade your variables as they will be removed in version 4.3.0"
             if var_false "${ENABLE_CHECKSUM}" ; then
+                sed -i "/DEFAULT_CHECKSUM=/d" "${backup_instance_vars}"
                 echo "DEFAULT_CHECKSUM=NONE" >> "${backup_instance_vars}"
             fi
         fi
 
         if [ -n "${DB_DUMP_BEGIN}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_BEGIN' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_BACKUP_BEGIN=/d" "${backup_instance_vars}"
             echo "DEFAULT_BACKUP_BEGIN=${DB_DUMP_BEGIN}" >> "${backup_instance_vars}"
         fi
 
         if [ -n "${DB_DUMP_FREQ}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_FREQ' detected - Please upgrade your variables as they will be removed in version 4.3.0"
-            echo "DEFAULT_BACKUP_INTERVAL=${DB_DUMP_INTERVAL}" >> "${backup_instance_vars}"
+            sed -i "/DEFAULT_BACKUP_INTERVAL=/d" "${backup_instance_vars}"
+            echo "DEFAULT_BACKUP_INTERVAL=${DB_DUMP_FREQ}" >> "${backup_instance_vars}"
         fi
 
         if [ -n "${DB_DUMP_TARGET}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_FILESYSTEM_PATH=/d" "${backup_instance_vars}"
             echo "DEFAULT_FILESYSTEM_PATH=${DB_DUMP_TARGET}"  >> "${backup_instance_vars}"
         fi
 
         if [ -n "${DB_DUMP_TARGET_ARCHIVE}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET_ACRHIVE' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_FILESYSTEM_ARCHIVE_PATH=/d" "${backup_instance_vars}"
             echo "DEFAULT_FILESYSTEM_ARCHIVE_PATH=${DB_DUMP_TARGET_ARCHIVE}"  >> "${backup_instance_vars}"
         fi
 
         if [ -n "${EXTRA_DUMP_OPTS}" ]; then
             print_warn "Deprecated and unsupported variable 'EXTRA_DUMP_OPTS' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_EXTRA_BACKUP_OPTS=/d" "${backup_instance_vars}"
             echo "DEFAULT_EXTRA_BACKUP_OPTS=${EXTRA_DUMP_OPTS}"  >> "${backup_instance_vars}"
         fi
         ##
@@ -159,10 +165,8 @@ bootstrap_variables() {
 
         transform_backup_instance_variable "${backup_instance_number}" ARCHIVE_TIME backup_job_archive_time
         transform_backup_instance_variable "${backup_instance_number}" AUTH backup_job_db_auth
-        set -x
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_BEGIN backup_job_backup_begin
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_INTERVAL backup_job_backup_interval
-        set +x
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_LOCATION backup_job_backup_location
         transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_BEGIN backup_job_snapshot_blackout_start
         transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_END backup_job_snapshot_blackout_finish
@@ -229,6 +233,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" USER backup_job_db_user
 
         backup_job_backup_begin=$(echo "${backup_job_backup_begin}" | sed -e "s|'||g" -e 's|"||g')
+        rm -rf "${backup_instance_vars}"
     }
 
     upgrade_lonely_variables() {
@@ -1753,70 +1758,47 @@ symlink_log () {
 
 write_log() {
     output_off
-    local CONTAINER_LOG_LEVEL_ORIGINAL=${CONTAINER_LOG_LEVEL}
     local _arg_log_level=${1}
     shift 1
     local _arg_log_message="$@"
 
     if [ -n "${backup_job_db_type}" ] && [ -n "${backup_job_db_name}" ] && [ -n "${backup_job_db_host}" ] && [ -n "${ltarget}" ]; then
-        write_to_file=true
-    else
-        write_to_file=false
+        case "${_arg_log_level,,}" in
+            debug )
+                case "${_arg_log_level,,}" in
+                    "debug" )
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    ;;
+                esac
+            ;;
+            error )
+                case "${_arg_log_level,,}" in
+                    "debug" | "notice" | "warn" | "error")
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    ;;
+                esac
+            ;;
+            info )
+                echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+            ;;
+            notice )
+                case "${_arg_log_level,,}" in
+                    "debug" | "notice" )
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    ;;
+                esac
+            ;;
+            warn )
+                case "${_arg_log_level,,}" in
+                    "debug" | "notice" | "warn" )
+                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
+                    ;;
+                esac
+            ;;
+        esac
+
     fi
 
-    case "${_arg_log_level,,}" in
-        debug )
-            CONTAINER_LOG_LEVEL=DEBUG
-            case "${_arg_log_level,,}" in
-                "debug" )
-                    print_debug "${_arg_log_message}"
-                    if var_true "${write_to_file}" ; then
-                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [debug] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-                    fi
-                ;;
-            esac
-            CONTAINER_LOG_LEVEL=${CONTAINER_LOG_LEVEL_ORIGINAL}
-        ;;
-        error )
-            CONTAINER_LOG_LEVEL=ERROR
-            case "${_arg_log_level,,}" in
-                "debug" | "notice" | "warn" | "error")
-                    print_error "${_arg_log_message}"
-                    if var_true "${write_to_file}" ; then
-                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [error] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-                    fi
-                ;;
-            esac
-        ;;
-        info )
-            CONTAINER_LOG_LEVEL=INFO
-            print_info "${_arg_log_message}"
-            if var_true "${write_to_file}" ; then
-                echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [info] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-            fi
-        ;;
-        notice )
-            CONTAINER_LOG_LEVEL=NOTICE
-            case "${_arg_log_level,,}" in
-                "debug" | "notice" )
-                    print_notice "${_arg_log_message}"
-                    if var_true "${write_to_file}" ; then
-                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [notice] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-                    fi
-                ;;
-            esac
-        ;;
-        warn )
-            CONTAINER_LOG_LEVEL=WARN
-            case "${_arg_log_level,,}" in
-                "debug" | "notice" | "warn" )
-                    print_warn "${_arg_log_message}"
-                    if var_true "${write_to_file}" ; then
-                        echo "$(date +'%Y-%m-%d %H:%M:%S %Z') [warn] ${_arg_log_message}" | run_as_user tee -a "${LOG_PATH}/$(date +'%Y%m%d')/$(date -d @${backup_job_start_time} +'%Y%m%d_%H%M%S')-${ltarget}.log" > /dev/null
-                    fi
-                ;;
-            esac
-        ;;
-    esac
+    print_${_arg_log_level} "${_arg_log_message}"
     output_on
 }
