@@ -118,12 +118,12 @@ bootstrap_variables() {
 
         if [ -n "${DB_DUMP_BEGIN}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_BEGIN' detected - Please upgrade your variables as they will be removed in version 4.3.0"
-            DEFAULT_BACKUP_BEGIN=${DB_BACKUP_BEGIN}
+            DEFAULT_BACKUP_BEGIN=${DB_DUMP_BEGIN}
         fi
 
         if [ -n "${DB_DUMP_FREQ}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_FREQ' detected - Please upgrade your variables as they will be removed in version 4.3.0"
-            DEFAULT_BACKUP_INTERVAL=${DB_BACKUP_INTERVAL}
+            DEFAULT_BACKUP_INTERVAL=${DB_DUMP_INTERVAL}
         fi
 
         if [ -n "${DB_DUMP_TARGET}" ]; then
