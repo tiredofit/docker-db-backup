@@ -24,7 +24,7 @@ else
 
     if [[ "${backup_job_backup_begin}" =~ ^\+(.*)$ ]]; then
         print_debug "BACKUP_BEGIN is a jump of minute starting with +"
-        timer plus_value
+        timer plusvalue
     elif [[ "${backup_job_backup_begin}" =~ ^[0-9]{4}$ ]]; then
         print_debug "BACKUP_BEGIN is a HHMM value"
         timer time
