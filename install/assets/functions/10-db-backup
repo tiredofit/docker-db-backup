@@ -1571,7 +1571,7 @@ timer() {
 
                     if [ "${expression_step}" != "${expression}" ]; then
                         for step in ${validate_temp}; do
-                            if [ $(( (${step} - ${expression_start}) % ${expression_step} )) -eq 0 ]; then
+                            if [ $( (( step - expression_start ) % expression_step )) -eq 0 ]; then
                               validate_all="$validate_all ${step}"
                             fi
                         done
