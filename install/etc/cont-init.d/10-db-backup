@@ -9,6 +9,6 @@ output_off
 setup_mode
 db_backup_container_init
 create_schedulers backup
-create_zabbix dbbackup
+create_zabbix dbbackup4
 
 liftoff
