@@ -141,13 +141,15 @@
                                         "uuid": "74d16a7680544c65af22cc568ce3d59d",
                                         "expression": "last(/DB Backup/dbbackup.backup.size.[{#NAME}])/last(/DB Backup/dbbackup.backup.size.[{#NAME}],#2)>0.2",
                                         "name": "[{#NAME}]  Backup 20% Smaller in Size",
-                                        "priority": "WARNING"
+                                        "priority": "WARNING",
+                                        "manual_close": "YES"
                                     },
                                     {
                                         "uuid": "5595d769c73f4eaeadda95c84c2c0f17",
                                         "expression": "last(/DB Backup/dbbackup.backup.size.[{#NAME}])<1K",
                                         "name": "[{#NAME}] Backup Empty",
-                                        "priority": "HIGH"
+                                        "priority": "HIGH",
+                                        "manual_close": "YES"
                                     }
                                 ]
                             },
