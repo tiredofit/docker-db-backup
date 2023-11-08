@@ -181,7 +181,7 @@
                                     },
                                     {
                                         "uuid": "74d16a7680544c65af22cc568ce3d59d",
-                                        "expression": "last(/DB Backup4/dbbackup.backup.size.[{#NAME}])/last(/DB Backup4/dbbackup.backup.size.[{#NAME}],#2)>0.2",
+                                        "expression": "last(/DB Backup4/dbbackup.backup.size.[{#NAME}])/last(/DB Backup4/dbbackup.backup.size.[{#NAME}],#2)<0.2",
                                         "name": "[{#NAME}]  Backup 20% Smaller in Size",
                                         "priority": "WARNING",
                                         "manual_close": "YES"
