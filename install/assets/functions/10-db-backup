@@ -535,7 +535,7 @@ backup_mysql() {
 
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(run_as_user mysql -h ${backup_job_db_host} -P $backup_job_db_port -u$backup_job_db_user ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        db_names=$(run_as_user mysql -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${backup_job_db_name_exclude}" ] ; then
             db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -618,7 +618,7 @@ backup_pgsql() {
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
-                run_as_user ${play_fair} pg_dump -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
+                run_as_user ${play_fair} pg_dump -h "${backup_job_db_host}" -p "${backup_job_db_port}" -U "${backup_job_db_user}" $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename}"
                 timer backup finish
@@ -633,9 +633,9 @@ backup_pgsql() {
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
-        run_as_user ${play_fair} pg_dumpall -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
+        run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
-        check_exit_code $backup_job_filename
+        check_exit_code "${backup_job_filename}"
         timer backup finish
         file_encryption
         generate_checksum
@@ -1095,7 +1095,7 @@ generate_checksum() {
         esac
 
         checksum_routines_start_time=$(date +'%s')
-        write_log notice "Generating ${checksum_extension^^} for '${backup_job_filename}'"
+        write_log notice "Generating ${checksum_extension^^} sum for '${backup_job_filename}'"
         cd "${TEMP_PATH}"
         run_as_user ${checksum_command} "${backup_job_filename}" | run_as_user tee "${backup_job_filename}"."${checksum_extension}" > /dev/null
         chmod ${backup_job_filesystem_permission} "${backup_job_filename}"."${checksum_extension}"
@@ -1609,12 +1609,7 @@ timer() {
             local cron_minute="$(echo -n "${2}" | awk '{print $1}')"
             local cron_hour="$(echo -n "${2}" | awk '{print $2}')"
             local cron_day_of_month="$(echo -n "${2}" | awk '{print $3}')"
-            local cron_month="$(echo -n "${2}" | awk '{print $4}')"
-            local cron_day_of_week="$(echo -n "${2}" | awk '{print $5}')"
-
-            local cron_parsed=1
-
-            local cron_next_minute="$(date --date=@"${cron_compare}" +"%-M")"
+            local cron_month="$(echo -n "${2}" | awk '{print $4}')"Generating
             local cron_next_hour="$(date --date=@"${cron_compare}" +"%-H")"
             local cron_next_day_of_month="$(date --date=@"${cron_compare}" +"%-d")"
             local cron_next_month="$(date --date=@"${cron_compare}" +"%-m")"
@@ -1750,7 +1745,7 @@ timer() {
         ;;
         time)
             time_future=$(date --date="$(date +"%Y%m%d") ${backup_job_backup_begin}" +"%s")
-            if [[ "${future_time}" < "${time_current}" ]]; then
+            if [[ "${time_future}" < "${time_current}" ]]; then
                 time_future=$(( time_future + 24*60*60))
             fi
             time_wait=$(( time_future - time_current ))
