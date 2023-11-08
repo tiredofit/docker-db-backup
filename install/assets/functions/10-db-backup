@@ -167,6 +167,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" AUTH backup_job_db_auth
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_BEGIN backup_job_backup_begin
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_INTERVAL backup_job_backup_interval
+        transform_backup_instance_variable "${backup_instance_number}" BACKUP_GLOBALS backup_job_backup_pgsql_globals
         transform_backup_instance_variable "${backup_instance_number}" BACKUP_LOCATION backup_job_backup_location
         transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_BEGIN backup_job_snapshot_blackout_start
         transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_END backup_job_snapshot_blackout_finish

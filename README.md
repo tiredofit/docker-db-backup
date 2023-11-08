@@ -298,6 +298,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 | Variable                         | Description                                                                                               | Default | `_FILE` |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
 | `DEFAULT_AUTH`                   | (Optional) Authentication Database                                                                        |         | x       |
+| `DEFAULT_BACKUP_GLOBALS`         | Backup Globals as part of backup procedure                                                                |         |         |
 | `DEFAULT_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
 | `DEFAULT_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |         |
 | `DEFAULT_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
@@ -562,6 +563,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 | Variable                      | Description                                                                                               | Default | `_FILE` |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
 | `DB01_AUTH`                   | (Optional) Authentication Database                                                                        |         |         |
+| `DB01_BACKUP_GLOBALS`         | Backup Globals after backing up database (forces `TRUE` if `_NAME=ALL``)                                  | `FALSE` |         |
 | `DB01_EXTRA_OPTS`             | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
 | `DB01_EXTRA_BACKUP_OPTS`      | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
 | `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |         |
