@@ -628,6 +628,8 @@ backup_pgsql() {
         _postgres_backup_globals=false
     fi
 
+    if var_false "${_postgres_backup_globals}" && var_true "${backup_job_backup_pgsql_globals}" ; then _postgres_backup_globals=true; fi
+
     write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
     if var_true "${backup_job_split_db}" ; then
@@ -1414,28 +1416,26 @@ post_dbbackup() {
     if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
         source /assets/defaults/03-monitoring
         write_log notice "Sending Backup Statistics to Zabbix"
-        silent zabbix_sender -c -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
-        cat <<EOF > /tmp/zabbix_output
-- dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
-- dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
-- dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
-- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$((dbbackup_finish_time-dbbackup_start_time))"
-- dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${backup_job_filename}"
-${zabbix_encrypt_time}
-${zabbix_checksum_time}
-EOF
+        silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
+        local zabbix_payload=$(run_as_user mktemp)
 
-        cat <<EOF | run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+        cat <<EOZP | silent run_as_user tee "${zabbix_payload}"
 - dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
 - dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
 - dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
 - dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$((dbbackup_finish_time-dbbackup_start_time))"
 - dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${backup_job_filename}"
-${zabbix_encrypt_time}
-${zabbix_checksum_time}
-EOF
+EOZP
+
+        if [ -n "${zabbix_checksum_time}" ] ; then echo "${zabbix_checksum_time}" | silent run_as_user tee -a "${zabbix_payload}" ; fi
+        if [ -n "${zabbix_encrypt_time}" ] ; then echo "${zabbix_encrypt_time}" | silent run_as_user tee -a "${zabbix_payload}"  ; fi
+
+        silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i "${zabbix_payload}"
 
         if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
+        unset zabbix_checksum_time
+        unset zabbix_encrypt_time
+        rm -rf "${zabbix_payload}"
     fi
 
     ### Post Script Support
