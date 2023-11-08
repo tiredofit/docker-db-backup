@@ -1296,8 +1296,8 @@ move_dbbackup() {
                     run_as_user ln -sfr "${backup_job_filesystem_path}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/latest-"${backup_job_filename_base}"
                 fi
                 if [ -n "${backup_job_archive_time}" ] ; then
-                    run_as_user mkdir -p "${backup_job_filesystem_archive}"
-                    run_as_user find "${backup_job_filesystem_path}"/  -type f -maxdepth 1 -mmin +"${backup_job_archive_time}" -iname "${backup_job_filename_base}*" -exec mv {} "${backup_job_filesystem_archive}" \;
+                    run_as_user mkdir -p "${backup_job_filesystem_archive_path}"
+                    run_as_user find "${backup_job_filesystem_path}"/  -type f -maxdepth 1 -mmin +"${backup_job_archive_time}" -iname "${backup_job_filename_base}*" -exec mv {} "${backup_job_filesystem_archive_path}" \;
                 fi
             ;;
             "s3" | "minio" )
@@ -1413,7 +1413,7 @@ post_dbbackup() {
 - dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
 - dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
 - dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
-- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$(echo $((dbbackup_finish_time-dbbackup_start_time)))"
+- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$((dbbackup_finish_time-dbbackup_start_time))"
 - dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${backup_job_filename}"
 ${zabbix_encrypt_time}
 ${zabbix_checksum_time}
@@ -1735,7 +1735,7 @@ timer() {
                 ;;
                 stop)
                     backup_job_finish_time=$(date +'%s')
-                    backup_job_total_time=$(echo $(( backup_job_finish_time - backup_job_start_time)))
+                    backup_job_total_time=$(( backup_job_finish_time - backup_job_start_time))
                 ;;
             esac
         ;;
