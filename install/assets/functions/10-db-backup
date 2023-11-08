@@ -1557,8 +1557,10 @@ timer() {
                     expression_step=${expression##*\/}
                     expression_number=${expression%%\/*}
                     validate_temp=""
+
                     local expression_start=
                     local expression_end=
+
                     if [ "${expression_number}" = "#" ]; then
                         expression_start=0
                         expression_end="${2}"
@@ -1571,7 +1573,7 @@ timer() {
 
                     if [ "${expression_step}" != "${expression}" ]; then
                         for step in ${validate_temp}; do
-                            if [ $( (( step - expression_start ) % expression_step )) -eq 0 ]; then
+                            if [ $(( ( step - expression_start ) % expression_step )) -eq 0 ]; then
                               validate_all="$validate_all ${step}"
                             fi
                         done
@@ -1580,7 +1582,7 @@ timer() {
                     fi
                 done
 
-                validate_all=$(echo $validate_all | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
+                validate_all=$(echo "${validate_all}" | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
                 for entry in $validate_all; do
                     if [ "${entry}" -ge "${3}" ]; then
                       echo "${entry}"
