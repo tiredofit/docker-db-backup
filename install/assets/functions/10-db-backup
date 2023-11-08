@@ -378,15 +378,16 @@ bootstrap_variables() {
 }
 
 backup_couch() {
-    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug on; fi
     prepare_dbbackup
     backup_job_filename=couch_${backup_job_db_name}_${backup_job_db_host#*//}_${now}.txt
     backup_job_filename_base=couch_${backup_job_db_name}_${backup_job_db_host#*//}
     compression
     pre_dbbackup ${backup_job_db_name}
     write_log notice "Dumping CouchDB database: '${backup_job_db_name}' ${compression_string}"
+    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug on; fi
     run_as_user curl -sSL -X GET ${backup_job_db_host}:${backup_job_db_port}/${backup_job_db_name}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
     exit_code=$?
+    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug off; fi
     check_exit_code backup "${backup_job_filename}"
     timer backup finish
     file_encryption
@@ -394,11 +395,9 @@ backup_couch() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup ${backup_job_db_name}
-    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug off; fi
 }
 
 backup_influx() {
-    if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything"
         db_names=justbackupeverything
@@ -416,6 +415,7 @@ backup_influx() {
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx database: '${db}'"
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
                 run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${backup_job_db_host}:${backup_job_db_port} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} "${TEMP_PATH}"/"${backup_job_filename_dir}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename_dir}"
@@ -423,6 +423,7 @@ backup_influx() {
                 run_as_user tar cf - "${TEMP_PATH}"/"${backup_job_filename_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename_dir}".tar"${extension}" > /dev/null
                 backup_job_filename=influx_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 backup_job_filename_base=influx_${db}_${backup_job_db_host#*//}
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 timer backup finish
                 file_encryption
                 generate_checksum
@@ -440,12 +441,14 @@ backup_influx() {
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx2 database: '${db}'"
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
                 run_as_user influx backup --org ${backup_job_db_user} ${bucket} --host ${backup_job_db_host}:${backup_job_db_port} --token ${backup_job_db_pass} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --compression none "${TEMP_PATH}"/"${backup_job_filename_dir}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename_dir}"
                 create_archive
                 backup_job_filename=influx2_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 backup_job_filename_base=influx2_${db}_${backup_job_db_host#*//}
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 timer backup finish
                 file_encryption
                 generate_checksum
@@ -455,11 +458,9 @@ backup_influx() {
             done
         ;;
     esac
-    if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
 }
 
 backup_mongo() {
-    if var_true "${DEBUG_BACKUP_MONGO}" ; then debug on; fi
     prepare_dbbackup
     if [ "${backup_job_compression,,}" = "none" ] ; then
         backup_job_filename=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.archive
@@ -477,8 +478,10 @@ backup_mongo() {
     fi
     pre_dbbackup "${backup_job_db_name}"
     write_log notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
+    if var_true "${DEBUG_BACKUP_MONGO}" ; then debug on; fi
     silent run_as_user ${play_fair} mongodump --archive=${TEMP_PATH}/${backup_job_filename} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
+    if var_true "${DEBUG_BACKUP_MONGO}" ; then debug off; fi
     check_exit_code backup "${backup_job_filename}"
     timer backup finish
     file_encryption
@@ -490,7 +493,6 @@ backup_mongo() {
 }
 
 backup_mssql() {
-    if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
     case "${backup_job_mssql_mode,,}" in
         db|database )
             prepare_dbbackup
@@ -498,8 +500,10 @@ backup_mssql() {
             backup_job_filename_base=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
             backup_job_filename_original=${backup_job_filename}
             compression
             pre_dbbackup all
@@ -518,8 +522,10 @@ backup_mssql() {
             backup_job_filename_base=mssql_${backup_job_db_name,,}_trn_${backup_job_db_host,,}
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
             backup_job_filename_original=${backup_job_filename}
             compression
             pre_dbbackup all
@@ -533,11 +539,10 @@ backup_mssql() {
             post_dbbackup "${backup_job_db_name}"
         ;;
     esac
-    if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
 }
 
 backup_mysql() {
-    if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
+
     if var_true "${backup_job_mysql_events}" ; then
         events="--events"
     fi
@@ -572,8 +577,10 @@ backup_mysql() {
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
+                if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
                 run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
+                if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
                 check_exit_code backup "${backup_job_filename}"
                 timer backup finish
                 file_encryption
@@ -590,8 +597,10 @@ backup_mysql() {
         compression
         pre_dbbackup all
         write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
+        if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
         run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
+        if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
         check_exit_code backup "${backup_job_filename}"
         timer backup finish
         file_encryption
@@ -600,19 +609,19 @@ backup_mysql() {
         check_exit_code move "${backup_job_filename}"
         post_dbbackup all
     fi
-    if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
 }
 
 backup_pgsql() {
-    if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
     backup_pgsql_globals() {
         prepare_dbbackup
         backup_job_filename=pgsql_globals_${backup_job_db_host,,}_${now}.sql
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
+        if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
         run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
+        if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
         check_exit_code "${backup_job_filename}"
         timer backup finish
         file_encryption
@@ -656,8 +665,10 @@ backup_pgsql() {
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
+                if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
                 run_as_user ${play_fair} pg_dump -h "${backup_job_db_host}" -p "${backup_job_db_port}" -U "${backup_job_db_user}" $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
+                if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
                 check_exit_code backup "${backup_job_filename}"
                 timer backup finish
                 file_encryption
@@ -683,8 +694,10 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
+        if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
         run_as_user ${play_fair} pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
+        if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
         check_exit_code backup "${backup_job_filename}"
         timer backup finish
         file_encryption
@@ -694,15 +707,14 @@ backup_pgsql() {
         post_dbbackup all
         if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     fi
-    if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
 }
 
 backup_redis() {
-    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug on; fi
     prepare_dbbackup
     write_log notice "Dumping Redis - Flushing Redis Cache First"
     backup_job_filename=redis_all_${backup_job_db_host,,}_${now}.rdb
     backup_job_filename_base=redis_${backup_job_db_host,,}
+    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug on; fi
     echo bgsave | silent run_as_user ${play_fair} redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${TEMP_PATH}/${backup_job_filename} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}
     sleep 10
     try=5
@@ -723,17 +735,16 @@ backup_redis() {
     pre_dbbackup all
     run_as_user ${compress_cmd} "${TEMP_PATH}/${backup_job_filename_original}"
     timer backup finish
+    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug on; fi
     check_exit_code backup "${backup_job_filename}"
     file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup all
-    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug off; fi
 }
 
 backup_sqlite3() {
-    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi
     prepare_dbbackup
     db=$(basename "${backup_job_db_host}")
     db="${db%.*}"
@@ -742,17 +753,18 @@ backup_sqlite3() {
     compression
     pre_dbbackup "${db}"
     write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
+    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi
     silent run_as_user ${play_fair} sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup.sqlite3'"
     exit_code=$?
     check_exit_code backup "${backup_job_filename}"
     run_as_user ${play_fair} cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${backup_job_filename}" > /dev/null
     timer backup finish
+    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug off; fi
     file_encryption
     generate_checksum
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup "${db}"
-    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug off; fi
 }
 
 check_availability() {
@@ -1085,10 +1097,16 @@ debug() {
     case "${1}" in
         off)
             DEBUG_MODE=${OLD_DEBUG_MODE}
+            if var_true "${DEBUG_MODE}" ; then
+                set -x
+            else
+                set +x
+            fi
+
         ;;
         on)
             OLD_DEBUG_MODE=${DEBUG_MODE}
-            DEBUG_MODE=TRUE
+            set -x
         ;;
     esac
 }
