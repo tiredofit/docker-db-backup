@@ -7,9 +7,9 @@ bootstrap_filesystem() {
     if [ "$(stat -c %U "${backup_job_filesystem_path}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_path}" ; fi
     if [ "$(stat -c %a "${backup_job_filesystem_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_path}" ; fi
 
-    if [ -d "${backup_job_filesystem_archive}" ]; then
-        if [ "$(stat -c %U "${backup_job_filesystem_archive}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_archive}" ; fi
-        if [ "$(stat -c %a "${backup_job_filesystem_archive}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_archive}" ; fi
+    if [ -d "${backup_job_filesystem_archive_path}" ]; then
+        if [ "$(stat -c %U "${backup_job_filesystem_archive_path}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_archive_path}" ; fi
+        if [ "$(stat -c %a "${backup_job_filesystem_archive_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_archive_path}" ; fi
     fi
 
     if [ ! -d "${LOG_PATH}" ]; then
@@ -1356,8 +1356,6 @@ move_dbbackup() {
 prepare_dbbackup() {
     timer backup start
     now=$(run_as_user date +"%Y%m%d-%H%M%S")
-    now_date=$(run_as_user date +"%Y-%m-%d")
-    now_time=$(run_as_user date +"%H:%M:%S")
     backup_job_filename_base=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}
     backup_job_filename=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.sql
 }
