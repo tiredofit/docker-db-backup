@@ -588,6 +588,23 @@ backup_mysql() {
 }
 
 backup_pgsql() {
+    backup_pgsql_globals() {
+        prepare_dbbackup
+        backup_job_filename=pgsql_globals_${backup_job_db_host,,}_${now}.sql
+        compression
+        pre_dbbackup "globals"
+        print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
+        run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
+        exit_code=$?
+        check_exit_code "${backup_job_filename}"
+        timer backup finish
+        file_encryption
+        generate_checksum
+        move_dbbackup
+        check_exit_code move "${backup_job_filename}"
+        post_dbbackup "globals"
+    }
+
     export PGPASSWORD=${backup_job_db_pass}
     if [ -n "${backup_job_db_auth}" ] ; then
         authdb=${backup_job_db_auth}
@@ -603,9 +620,11 @@ backup_pgsql() {
                 write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
+        _postgres_backup_globals=true
         fi
     else
         db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
+        _postgres_backup_globals=false
     fi
 
     write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
@@ -628,20 +647,7 @@ backup_pgsql() {
                 check_exit_code move "${backup_job_filename}"
                 post_dbbackup "${db}"
         done
-        prepare_dbbackup
-        backup_job_filename=pgsql_globals_${backup_job_db_host,,}_${now}.sql
-        compression
-        pre_dbbackup "globals"
-        print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
-        run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
-        exit_code=$?
-        check_exit_code "${backup_job_filename}"
-        timer backup finish
-        file_encryption
-        generate_checksum
-        move_dbbackup
-        check_exit_code move "${backup_job_filename}"
-        post_dbbackup "globals"
+        if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     else
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
@@ -667,6 +673,7 @@ backup_pgsql() {
         move_dbbackup
         check_exit_code move "${backup_job_filename}"
         post_dbbackup all
+        if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     fi
 }
 
@@ -1407,7 +1414,7 @@ post_dbbackup() {
         source /assets/defaults/03-monitoring
         write_log notice "Sending Backup Statistics to Zabbix"
         silent zabbix_sender -c -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -k dbbackup.backup -o '[{"{#NAME}":"'${backup_job_db_host}.${backup_job_db_name}'"}]'
-        cat <<EOF | silent run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+        cat <<EOF > /tmp/zabbix_output
 - dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
 - dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
 - dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
@@ -1416,6 +1423,17 @@ post_dbbackup() {
 ${zabbix_encrypt_time}
 ${zabbix_checksum_time}
 EOF
+
+        cat <<EOF | run_as_user zabbix_sender -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" -i -
+- dbbackup.backup.size.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_size}"
+- dbbackup.backup.datetime.[${backup_job_db_host}.${backup_job_db_name}] "${dbbackup_date}"
+- dbbackup.backup.status.[${backup_job_db_host}.${backup_job_db_name}] "${exit_code}"
+- dbbackup.backup.duration.[${backup_job_db_host}.${backup_job_db_name}] "$((dbbackup_finish_time-dbbackup_start_time))"
+- dbbackup.backup.filename.[${backup_job_db_host}.${backup_job_db_name}] "${backup_job_filename}"
+${zabbix_encrypt_time}
+${zabbix_checksum_time}
+EOF
+
         if [ "$?" != "0" ] ; then write_log error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'" ; fi
     fi
 
