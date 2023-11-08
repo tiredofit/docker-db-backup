@@ -1,6 +1,7 @@
 #!/command/with-contenv bash
 
 bootstrap_filesystem() {
+    if var_true "${DEBUG_BOOTSTRAP_FILESYSTEM}" ; then debug on; fi
     if [ ! -d "${backup_job_filesystem_path}" ]; then
         mkdir -p "${backup_job_filesystem_path}"
     fi
@@ -24,9 +25,11 @@ bootstrap_filesystem() {
         mkdir -p "${TEMP_PATH}"
     fi
     if [ "$(stat -c %U "${TEMP_PATH}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${TEMP_PATH}" ; fi
+    if var_true "${DEBUG_BOOTSTRAP_FILESYSTEM}" ; then debug off; fi
 }
 
 bootstrap_variables() {
+    if var_true "${DEBUG_BOOTSTRAP_VARIABLES}" ; then debug on; fi
     backup_init() {
         backup_instance_number=${1}
         backup_instance_vars=$(mktemp)
@@ -370,9 +373,12 @@ bootstrap_variables() {
         parse_variables) parse_variables "$2" ;;
         upgrade ) upgrade_lonely_variables "$2" ;;
     esac
+
+    if var_true "${DEBUG_BOOTSTRAP_VARIABLES}" ; then debug off; fi
 }
 
 backup_couch() {
+    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug on; fi
     prepare_dbbackup
     backup_job_filename=couch_${backup_job_db_name}_${backup_job_db_host#*//}_${now}.txt
     backup_job_filename_base=couch_${backup_job_db_name}_${backup_job_db_host#*//}
@@ -388,9 +394,11 @@ backup_couch() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup ${backup_job_db_name}
+    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug off; fi
 }
 
 backup_influx() {
+    if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything"
         db_names=justbackupeverything
@@ -447,9 +455,11 @@ backup_influx() {
             done
         ;;
     esac
+    if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
 }
 
 backup_mongo() {
+    if var_true "${DEBUG_BACKUP_MONGO}" ; then debug on; fi
     prepare_dbbackup
     if [ "${backup_job_compression,,}" = "none" ] ; then
         backup_job_filename=${dbtype}_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.archive
@@ -476,9 +486,11 @@ backup_mongo() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup "${backup_job_db_name}"
+    if var_true "${DEBUG_BACKUP_MONGO}" ; then debug off; fi
 }
 
 backup_mssql() {
+    if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
     case "${backup_job_mssql_mode,,}" in
         db|database )
             prepare_dbbackup
@@ -521,9 +533,11 @@ backup_mssql() {
             post_dbbackup "${backup_job_db_name}"
         ;;
     esac
+    if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
 }
 
 backup_mysql() {
+    if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
     if var_true "${backup_job_mysql_events}" ; then
         events="--events"
     fi
@@ -586,9 +600,11 @@ backup_mysql() {
         check_exit_code move "${backup_job_filename}"
         post_dbbackup all
     fi
+    if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
 }
 
 backup_pgsql() {
+    if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
     backup_pgsql_globals() {
         prepare_dbbackup
         backup_job_filename=pgsql_globals_${backup_job_db_host,,}_${now}.sql
@@ -678,9 +694,11 @@ backup_pgsql() {
         post_dbbackup all
         if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     fi
+    if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
 }
 
 backup_redis() {
+    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug on; fi
     prepare_dbbackup
     write_log notice "Dumping Redis - Flushing Redis Cache First"
     backup_job_filename=redis_all_${backup_job_db_host,,}_${now}.rdb
@@ -711,9 +729,11 @@ backup_redis() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup all
+    if var_true "${DEBUG_BACKUP_REDIS}" ; then debug off; fi
 }
 
 backup_sqlite3() {
+    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi
     prepare_dbbackup
     db=$(basename "${backup_job_db_host}")
     db="${db%.*}"
@@ -732,10 +752,12 @@ backup_sqlite3() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup "${db}"
+    if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug off; fi
 }
 
 check_availability() {
-### Set the Database Type
+    if var_true "${DEBUG_CHECK_AVAILABILITY}" ; then debug on; fi
+    ### Set the Database Type
     if var_false "${backup_job_skip_availability_check}" ; then
         case "${dbtype}" in
             "couch" )
@@ -834,9 +856,11 @@ check_availability() {
             ;;
         esac
     fi
+    if var_true "${DEBUG_CHECK_AVAILABILITY}" ; then debug off; fi
 }
 
 check_exit_code() {
+    if var_true "${DEBUG_CHECK_EXIT_CODE}" ; then debug on; fi
     case "${1}" in
         backup )
             write_log debug "DB Backup exit Code is ${exit_code}"
@@ -875,9 +899,11 @@ check_exit_code() {
             esac
         ;;
     esac
+    if var_true "${DEBUG_CHECK_EXIT_CODE}" ; then debug off; fi
 }
 
 cleanup_old_data() {
+    if var_true "${DEBUG_CLEANUP_OLD_DATA}" ; then debug on; fi
     if [ -n "${backup_job_cleanup_time}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
             case "${backup_job_backup_location,,}" in
@@ -913,9 +939,11 @@ cleanup_old_data() {
             write_log error "Skipping Cleaning up old backups because there were errors in backing up"
         fi
     fi
+    if var_true "${DEBUG_CLEANUP_OLD_DATA}" ; then debug off; fi
 }
 
 compression() {
+    if var_true "${DEBUG_COMPRESSION}" ; then debug on; fi
     if var_false "${backup_job_parallel_compression}" ; then
         backup_job_parallel_compression_threads=1
     fi
@@ -979,18 +1007,22 @@ compression() {
             fi
         ;;
     esac
+    if var_true "${DEBUG_COMPRESSION}" ; then debug off; fi
 }
 
 create_archive() {
+    if var_true "${DEBUG_CREATE_ARCHIVE}" ; then debug on; fi
     if [ "${exit_code}" = "0" ] ; then
         write_log notice "Creating archive file of '${backup_job_filename_dir}' with tar ${compression_string}"
         run_as_user tar cf - "${TEMP_PATH}"/"${backup_job_filename_dir}" | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename_dir}".tar"${extension}" > /dev/null
     else
         write_log error "Skipping creating archive file because backup did not complete successfully"
     fi
+    if var_true "${DEBUG_CREATE_ARCHIVE}" ; then debug off; fi
 }
 
 create_schedulers() {
+    if var_true "${DEBUG_CREATE_SCHEDULERS}" ; then debug on; fi
     backup() {
         bootstrap_variables upgrade BACKUP
         local backup_instances=$(printenv | sort | grep -c "^DB[0-9]._HOST")
@@ -1033,6 +1065,7 @@ EOF
     case "${1}" in
         backup ) backup ;;
     esac
+    if var_true "${DEBUG_CREATE_SCHEDULERS}" ; then debug off; fi
 }
 
 ctrl_c() {
@@ -1048,7 +1081,20 @@ db_backup_container_init() {
     touch /tmp/.container/db-backup-backups
 }
 
+debug() {
+    case "${1}" in
+        off)
+            DEBUG_MODE=${OLD_DEBUG_MODE}
+        ;;
+        on)
+            OLD_DEBUG_MODE=${DEBUG_MODE}
+            DEBUG_MODE=TRUE
+        ;;
+    esac
+}
+
 file_encryption() {
+    if var_true "${DEBUG_FILE_ENCRYPTION}" ; then debug on; fi
     if var_true "${backup_job_encrypt}" ; then
         if [ "${exit_code}" = "0" ] ; then
             print_debug "Encrypting"
@@ -1086,9 +1132,11 @@ EOF
             write_log error "Skipping encryption because backup did not complete successfully"
         fi
     fi
+    if var_true "${DEBUG_FILE_ENCRYPTION}" ; then debug off; fi
 }
 
 generate_checksum() {
+    if var_true "${DEBUG_GENERATE_CHECKSUM}" ; then debug on; fi
     if [ "${exit_code}" = "0" ] ; then
         case "${backup_job_checksum,,}" in
             "md5" )
@@ -1122,9 +1170,11 @@ EOF
     else
         write_log error "Skipping Checksum creation because backup did not complete successfully"
     fi
+    if var_true "${DEBUG_GENERATE_CHECKSUM}" ; then debug off; fi
 }
 
 notify() {
+    if var_true "${DEBUG_NOTIFY}" ; then debug on; fi
     notification_custom() {
         if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
             if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
@@ -1268,9 +1318,11 @@ EOF
             esac
         done
     fi
+    if var_true "${DEBUG_NOTIFY}" ; then debug off; fi
 }
 
 move_dbbackup() {
+    if var_true "${DEBUG_MOVE_DBBACKUP}" ; then debug on; fi
     if [ "${exit_code}" = "0" ] ; then
         dbbackup_size="$(run_as_user stat -c%s "${TEMP_PATH}"/"${backup_job_filename}")"
         dbbackup_date="$(run_as_user date -r  "${TEMP_PATH}"/"${backup_job_filename}" +'%s')"
@@ -1361,6 +1413,7 @@ move_dbbackup() {
     fi
 
     run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"
+    if var_true "${DEBUG_MOVE_DBBACKUP}" ; then debug off; fi
 }
 
 prepare_dbbackup() {
@@ -1371,6 +1424,7 @@ prepare_dbbackup() {
 }
 
 pre_dbbackup() {
+    if var_true "${DEBUG_PRE_DBBACKUP}" ; then debug on; fi
     ### Pre Script Support
     if [ -n "${backup_job_pre_script}" ] ; then
         if var_true "${backup_job_pre_script_x_verify}" ; then
@@ -1407,9 +1461,11 @@ pre_dbbackup() {
             fi
         done
     fi
+    if var_true "${DEBUG_PRE_DBBACKUP}" ; then debug off; fi
 }
 
 post_dbbackup() {
+    if var_true "${DEBUG_POST_DBBACKUP}" ; then debug on; fi
     dbbackup_finish_time=$(run_as_user date +"%s")
     dbbackup_total_time=$(run_as_user echo $((dbbackup_finish_time-dbbackup_start_time)))
 
@@ -1476,9 +1532,11 @@ EOZP
     fi
 
     write_log notice "DB Backup for '${1}' time taken: $(echo ${dbbackup_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"
+    if var_true "${DEBUG_POST_DBBACKUP}" ; then debug on; fi
 }
 
 process_limiter() {
+    if var_true "${DEBUG_PROCESS_LIMITER}" ; then debug on; fi
     while true ; do
         counter=0
         process_amount="$(wc -l /tmp/.container/db-backup-backups | awk '{print $1}')"
@@ -1497,6 +1555,7 @@ process_limiter() {
             break
         fi
     done
+    if var_true "${DEBUG_PROCESS_LIMITER}" ; then debug off; fi
 }
 
 run_as_user() {
@@ -1545,6 +1604,7 @@ symlink_log () {
 }
 
 timer() {
+    if var_true "${DEBUG_TIMER}" ; then debug on; fi
     case "${1}" in
         backup)
             case "${2}" in
@@ -1768,9 +1828,11 @@ timer() {
             time_wait=$(( time_future - time_current ))
         ;;
     esac
+    if var_true "${DEBUG_TIMER}" ; then debug off; fi
 }
 
 write_log() {
+    if var_true "${DEBUG_WRITE_LOG}" ; then debug on; fi
     output_off
     local _arg_log_level=${1}
     shift 1
@@ -1815,4 +1877,5 @@ write_log() {
 
     print_${_arg_log_level} "${_arg_log_message}"
     output_on
+    if var_true "${DEBUG_WRITE_LOG}" ; then debug off; fi
 }
