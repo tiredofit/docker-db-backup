@@ -1399,7 +1399,7 @@ move_dbbackup() {
                     s3_ssl="--no-verify-ssl"
                 fi
 
-                [[ ( -n "${S3_HOST}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${backup_job_s3_protocol}://${backup_job_s3_host}"
+                [[ ( -n "${backup_job_s3_host}" ) ]] && PARAM_AWS_ENDPOINT_URL=" --endpoint-url ${backup_job_s3_protocol}://${backup_job_s3_host}"
 
                 silent aws ${PARAM_AWS_ENDPOINT_URL} s3 cp ${TEMP_PATH}/${backup_job_filename} s3://${backup_job_s3_bucket}/${backup_job_s3_path}/${backup_job_filename} ${s3_ssl} ${s3_ca_cert} ${backup_job_s3_extra_opts}
                 move_exit_code=$?

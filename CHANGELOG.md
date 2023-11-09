@@ -1,3 +1,9 @@
+## 4.0.2 2023-11-09 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Properly use custom _S3_HOST variables
+
+
 ## 4.0.1 2023-11-09 <dave at tiredofit dot ca>
 
    ### Changed
