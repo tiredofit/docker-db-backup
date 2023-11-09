@@ -74,10 +74,38 @@ EOF
     esac
 fi
 
+
 control_c() {
-    #if [ -f "${restore_vars}" ] ; then rm -rf "${restore_vars}" ; fi
+    if [ -f "${restore_vars}" ] ; then rm -rf "${restore_vars}" ; fi
     print_warn "User aborted"
     exit
+}
+
+get_filename() {
+    COLUMNS=12
+    prompt="Please select a file to restore:"
+    options=( $(find "${DEFAULT_FILESYSTEM_PATH}" -type f -maxdepth 2  -not -name '*.md5' -not -name '*.sha1' -print0 | sort -z | xargs -0) )
+    PS3="$prompt "
+    select opt in "${options[@]}" "Custom" "Quit" ; do
+        if (( REPLY == 2 + ${#options[@]} )) ; then
+            echo "Bye!"
+            exit 2
+        elif (( REPLY == 1 + ${#options[@]} )) ; then
+            while [ ! -f "${opt}" ] ; do
+                read -p "What path and filename to restore: " opt
+                if [ ! -f "${opt}" ] ; then
+                print_error "File not found. Please retry.."
+                fi
+            done
+            break
+        elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+            break
+        else
+            echo "Invalid option. Try another one."
+        fi
+    done
+    COLUMNS=$oldcolumns
+    r_filename=${opt}
 }
 
 get_dbhost() {
