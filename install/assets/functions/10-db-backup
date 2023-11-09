@@ -247,44 +247,52 @@ bootstrap_variables() {
             unset "$(echo "${restore_var}" | cut -d = -f 1)"
         done < "${restore_vars}"
 
+        if [ -n "${DB_NAME}" ] && [ -z "${DB01_NAME}" ] ; then export DB01_NAME="${DB_NAME}" ; unset DB_NAME ; fi
+        if [ -n "${DB_USER}" ] && [ -z "${DB01_USER}" ] ; then export DB01_USER="${DB_USER}" ; unset DB_USER ; fi
+        if [ -n "${DB_PASS}" ] && [ -z "${DB01_PASS}" ] ; then export DB01_PASS="${DB_PASS}" ; unset DB_PASS ; fi
+        if [ -n "${DB_TYPE}" ] && [ -z "${DB01_TYPE}" ] ; then export DB01_TYPE="${DB_TYPE}" ; unset DB_TYPE ; fi
+        if [ -n "${DB_PORT}" ] && [ -z "${DB01_PORT}" ] ; then export DB01_PORT="${DB_PORT}" ; unset DB_PORT ; fi
+        if [ -n "${DB_HOST}" ] && [ -z "${DB01_HOST}" ] ; then export DB01_HOST="${DB_HOST}" ; unset DB_HOST ; fi
+        if [ -n "${DB_AUTH}" ] && [ -z "${DB01_AUTH}" ] ; then export DB01_AUTH="${DB_AUTH}" ; unset DB_AUTH ; fi
+        if [ -n "${MONGO_CUSTOM_URI}" ] && [ -z "${DB01_MONGO_CUSTOM_URI}" ] ; then export DB01_MONGO_CUSTOM_URI="${DB_MONGO_CUSTOM_URI}" ; unset MONGO_CUSTOM_URI ; fi
+        if [ -n "${MYSQL_TLS_CA_FILE}" ] && [ -z "${DB01_MYSQL_TLS_CA_FILE}" ] ; then export DB01_MYSQL_TLS_CA_FILE="${MYSQL_TLS_CA_FILE}" ; unset MYSQL_TLS_CA_FILE ; fi
+        if [ -n "${MYSQL_TLS_CERT_FILE}" ] && [ -z "${DB01_MYSQL_TLS_CERT_FILE}" ] ; then export DB01_MYSQL_TLS_CERT_FILE="${MYSQL_TLS_CERT_FILE}" ; unset MYSQL_TLS_CERT_FILE ; fi
+        if [ -n "${MYSQL_TLS_KEY_FILE}" ] && [ -z "${DB01_MYSQL_TLS_KEY_FILE}" ] ; then export DB01_MYSQL_TLS_KEY_FILE="${MYSQL_TLS_KEY_FILE}" ; unset MYSQL_TLS_KEY_FILE ; fi
+
         transform_file_var \
                             DEFAULT_AUTH \
-                            DEFAULT_TYPE \
                             DEFAULT_HOST \
-                            DEFAULT_PORT \
                             DEFAULT_NAME \
-                            DEFAULT_USER \
                             DEFAULT_PASS \
-                            DEFAULT_ENCRYPT_PASSPHRASE \
-                            DEFAULT_ENCRYPT_PUBKEY \
+                            DEFAULT_PORT \
+                            DEFAULT_TYPE \
+                            DEFAULT_USER \
                             DEFAULT_MONGO_CUSTOM_URI \
                             DEFAULT_MYSQL_TLS_CA_FILE \
                             DEFAULT_MYSQL_TLS_CERT_FILE \
-                            DEFAULT_MYSQL_TLS_KEY_FILE \
-                            DB"${backup_instance_number}"_AUTH \
-                            DB"${backup_instance_number}"_TYPE \
-                            DB"${backup_instance_number}"_HOST \
-                            DB"${backup_instance_number}"_PORT \
-                            DB"${backup_instance_number}"_NAME \
-                            DB"${backup_instance_number}"_NAME_EXCLUDE \
-                            DB"${backup_instance_number}"_USER \
-                            DB"${backup_instance_number}"_PASS \
-                            DB"${backup_instance_number}"_MONGO_CUSTOM_URI \
-                            DB"${backup_instance_number}"_MYSQL_TLS_CA_FILE \
-                            DB"${backup_instance_number}"_MYSQL_TLS_CERT_FILE \
-                            DB"${backup_instance_number}"_MYSQL_TLS_KEY_FILE \
-                            DB_AUTH \
-                            DB_HOST \
-                            DB_NAME \
-                            DB_PORT \
-                            DB_USER \
-                            DB_PASS \
-                            MONGO_CUSTOM_URI \
-                            MYSQL_TLS_CA_FILE \
-                            MYSQL_TLS_CERT_FILE
+                            DEFAULT_MYSQL_TLS_KEY_FILE
 
+        set -o posix ; set | grep -E "^DEFAULT_" > "${restore_vars}"
 
-        set -o posix ; set | grep -E "^DB${restore_instance_number}_|^DEFAULT_|^DB_|^MYSQL_" > "${restore_vars}"
+        restore_instances=$(printenv | sort | grep -c '^DB.*_HOST')
+
+        for (( restore_instance_number = 01; restore_instance_number <= restore_instances; restore_instance_number++ )) ; do
+            restore_instance_number=$(printf "%02d" $restore_instance_number)
+            transform_file_var \
+                DB"${restore_instance_number}"_AUTH \
+                DB"${restore_instance_number}"_HOST \
+                DB"${restore_instance_number}"_NAME \
+                DB"${restore_instance_number}"_PASS \
+                DB"${restore_instance_number}"_PORT \
+                DB"${restore_instance_number}"_TYPE \
+                DB"${restore_instance_number}"_USER \
+                DB"${restore_instance_number}"_MONGO_CUSTOM_URI \
+                DB"${restore_instance_number}"_MYSQL_TLS_CA_FILE \
+                DB"${restore_instance_number}"_MYSQL_TLS_CERT_FILE \
+                DB"${restore_instance_number}"_MYSQL_TLS_KEY_FILE
+
+            set -o posix ; set | grep -E "^DB${restore_instance_number}_" >> "${restore_vars}"
+        done
 
         if [ -n "${DB_DUMP_TARGET}" ]; then
             print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET' detected - Please upgrade your variables as they will be removed in version 4.3.0"
@@ -297,6 +305,8 @@ bootstrap_variables() {
             sed -i "/DEFAULT_FILESYSTEM_ARCHIVE_PATH=/d" "${restore_vars}"
             echo "DEFAULT_FILESYSTEM_ARCHIVE_PATH=${DB_DUMP_TARGET_ARCHIVE}"  >> "${restore_vars}"
         fi
+
+        echo "RESTORE_VARS is ${restore_vars}"
     }
 
     parse_variables() {
