@@ -1096,16 +1096,17 @@ db_backup_container_init() {
 debug() {
     case "${1}" in
         off)
-            DEBUG_MODE=${OLD_DEBUG_MODE}
+            DEBUG_MODE=${_original_debug_mode}
             if var_true "${DEBUG_MODE}" ; then
                 set -x
             else
                 set +x
             fi
-
         ;;
         on)
-            OLD_DEBUG_MODE=${DEBUG_MODE}
+            if [ -z "${_original_debug_mode}" ]; then
+                _original_debug_mode="${DEBUG_MODE}"
+            fi
             set -x
         ;;
     esac
