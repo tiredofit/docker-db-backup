@@ -212,6 +212,8 @@ If these are set and no other defaults or variables are set explicitly, they wil
 
 ##### Encryption Options
 
+Encryption occurs after compression and the encrypted filename will have a `.gpg` suffix
+
 | Variable                     | Description                                 | Default |
 | ---------------------------- | ------------------------------------------- | ------- |
 | `DEFAULT_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
@@ -229,7 +231,7 @@ If these are set and no other defaults or variables are set explicitly, they wil
 |                                 | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
 |                                 | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
 |                                 | Full datestamp e.g. `2023-12-21 23:30:00`                                                                                                      |         |
-|                                 | Cron expression e.g. `30 23 * * *`  - [Understand the format](https://en.wikipedia.org/wiki/ Cron) - *BACKUP_INTERVAL is ignored*              |         |
+|                                 | Cron expression e.g. `30 23 * * *` [Understand the format](https://en.wikipedia.org/wiki/Cron) - *BACKUP_INTERVAL is ignored*                  |         |
 | `DEFAULT_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
 |                                 | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
 | `DEFAULT_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from                                                                                   |         |
@@ -390,11 +392,11 @@ echo "${1} Backup Starting on ${2} for ${3} at ${4}. Filename: ${5}"
 ```
 
     ## script DBXX_TYPE DBXX_HOST DBXX_NAME STARTEPOCH BACKUP_FILENAME
-    ${f} "${backup_job_db_type}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${target}"
+    ${f} "${backup_job_db_type}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${backup_job_file}"
 
 Outputs the following on the console:
 
-`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2`
 
 ###### Post backup
 
@@ -421,7 +423,7 @@ echo "${1} ${2} Backup Completed on ${3} for ${4} on ${5} ending ${6} for a dura
 ```
 
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${backup_routines_finish_time}" "${backup_routines_total_time}" "${target}" "${FILESIZE}" "${checksum_value}" "${move_exit_code}
+      ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${backup_routines_finish_time}" "${backup_routines_total_time}" "${backup_job_file}" "${filesize}" "${checksum_value}" "${move_exit_code}
 
 Outputs the following on the console:
 
@@ -471,6 +473,8 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 ##### Encryption Options
 
+Encryption will occur after compression and the resulting filename will have a `.gpg` suffix
+
 | Variable                  | Description                                 | Default |
 | ------------------------- | ------------------------------------------- | ------- |
 | `DB01_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
@@ -488,7 +492,7 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 |                              | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
 |                              | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
 |                              | Full datestamp e.g. `2023-12-21 23:30:00`                                                                                                      |         |
-|                              | Cron expression e.g. `30 23 * * *`  - [Understand the format](https://en.wikipedia.org/wiki/ Cron) - *BACKUP_INTERVAL is ignored*              |         |
+|                              | Cron expression e.g. `30 23 * * *`  [Understand the format](https://en.wikipedia.org/wiki/Cron) - *BACKUP_INTERVAL is ignored*              |         |
 | `DB01_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
 |                              | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
 | `DB01_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from `DB01_BACKUP_FILESYSTEM_PATH`                                                     |         |
@@ -630,7 +634,7 @@ If `DB01_BACKUP_LOCATION` = `blobxfer` then the following options are used:.
 | `DB01_BLOBXFER_STORAGE_ACCOUNT_KEY` | Microsoft Azure Cloud storage account key.  |                     | x       |
 | `DB01_BLOBXFER_REMOTE_PATH`         | Remote Azure path                           | `/docker-db-backup` | x       |
 
-> This service uploads files from backup target directory `DB01_BACKUP_FILESYSTEM_PATH`.
+> This service uploads files from backup directory `DB01_BACKUP_FILESYSTEM_PATH`.
 > If the a cleanup configuration in `DB01_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ##### Hooks
@@ -663,11 +667,11 @@ echo "${1} Backup Starting on ${2} for ${3} at ${4}. Filename: ${5}"
 ```
 
     ## script DB01_TYPE DB01_HOST DB01_NAME STARTEPOCH BACKUP_FILENAME
-    ${f} "${backup_job_db_type}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${target}"
+    ${f} "${backup_job_db_type}" "${backup_job_db_host}" "${backup_job_db_name}" "${backup_routines_start_time}" "${backup_job_filename}"
 
 Outputs the following on the console:
 
-`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2
+`mysql Backup Starting on example-db for example at 1647370800. Filename: mysql_example_example-db_202200315-000000.sql.bz2`
 
 ###### Post backup
 
@@ -694,7 +698,7 @@ echo "${1} ${2} Backup Completed on ${3} for ${4} on ${5} ending ${6} for a dura
 ```
 
       ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_routines_start_time}" "${backup_routines_finish_time}" "${backup_routines_total_time}" "${target}" "${FILESIZE}" "${checksum_value}" "${move_exit_code}
+      ${f} "${exit_code}" "${dbtype}" "${dbhost}" "${dbname}" "${backup_routines_start_time}" "${backup_routines_finish_time}" "${backup_routines_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}
 
 Outputs the following on the console:
 
