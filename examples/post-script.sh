@@ -4,7 +4,7 @@
 # #### $1=EXIT_CODE (After running backup routine)
 # #### $2=DB_TYPE (Type of Backup)
 # #### $3=DB_HOST (Backup Host)
-# #### #4=DB_NAME (Name of Database backed up
+# #### #4=DB_NAME (Name of Database backed up)
 # #### $5=BACKUP START TIME (Seconds since Epoch)
 # #### $6=BACKUP FINISH TIME (Seconds since Epoch)
 # #### $7=BACKUP TOTAL TIME (Seconds between Start and Finish)

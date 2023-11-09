@@ -38,7 +38,7 @@ else
         "-h" )
             cat <<EOF
 ${IMAGE_NAME} Restore Tool ${IMAGE_VERSION}
-(c) 2022 Dave Conroy (https://github.com/tiredofit)
+(c) 2023 Dave Conroy (https://github.com/tiredofit) (https://www.tiredofit.ca)
 
 This script will assist you in recovering databases taken by the Docker image.
 You will be presented with a series of menus allowing you to choose:
