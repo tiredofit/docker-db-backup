@@ -1,3 +1,9 @@
+## 4.0.4 2023-11-09 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add support for restoring from different DB_ variables in restore script
+
+
 ## 4.0.3 2023-11-09 <dave at tiredofit dot ca>
 
    ### Changed
