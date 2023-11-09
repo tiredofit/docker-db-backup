@@ -74,10 +74,16 @@ EOF
     esac
 fi
 
+control_c() {
+    if [ -f "${restore_vars}" ] ; then rm -rf "${restore_vars}" ; fi
+    print_warn "User aborted"
+    exit
+}
+
 get_filename() {
     COLUMNS=12
     prompt="Please select a file to restore:"
-    options=( $(find "${DEFAULT_BACKUP_PATH}" -type f -maxdepth 2  -not -name '*.md5' -not -name '*.sha1' -print0 | sort -z | xargs -0) )
+    options=( $(find "${DEFAULT_FILESYSTEM_PATH}" -type f -maxdepth 2  -not -name '*.md5' -not -name '*.sha1' -print0 | sort -z | xargs -0) )
     PS3="$prompt "
     select opt in "${options[@]}" "Custom" "Quit" ; do
         if (( REPLY == 2 + ${#options[@]} )) ; then
@@ -810,6 +816,8 @@ EOF
 }
 
 #### SCRIPT START
+trap ontrol_c INT
+
 cat << EOF
 
 ## ${IMAGE_NAME} Restore Script

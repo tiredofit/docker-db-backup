@@ -51,7 +51,7 @@ bootstrap_variables() {
                             DEFAULT_ENCRYPT_PUBKEY \
                             DEFAULT_MONGO_CUSTOM_URI \
                             DEFAULT_MYSQL_TLS_CA_FILE \
-                            DEFAULT_MYSQL_TLS_backup_job_filenameCERT_FILE \
+                            DEFAULT_MYSQL_TLS_CERT_FILE \
                             DEFAULT_MYSQL_TLS_KEY_FILE \
                             DEFAULT_S3_BUCKET \
                             DEFAULT_S3_KEY_ID \
@@ -240,18 +240,63 @@ bootstrap_variables() {
         rm -rf "${backup_instance_vars}"
     }
 
-    upgrade_lonely_variables() {
-        upgrade_lonely_variables_tmp=$(mktemp)
-        set -o posix; set | grep "^$1" | grep -v "^$1[0-9]._" > "${upgrade_lonely_variables_tmp}"
-        while read -r exist_var ; do
-            if [ ! -v "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2)" ] ; then
-                export "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2-9)"="$(echo "${exist_var}" | cut -d = -f2)"
-            else
-                print_error "Variable ${1}01_$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2) already exists, fix your variables and start again.."
-                exit 1
-            fi
-        done < "${upgrade_lonely_variables_tmp}"
-        rm -rf "${upgrade_lonely_variables_tmp}"
+    restore_init() {
+        restore_vars=$(mktemp)
+        set -o posix ; set | grep -oE "^restore_job_.*=" | grep -oE ".*=" | sed "/--/d" > "${restore_vars}"
+        while read -r restore_var ; do
+            unset "$(echo "${restore_var}" | cut -d = -f 1)"
+        done < "${restore_vars}"
+
+        transform_file_var \
+                            DEFAULT_AUTH \
+                            DEFAULT_TYPE \
+                            DEFAULT_HOST \
+                            DEFAULT_PORT \
+                            DEFAULT_NAME \
+                            DEFAULT_USER \
+                            DEFAULT_PASS \
+                            DEFAULT_ENCRYPT_PASSPHRASE \
+                            DEFAULT_ENCRYPT_PUBKEY \
+                            DEFAULT_MONGO_CUSTOM_URI \
+                            DEFAULT_MYSQL_TLS_CA_FILE \
+                            DEFAULT_MYSQL_TLS_CERT_FILE \
+                            DEFAULT_MYSQL_TLS_KEY_FILE \
+                            DB"${backup_instance_number}"_AUTH \
+                            DB"${backup_instance_number}"_TYPE \
+                            DB"${backup_instance_number}"_HOST \
+                            DB"${backup_instance_number}"_PORT \
+                            DB"${backup_instance_number}"_NAME \
+                            DB"${backup_instance_number}"_NAME_EXCLUDE \
+                            DB"${backup_instance_number}"_USER \
+                            DB"${backup_instance_number}"_PASS \
+                            DB"${backup_instance_number}"_MONGO_CUSTOM_URI \
+                            DB"${backup_instance_number}"_MYSQL_TLS_CA_FILE \
+                            DB"${backup_instance_number}"_MYSQL_TLS_CERT_FILE \
+                            DB"${backup_instance_number}"_MYSQL_TLS_KEY_FILE \
+                            DB_AUTH \
+                            DB_HOST \
+                            DB_NAME \
+                            DB_PORT \
+                            DB_USER \
+                            DB_PASS \
+                            MONGO_CUSTOM_URI \
+                            MYSQL_TLS_CA_FILE \
+                            MYSQL_TLS_CERT_FILE
+
+
+        set -o posix ; set | grep -E "^DB${restore_instance_number}_|^DEFAULT_|^DB_|^MYSQL_" > "${restore_vars}"
+
+        if [ -n "${DB_DUMP_TARGET}" ]; then
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_FILESYSTEM_PATH=/d" "${restore_vars}"
+            echo "DEFAULT_FILESYSTEM_PATH=${DB_DUMP_TARGET}"  >> "${restore_vars}"
+        fi
+
+        if [ -n "${DB_DUMP_TARGET_ARCHIVE}" ]; then
+            print_warn "Deprecated and unsupported variable 'DB_DUMP_TARGET_ACRHIVE' detected - Please upgrade your variables as they will be removed in version 4.3.0"
+            sed -i "/DEFAULT_FILESYSTEM_ARCHIVE_PATH=/d" "${restore_vars}"
+            echo "DEFAULT_FILESYSTEM_ARCHIVE_PATH=${DB_DUMP_TARGET_ARCHIVE}"  >> "${restore_vars}"
+        fi
     }
 
     parse_variables() {
@@ -368,9 +413,24 @@ bootstrap_variables() {
         if var_true "${backup_job_resource_optimized}" ; then play_fair="nice -19 ionice -c2" ; fi
     }
 
+    upgrade_lonely_variables() {
+        upgrade_lonely_variables_tmp=$(mktemp)
+        set -o posix; set | grep "^$1" | grep -v "^$1[0-9]._" > "${upgrade_lonely_variables_tmp}"
+        while read -r exist_var ; do
+            if [ ! -v "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2)" ] ; then
+                export "${1}"01_"$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2-9)"="$(echo "${exist_var}" | cut -d = -f2)"
+            else
+                print_error "Variable ${1}01_$(echo "${exist_var}" | cut -d = -f1 | cut -d _ -f2) already exists, fix your variables and start again.."
+                exit 1
+            fi
+        done < "${upgrade_lonely_variables_tmp}"
+        rm -rf "${upgrade_lonely_variables_tmp}"
+    }
+
     case "${1}" in
         backup_init ) backup_init "$2" ;;
         parse_variables) parse_variables "$2" ;;
+        restore_init) restore_init ;;
         upgrade ) upgrade_lonely_variables "$2" ;;
     esac
 
