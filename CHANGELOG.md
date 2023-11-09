@@ -1,3 +1,9 @@
+## 4.0.1 2023-11-09 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Restore - Stop using DB_DUMP_TARGET and instead browse using DEFAULT_BACKUP_PATH
+
+
 ## 4.0.0 2023-11-08 <dave at tiredofit dot ca>
 
 This is the fourth major release to the DB Backup image which started as a basic MySQL backup service in early 2017. With each major release brings enhancements, bugfixes, removals along with breaking changes and this one is no different.
