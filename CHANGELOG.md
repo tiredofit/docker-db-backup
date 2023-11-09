@@ -1,3 +1,9 @@
+## 4.0.3 2023-11-09 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve issue with _MYSQL_TLS_CERT_FILE not being read
+
+
 ## 4.0.2 2023-11-09 <dave at tiredofit dot ca>
 
    ### Changed
