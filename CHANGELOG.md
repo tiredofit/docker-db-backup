@@ -1,3 +1,63 @@
+## 4.0.0 2023-11-08 <dave at tiredofit dot ca>
+
+This is the fourth major release to the DB Backup image which started as a basic MySQL backup service in early 2017. With each major release brings enhancements, bugfixes, removals along with breaking changes and this one is no different.
+
+This release brings functionality requested by the community such as multiple host backup support by means of independent scheduler tasks,blackout periods, better resource usage, better security via file encryption, file permissions, and more verbosity via log files. , and also merges contributions from other developers.
+
+Upgrading to this image should for the most part work for most users, but will involve event upgrading environment variables as the formathas changed significantly. Old variables should continue to work, however are unsupported and will be removed with the `4.3.0` release, whenever that will be.
+
+A significant amount of development hours were put in to accomodate for feature requests by the community. If you are using this in a commercial setting or find this image valuable, please consider sponsoring my work for a period of time or engaging in a private support offering. More details at https://www.tiredofit.ca/sponsor
+
+   ### Added
+
+      - Backup Multiple Hosts in same image all with different options (scheduling, compression, destination, cleanup) (Use `DBXX_option` variables)
+      - Backup limits how many backup jobs run concurrently
+      - Backup Scheduling now allows using a timestamp (e.g. `Dec 12 2023 03:00:00`) - credit benvia@github
+      - Backup Scheduling now allows using a cron expression (e.g `00 03 * * *`)
+      - Backup Blackout period to skip backing up during a period of time
+      - Backup runs as dedicated user (no longer root)
+      - Backup can have specific file permissions set upon completion (e.g. `700` or `rwx------`)
+      - Backups can run with reduced priority mode to allow for fair scheduling across system
+      - Backups - MySQL/MariaDB now has ability to backup events
+      - Backups - Microsoft SQL server now has option to backup transaction logs
+      - Backups - Postgres now backs up globals  - credit oscarsiles@github
+      - Backups with Azure synchronize storage before upload - credit eoehen@github
+      - Encrypt backup file with a passphrase or a GPG Public Key ability
+      - Log backup jobs to file along with log rotation
+      - Notification support upon job failure via Email, Mattermost, Matrix, Rocketchat
+      - Zabbix Metrics now auto discovers new jobs
+      - Zabbix Metrics sends metrics relating to backed up filename, checksum hash, and the duration of backup/compression time, checksum time, encryption time
+      - New Debug Capabilities
+
+   ### Changed
+
+      - Reworked Documentation
+      - Reworked all functions and renamed all variables
+      - Many variables now use a prefix of `DEFAULT_` to operate on all backup jobs
+      - Can be overridden per backup job by setting `DB_<option>` or to unset default variable `DB_<option>=unset`
+      - Renamed variables and terms
+         - `_DUMP_LOCATION` -> `_BACKUP_LOCATION`
+         - `_DUMP_BEGIN` -> `_BACKUP_BEGIN`
+         - `_DUMP_FREQ` -> `_BACKUP_INTERVAL`
+         - `_DUMP_TARGET`` -> `_FILESYSTEM_PATH`
+         - `_DUMP_ARCHIVE`` -> `_FILESYSTEM_PATH`
+         - `EXTRA_DUMP_OPTS`` -> `_EXTRA_BACKUP_OPTS`
+         - `TEMP_LOCATION`` -> `TEMP_PATH`
+      - Backups - AWS CLI updated to 1.29.78
+      - Backups - InfluxDB 2 Client version updated to 2.7.3
+      - Backups - Microsoft SQL server now compresses files post initial backup
+      - Backups - Manual backups handle aborting gracefully
+      - Checksum routines now complete in half the time
+      - Checksum variable now supports "NONE"
+      - Zabbix metrics sending occurs in one process as opposed to singular
+      - Cleanup Only cleanup files that match same backup name pattern
+      - Cleanup/Archive uses relative path instead of absolute with creating_latest_symlink
+      - A handful of code optimizations and cleanup
+
+   ### Removed
+      - `ENABLE_CHECKSUM` - has been wrapped into `_CHECKSUM=none`
+
+
 ## 3.12.0 2023-10-29 <alwynpan@github>
 
    ### Added
