@@ -1,3 +1,13 @@
+## 4.0.5 2023-11-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add undocumented DBBACKUP_USER|GROUP environment variables for troubleshooting permissions
+      - Add more verbosity when using DEBUG_ statements
+
+   ### Changed
+      - Change _FILESYSTEM_PERMISSION to 600 from 700
+
+
 ## 4.0.4 2023-11-09 <dave at tiredofit dot ca>
 
    ### Added
