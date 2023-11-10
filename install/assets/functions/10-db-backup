@@ -5,11 +5,11 @@ bootstrap_filesystem() {
     if [ ! -d "${backup_job_filesystem_path}" ]; then
         mkdir -p "${backup_job_filesystem_path}"
     fi
-    if [ "$(stat -c %U "${backup_job_filesystem_path}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_path}" ; fi
+    if [ "$(stat -c %U "${backup_job_filesystem_path}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${backup_job_filesystem_path}" ; fi
     if [ "$(stat -c %a "${backup_job_filesystem_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_path}" ; fi
 
     if [ -d "${backup_job_filesystem_archive_path}" ]; then
-        if [ "$(stat -c %U "${backup_job_filesystem_archive_path}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${backup_job_filesystem_archive_path}" ; fi
+        if [ "$(stat -c %U "${backup_job_filesystem_archive_path}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${backup_job_filesystem_archive_path}" ; fi
         if [ "$(stat -c %a "${backup_job_filesystem_archive_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_archive_path}" ; fi
     fi
 
@@ -17,14 +17,14 @@ bootstrap_filesystem() {
         mkdir -p "${LOG_PATH}"
     fi
 
-    if [ "$(stat -c %U "${LOG_PATH}")" != "dbbackup" ] ; then chown dbbackup:dbbackup "${LOG_PATH}" ; fi
+    if [ "$(stat -c %U "${LOG_PATH}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${LOG_PATH}" ; fi
     if [ ! -d "${LOG_PATH}"/"$(date +'%Y%m%d')" ]; then run_as_user mkdir -p "${LOG_PATH}"/"$(date +'%Y%m%d')"; fi
     if [ "$(stat -c %a "${LOG_PATH}")" != "755" ] ; then chmod -R 755 "${LOG_PATH}" ; fi
 
     if [ ! -d "${TEMP_PATH}" ]; then
         mkdir -p "${TEMP_PATH}"
     fi
-    if [ "$(stat -c %U "${TEMP_PATH}")" != "dbbackup" ] ; then chown -R dbbackup:dbbackup "${TEMP_PATH}" ; fi
+    if [ "$(stat -c %U "${TEMP_PATH}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${TEMP_PATH}" ; fi
     if var_true "${DEBUG_BOOTSTRAP_FILESYSTEM}" ; then debug off; fi
 }
 
@@ -1648,7 +1648,7 @@ process_limiter() {
 }
 
 run_as_user() {
-    s6-setuidgid dbbackup $@
+    s6-setuidgid "${DBBACKUP_USER}" $@
 }
 
 setup_mode() {
