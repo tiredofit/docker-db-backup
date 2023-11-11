@@ -48,7 +48,8 @@ bootstrap_variables() {
                             DEFAULT_USER \
                             DEFAULT_PASS \
                             DEFAULT_ENCRYPT_PASSPHRASE \
-                            DEFAULT_ENCRYPT_PUBKEY \
+                            DEFAULT_ENCRYPT_PUBLIC_KEY \
+                            DEFAULT_ENCRYPT_PRIVATE_KEY \
                             DEFAULT_MONGO_CUSTOM_URI \
                             DEFAULT_MYSQL_TLS_CA_FILE \
                             DEFAULT_MYSQL_TLS_CERT_FILE \
@@ -74,7 +75,8 @@ bootstrap_variables() {
                             DB"${backup_instance_number}"_USER \
                             DB"${backup_instance_number}"_PASS \
                             DB"${backup_instance_number}"_ENCRYPT_PASSPHRASE \
-                            DB"${backup_instance_number}"_ENCRYPT_PUBKEY \
+                            DB"${backup_instance_number}"_ENCRYPT_PUBLIC_KEY \
+                            DB"${backup_instance_number}"_ENCRYPT_PRIVATE_KEY \
                             DB"${backup_instance_number}"_MONGO_CUSTOM_URI \
                             DB"${backup_instance_number}"_MYSQL_TLS_CA_FILE \
                             DB"${backup_instance_number}"_MYSQL_TLS_CERT_FILE \
@@ -185,7 +187,8 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" ENABLE_PARALLEL_COMPRESSION backup_job_parallel_compression
         transform_backup_instance_variable "${backup_instance_number}" ENCRYPT backup_job_encrypt
         transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PASSPHRASE backup_job_encrypt_passphrase
-        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PUBKEY backup_job_encrypt_pubkey
+        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PRIVATE_KEY backup_job_encrypt_private_key
+        transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PUBLIC_KEY backup_job_encrypt_public_key
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_DUMP_OPTS backup_job_extra_dump_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_ENUMERATION_OPTS backup_job_extra_enumeration_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_OPTS backup_job_extra_opts
@@ -1237,21 +1240,26 @@ file_encryption() {
         if [ "${exit_code}" = "0" ] ; then
             print_debug "[file_encryption] Encrypting"
             output_off
-            if [ -n "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_pubkey}" ]; then
+            if [ -n "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_public_key}" ]; then
                 print_error "Can't encrypt as both ENCRYPT_PASSPHRASE and ENCRYPT_PUBKEY exist!"
                 return
-            elif [ -n "${backup_job_encrypt_passphrase}" ] && [ -z "${backup_job_encrypt_pubkey}" ]; then
+            elif [ -n "${backup_job_encrypt_passphrase}" ] && [ -z "${backup_job_encrypt_public_key}" ]; then
                 print_notice "Encrypting with GPG Passphrase"
                 encrypt_routines_start_time=$(date +'%s')
                 encrypt_tmp_dir=$(run_as_user mktemp -d)
                 echo "${backup_job_encrypt_passphrase}" | silent run_as_user ${play_fair} gpg --batch --home ${encrypt_tmp_dir} --yes --passphrase-fd 0 -c "${TEMP_PATH}"/"${backup_job_filename}"
                 rm -rf "${encrypt_tmp_dir}"
-            elif [ -z "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_pubkey}" ]; then
-                if [ -f "${backup_job_encrypt_pubkey}" ]; then
+            elif [ -z "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_public_key}" ] && [ -n "${backup_job_encrypt_private_key}" ]; then
+                if [ -f "${backup_job_encrypt_private_key}" ]; then
                     encrypt_routines_start_time=$(date +'%s')
-                    print_notice "Encrypting with GPG Public Key"
+                    print_notice "Encrypting with GPG Private Key"
                     encrypt_tmp_dir=$(run_as_user mktemp -d)
-                    silent run_as_user ${play_fair} gpg --batch --yes --home ${encrypt_tmp_dir} --recipient-file "${backup_job_encrypt_pubkey}" -c "${TEMP_PATH}"/"${backup_job_filename}"
+                    cat "${backup_job_encrypt_private_key}" | run_as_user tee "${encrypt_tmp_dir}"/private_key.asc > /dev/null
+                    print_debug "[file_encryption] [key] Importing Private Key"
+                    silent run_as_user gpg --home ${encrypt_tmp_dir} --batch --import "${encrypt_tmp_dir}"/private_key.asc
+                    print_debug "[file_encryption] [key] Encrypting to Public Key"
+                    cat "${backup_job_encrypt_public_key}" | run_as_user tee "${encrypt_tmp_dir}"/public_key.asc > /dev/null
+                    silent run_as_user ${play_fair} gpg --batch --yes --home "${encrypt_tmp_dir}" --encrypt --recipient-file "${encrypt_tmp_dir}"/public_key.asc "${TEMP_PATH}"/"${backup_job_filename}"
                     rm -rf "${encrypt_tmp_dir}"
                 fi
             fi
@@ -1266,6 +1274,9 @@ file_encryption() {
 - dbbackup.backup.encrypt.duration.[${backup_job_db_host}.${backup_job_db_name}] ${encrypt_routines_total_time}
 EOF
                 )
+            else
+                print_error "Encryption failed! Could not detect encrypted file"
+                return 99
             fi
         else
             write_log error "Skipping encryption because backup did not complete successfully"

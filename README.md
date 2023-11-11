@@ -214,12 +214,13 @@ If these are set and no other defaults or variables are set explicitly, they wil
 
 Encryption occurs after compression and the encrypted filename will have a `.gpg` suffix
 
-| Variable                     | Description                                 | Default |
-| ---------------------------- | ------------------------------------------- | ------- |
-| `DEFAULT_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
-| `DEFAULT_ENCRYPT_PASSPHRASE` | Passphrase to encrypt file with GPG         |         |
-| *or*                         |                                             |         |
-| `DEFAULT_ENCRYPT_PUBKEY`     | Path of public key to encrypt file with GPG |         |
+| Variable                      | Description                                  | Default | `_FILE` |
+| ----------------------------- | -------------------------------------------- | ------- | ------- |
+| `DEFAULT_ENCRYPT`             | Encrypt file after backing up with GPG       | `FALSE` |         |
+| `DEFAULT_ENCRYPT_PASSPHRASE`  | Passphrase to encrypt file with GPG          |         | x       |
+| *or*                          |                                              |         |         |
+| `DEFAULT_ENCRYPT_PUBLIC_KEY`  | Path of public key to encrypt file with GPG  |         | x       |
+| `DEFAULT_ENCRYPT_PRIVATE_KEY` | Path of private key to encrypt file with GPG |         | x       |
 
 ##### Scheduling Options
 
@@ -476,12 +477,14 @@ Otherwise, override them per backup job. Additional backup jobs can be scheduled
 
 Encryption will occur after compression and the resulting filename will have a `.gpg` suffix
 
-| Variable                  | Description                                 | Default |
-| ------------------------- | ------------------------------------------- | ------- |
-| `DB01_ENCRYPT`            | Encrypt file after backing up with GPG      | `FALSE` |
-| `DB01_ENCRYPT_PASSPHRASE` | Passphrase to encrypt file with GPG         |         |
-| *or*                      |                                             |         |
-| `DB01_ENCRYPT_PUBKEY`     | Path of public key to encrypt file with GPG |         |
+
+| Variable                   | Description                                  | Default | `_FILE` |
+| -------------------------- | -------------------------------------------- | ------- | ------- |
+| `DB01_ENCRYPT`             | Encrypt file after backing up with GPG       | `FALSE` |         |
+| `DB01_ENCRYPT_PASSPHRASE`  | Passphrase to encrypt file with GPG          |         | x       |
+| *or*                       |                                              |         |         |
+| `DB01_ENCRYPT_PUBLIC_KEY`  | Path of public key to encrypt file with GPG  |         | x       |
+| `DB01_ENCRYPT_PRIVATE_KEY` | Path of private key to encrypt file with GPG |         | x       |
 
 ##### Scheduling Options
 
