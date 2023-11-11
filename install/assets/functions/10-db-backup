@@ -1219,6 +1219,9 @@ debug() {
             fi
             if [ -z "${_original_show_output}" ]; then
                 _original_show_output="${SHOW_OUTPUT}"
+                if ! [[ "${_original_show_output,,}" =~ true|false ]]; then
+                    __original_show_output="FALSE"
+                fi
             fi
             backup_job_log_level=DEBUG
             CONTAINER_LOG_LEVEL=DEBUG
