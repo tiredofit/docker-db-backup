@@ -1195,7 +1195,7 @@ db_backup_container_init() {
 debug() {
     case "${1}" in
         off)
-            backup_job_log_level=$_original_job_log_log_level}
+            backup_job_log_level=$_original_job_log_level}
             CONTAINER_LOG_LEVEL=${_original_container_log_level}
             DEBUG_MODE=${_original_debug_mode}
             SHOW_OUTPUT=${_original_show_output}
@@ -1248,7 +1248,7 @@ file_encryption() {
                     encrypt_routines_start_time=$(date +'%s')
                     print_notice "Encrypting with GPG Public Key"
                     encrypt_tmp_dir=$(run_as_user mktemp -d)
-                    silent run_as_user ${play_fair} gpg --batch --yes --home "${encrypt_tmp_dir}" --recipient-file "${backup_job_encrypt_pubkey}" -c "${TEMP_PATH}"/"${backup_job_filename}"
+                    silent run_as_user ${play_fair} gpg --batch --yes --home ${encrypt_tmp_dir} --recipient-file "${backup_job_encrypt_pubkey}" -c "${TEMP_PATH}"/"${backup_job_filename}"
                     rm -rf "${encrypt_tmp_dir}"
                 fi
             fi
