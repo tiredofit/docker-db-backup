@@ -8,8 +8,11 @@ source /assets/functions/10-db-backup
 source /assets/defaults/10-db-backup
 bootstrap_variables backup_init {{BACKUP_NUMBER}}
 bootstrap_variables parse_variables {{BACKUP_NUMBER}}
-PROCESS_NAME="{{BACKUP_NUMBER}}-${backup_job_db_host}__${backup_job_db_name}"
-
+if [ -z "${backup_job_db_name}" ]; then
+    PROCESS_NAME="{{BACKUP_NUMBER}}${backup_job_db_host//\//_}"
+else
+    PROCESS_NAME="{{BACKUP_NUMBER}}-${backup_job_db_host//\//_}__${backup_job_db_name}"
+fi
 
 trap ctrl_c INT
 
