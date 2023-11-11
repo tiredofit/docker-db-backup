@@ -160,16 +160,16 @@ bootstrap_variables() {
 
         transform_backup_instance_variable() {
             if grep -q "^DB${1}_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
-                export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+                export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2-)"
             elif grep -q "^DB_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
                 # Allow old legacy work, perhaps remove old DB_ functionality in future? This should allow for seamless upgrades
                 #print_warn "Legacy Variable 'DB_${2}'' detected - Please upgrade your variables as they will be removed in version 4.3.0"
-                export "$3"="$(grep "^DB_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+                export "$3"="$(grep "^DB_${2}=" "${backup_instance_vars}" | cut -d = -f2-)"
             elif grep -q "^${2}=" "${backup_instance_vars}" && [ "$(grep "^${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
                 print_warn "Legacy unsupported variable '${2}' detected - Please upgrade your variables as they will be removed in version 4.3.0"
-                export "$3"="$(grep "^${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+                export "$3"="$(grep "^${2}=" "${backup_instance_vars}" | cut -d = -f2-)"
             elif grep -q "^DEFAULT_${2}=" "${backup_instance_vars}" && [ "$(grep "^DEFAULT_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
-                export "$3"="$(grep "^DEFAULT_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
+                export "$3"="$(grep "^DEFAULT_${2}=" "${backup_instance_vars}" | cut -d = -f2-)"
             fi
         }
 

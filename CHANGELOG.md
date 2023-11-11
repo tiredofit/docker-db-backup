@@ -1,3 +1,9 @@
+## 4.0.10 2023-11-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Change environment variable parsing routines to properly accomodate for Passwords containing '=='
+
+
 ## 4.0.9 2023-11-11 <dave at tiredofit dot ca>
 
    ### Changed
