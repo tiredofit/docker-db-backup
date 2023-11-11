@@ -1,3 +1,15 @@
+## 4.0.7 2023-11-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add seperate permissions for _FILESYSTEM_PATH
+
+   ### Changed
+      - More output and debugging additions
+      - SQLite3 now backs up without running into file permission/access problems
+      - Cleanup old sqlite backups from temp directory
+      - Handle multiple SQLite3 backups concurrently
+
+
 ## 4.0.6 2023-11-10 <dave at tiredofit dot ca>
 
    ### Added
