@@ -6,11 +6,11 @@ bootstrap_filesystem() {
         mkdir -p "${backup_job_filesystem_path}"
     fi
     if [ "$(stat -c %U "${backup_job_filesystem_path}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${backup_job_filesystem_path}" ; fi
-    if [ "$(stat -c %a "${backup_job_filesystem_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_path}" ; fi
+    if [ "$(stat -c %a "${backup_job_filesystem_path}")" != "${backup_job_filesystem_path_permission}" ] ; then chmod "${backup_job_filesystem_path_permission}" "${backup_job_filesystem_path}" ; fi
 
     if [ -d "${backup_job_filesystem_archive_path}" ]; then
         if [ "$(stat -c %U "${backup_job_filesystem_archive_path}")" != "${DBBACKUP_USER}" ] ; then chown -R "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${backup_job_filesystem_archive_path}" ; fi
-        if [ "$(stat -c %a "${backup_job_filesystem_archive_path}")" != "${backup_job_filesystem_permission}" ] ; then chmod -R "${backup_job_filesystem_permission}" "${backup_job_filesystem_archive_path}" ; fi
+        if [ "$(stat -c %a "${backup_job_filesystem_archive_path}")" != "${backup_job_filesystem_path_permission}" ] ; then chmod "${backup_job_filesystem_path_permission}" "${backup_job_filesystem_archive_path}" ; fi
     fi
 
     if [ ! -d "${LOG_PATH}" ]; then
@@ -191,6 +191,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_OPTS backup_job_extra_opts
         transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_ARCHIVE_PATH backup_job_filesystem_archive_path
         transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_PATH backup_job_filesystem_path
+        transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_PATH_PERMISSION backup_job_filesystem_path_permission
         transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_PERMISSION backup_job_filesystem_permission
         transform_backup_instance_variable "${backup_instance_number}" GZ_RSYNCABLE backup_job_gz_rsyncable
         transform_backup_instance_variable "${backup_instance_number}" HOST backup_job_db_host
@@ -459,12 +460,7 @@ backup_couch() {
     prepare_dbbackup
     backup_job_filename=couch_${backup_job_db_name}_${backup_job_db_host#*//}_${now}.txt
     backup_job_filename_base=couch_${backup_job_db_name}_${backup_job_db_host#*//}
-    compression
-    pre_dbbackup ${backup_job_db_name}
-    write_log notice "Dumping CouchDB database: '${backup_job_db_name}' ${compression_string}"
-    if var_true "${DEBUG_BACKUP_COUCH}" ; then debug on; fi
-    run_as_user curl -sSL -X GET ${backup_job_db_host}:${backup_job_db_port}/${backup_job_db_name}/_all_docs?include_docs=true | ${compress_cmd} | run_as_user tee "${TEMP_PATH}"/"${backup_job_filename}" > /dev/null
-    exit_code=$?
+    compressionzyclonite
     if var_true "${DEBUG_BACKUP_COUCH}" ; then debug off; fi
     check_exit_code backup "${backup_job_filename}"
     timer backup finish
@@ -847,7 +843,7 @@ backup_sqlite3() {
     pre_dbbackup "${db}"
     write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
     if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi
-    silent run_as_user ${play_fair} sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup.sqlite3'"
+    silent run_as_user ${play_fair} sqlite3 "${backup_job_db_host}" ".backup ${TEMP_PATH}/backup.sqlite3"
     exit_code=$?
     check_exit_code backup "${backup_job_filename}"
     run_as_user ${play_fair} cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${backup_job_filename}" > /dev/null

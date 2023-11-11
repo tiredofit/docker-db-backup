@@ -322,12 +322,13 @@ Options that are related to the value of `DEFAULT_BACKUP_LOCATION`
 
 If `DEFAULT_BACKUP_LOCTION` = `FILESYSTEM` then the following options are used:
 
-| Variable                          | Description                                                                                           | Default                               |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `DEFAULT_CREATE_LATEST_SYMLINK`   | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)` | `TRUE`                                |
-| `DEFAULT_FILESYSTEM_PATH`         | Directory where the database dumps are kept.                                                          | `/backup`                             |
-| `DEFAULT_FILESYSTEM_ARCHIVE_PATH` | Optional Directory where the database dumps archives are kept                                         | `${DEFAULT_FILESYSTEM_PATH}/archive/` |
-| `DEFAULT_FILESYSTEM_PERMISSION`   | Directory and File permissions to apply to files.                                                     | `600`                                 |
+| Variable                             | Description                                                                                           | Default                               |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `DEFAULT_CREATE_LATEST_SYMLINK`      | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)` | `TRUE`                                |
+| `DEFAULT_FILESYSTEM_PATH`            | Directory where the database dumps are kept.                                                          | `/backup`                             |
+| `DEFAULT_FILESYSTEM_PATH_PERMISSION` | Permissions to apply to backup directory                                                              | `700`                                 |
+| `DEFAULT_FILESYSTEM_ARCHIVE_PATH`    | Optional Directory where the database dumps archives are kept                                         | `${DEFAULT_FILESYSTEM_PATH}/archive/` |
+| `DEFAULT_FILESYSTEM_PERMISSION`      | Permissions to apply to files.                                                                        | `600`                                 |
 
 ###### S3
 
@@ -492,7 +493,7 @@ Encryption will occur after compression and the resulting filename will have a `
 |                              | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |         |
 |                              | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |         |
 |                              | Full datestamp e.g. `2023-12-21 23:30:00`                                                                                                      |         |
-|                              | Cron expression e.g. `30 23 * * *`  [Understand the format](https://en.wikipedia.org/wiki/Cron) - *BACKUP_INTERVAL is ignored*              |         |
+|                              | Cron expression e.g. `30 23 * * *`  [Understand the format](https://en.wikipedia.org/wiki/Cron) - *BACKUP_INTERVAL is ignored*                 |         |
 | `DB01_CLEANUP_TIME`          | Value in minutes to delete old backups (only fired when backup interval executes)                                                              | `FALSE` |
 |                              | 1440 would delete anything above 1 day old. You don't need to set this variable if you want to hold onto everything.                           |         |
 | `DB01_ARCHIVE_TIME`          | Value in minutes to move all files files older than (x) from `DB01_BACKUP_FILESYSTEM_PATH`                                                     |         |
@@ -597,12 +598,13 @@ Options that are related to the value of `DB01_BACKUP_LOCATION`
 
 If `DB01_BACKUP_LOCTION` = `FILESYSTEM` then the following options are used:
 
-| Variable                       | Description                                                                                           | Default                           |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `DB01_CREATE_LATEST_SYMLINK`   | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)` | `TRUE`                            |
-| `DB01_FILESYSTEM_PATH`         | Directory where the database dumps are kept.                                                          | `/backup`                         |
-| `DB01_FILESYSTEM_ARCHIVE_PATH` | Optional Directory where the database dumps archives are kept                                         | `${DB01_FILESYSTEM_PATH/archive/` |
-| `DB01_FILESYSTEM_PERMISSION`   | Directory and File permissions to apply to files.                                                     | `600`                             |
+| Variable                          | Description                                                                                           | Default                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `DB01_CREATE_LATEST_SYMLINK`      | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)` | `TRUE`                            |
+| `DB01_FILESYSTEM_PATH`            | Directory where the database dumps are kept.                                                          | `/backup`                         |
+| `DB01_FILESYSTEM_PATH_PERMISSION` | Permissions to apply to backup directory                                                              | `700`                             |
+| `DB01_FILESYSTEM_ARCHIVE_PATH`    | Optional Directory where the database dumps archives are kept                                         | `${DB01_FILESYSTEM_PATH/archive/` |
+| `DB01_FILESYSTEM_PERMISSION`      | Directory and File permissions to apply to files.                                                     | `600`                             |
 
 ###### S3
 
