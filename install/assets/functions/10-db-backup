@@ -153,6 +153,11 @@ bootstrap_variables() {
         fi
         ##
 
+        if grep -qo ".*_PASS='.*'" "${backup_instance_vars}"; then
+            print_debug "[bootstrap_variables] [backup_init] Found _PASS variable with quotes"
+            sed -i "s|_PASS='\(.*\)'|_PASS=\1|g" "${backup_instance_vars}"
+        fi
+
         transform_backup_instance_variable() {
             if grep -q "^DB${1}_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
                 export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)"
@@ -1738,7 +1743,7 @@ process_limiter() {
 }
 
 run_as_user() {
-    sudo -u "${DBBACKUP_USER}" $@
+    sudo -Eu "${DBBACKUP_USER}" $@
 }
 
 setup_mode() {

@@ -1,3 +1,9 @@
+## 4.0.9 2023-11-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with quotes being wrapped around _PASS variables
+
+
 ## 4.0.8 2023-11-11 <dave at tiredofit dot ca>
 
    ### Changed
