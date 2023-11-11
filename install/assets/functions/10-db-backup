@@ -1183,7 +1183,7 @@ EOF
 }
 
 ctrl_c() {
-    sed -i "/^{{BACKUP_NUMBER}}/d" /tmp/.container/db-backup-backups
+    sed -i "/^${backup_instance_number}/d" /tmp/.container/db-backup-backups
     symlink_log
     print_warn "User aborted"
     exit

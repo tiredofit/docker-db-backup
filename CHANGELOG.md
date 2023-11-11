@@ -2,8 +2,8 @@
 
    ### Changed
       - Tidy up file_encryption() routines
-      - Change environment variable _ENCRYPTION_PUBKEY to _ENCRYPTION_PUBLIC_KEY
-      - Add new environment variable _ENCRYPTION_PRIVATE_KEY
+      - Change environment variable _ENCRYPT_PUBKEY to _ENCRYPT_PUBLIC_KEY
+      - Add new environment variable _ENCRYPT_PRIVATE_KEY
 
 
 ## 4.0.7 2023-11-11 <dave at tiredofit dot ca>
