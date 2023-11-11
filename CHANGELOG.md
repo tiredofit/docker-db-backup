@@ -1,3 +1,9 @@
+## 4.0.11 2023-11-11 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve issue with backing up ALL databases with PGSQL and MySQL
+
+
 ## 4.0.10 2023-11-11 <dave at tiredofit dot ca>
 
    ### Changed

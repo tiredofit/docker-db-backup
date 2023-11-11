@@ -734,7 +734,7 @@ backup_pgsql() {
     fi
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up all databases"
-        db_names=$(run_as_user psql -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        db_names=$(psql -h ${backup_job_db_host} -U ${backup_job_db_user} -p ${backup_job_db_port} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         if [ -n "${backup_job_db_name_exclude}" ] ; then
             db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -782,7 +782,7 @@ backup_pgsql() {
         pre_dbbackup all
         write_log notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
-        tmp_db_names=$(run_as_user psql -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
+        tmp_db_names=$(psql -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} -d ${authdb} -c 'COPY (SELECT datname FROM pg_database WHERE datistemplate = false) TO STDOUT;' )
         for r_db_name in $(echo $db_names | xargs); do
             tmp_db_names=$(echo "$tmp_db_names" | xargs | sed "s|${r_db_name}||g"  )
         done
@@ -1743,7 +1743,7 @@ process_limiter() {
 }
 
 run_as_user() {
-    sudo -Eu "${DBBACKUP_USER}" $@
+    sudo -Eu "${DBBACKUP_USER}" "$@"
 }
 
 setup_mode() {
