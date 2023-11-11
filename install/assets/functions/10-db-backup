@@ -839,16 +839,21 @@ backup_sqlite3() {
     db="${db%.*}"
     backup_job_filename=sqlite3_${db}_${now}.sqlite3
     backup_job_filename_base=sqlite3_${db}.sqlite3
-    compression
     pre_dbbackup "${db}"
     write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
     if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi
-    silent run_as_user ${play_fair} sqlite3 "${backup_job_db_host}" ".backup ${TEMP_PATH}/backup.sqlite3"
+    silent ${play_fair} sqlite3 "${backup_job_db_host}" ".backup '${TEMP_PATH}/backup_${now}.sqlite3'"
     exit_code=$?
     check_exit_code backup "${backup_job_filename}"
-    run_as_user ${play_fair} cat "${TEMP_PATH}"/backup.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${backup_job_filename}" > /dev/null
-    timer backup finish
+    if [ ! -f "${TEMP_PATH}"/backup_${now}.sqlite3 ] ; then
+        print_error "SQLite3 backup failed! Exitting"
+        return 1
+    fi
+    compression
+    run_as_user ${play_fair} cat "${TEMP_PATH}"/backup_${now}.sqlite3 | ${dir_compress_cmd} | run_as_user tee "${TEMP_PATH}/${backup_job_filename}" > /dev/null
+    rm -rf "${TEMP_PATH}"/backup_${now}.sqlite3
     if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug off; fi
+    timer backup finish
     file_encryption
     generate_checksum
     move_dbbackup
@@ -1190,7 +1195,11 @@ db_backup_container_init() {
 debug() {
     case "${1}" in
         off)
+            backup_job_log_level=$_original_job_log_log_level}
+            CONTAINER_LOG_LEVEL=${_original_container_log_level}
             DEBUG_MODE=${_original_debug_mode}
+            SHOW_OUTPUT=${_original_show_output}
+
             if var_true "${DEBUG_MODE}" ; then
                 set -x
             else
@@ -1198,9 +1207,22 @@ debug() {
             fi
         ;;
         on)
+            if [ -z "${_original_container_log_level}" ]; then
+                _original_container_log_level="${CONTAINER_LOG_LEVEL}"
+            fi
+            if [ -z "${_original_job_log_level}" ]; then
+                _original_job_log_level="${backup_job_log_level}"
+            fi
+
             if [ -z "${_original_debug_mode}" ]; then
                 _original_debug_mode="${DEBUG_MODE}"
             fi
+            if [ -z "${_original_show_output}" ]; then
+                _original_show_output="${SHOW_OUTPUT}"
+            fi
+            backup_job_log_level=DEBUG
+            CONTAINER_LOG_LEVEL=DEBUG
+            SHOW_OUTPUT=TRUE
             set -x
         ;;
     esac
