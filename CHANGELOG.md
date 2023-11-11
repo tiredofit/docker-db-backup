@@ -1,3 +1,12 @@
+## 4.0.6 2023-11-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add additional DEBUG_ statements
+
+   ### Changed
+      - Fix issue with Influx DB not properly detecting the correct version
+
+
 ## 4.0.5 2023-11-10 <dave at tiredofit dot ca>
 
    ### Added

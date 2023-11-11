@@ -237,6 +237,14 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" USER backup_job_db_user
 
         backup_job_backup_begin=$(echo "${backup_job_backup_begin}" | sed -e "s|'||g" -e 's|"||g')
+        if var_true "${DEBUG_BACKUP_INSTANCE_VARIABLE}" ; then cat <<EOF
+## BEGIN Variable Dump $(TZ=${TIMEZONE} date)
+
+$(cat ${backup_instance_vars})
+
+## END
+EOF
+        fi
         rm -rf "${backup_instance_vars}"
     }
 
@@ -315,7 +323,7 @@ bootstrap_variables() {
             ## Check is Variable is Defined
             ## Usage: check_var transformed_varname real_varname "Description"
             output_off
-            print_debug "Looking for existence of $2 environment variable"
+            print_debug "[parse_variables] Looking for existence of $2 environment variable"
             if [ ! -v "$1" ]; then
                 print_error "No '$3' Entered! - Set '\$$2' environment variable - Halting Backup Number ${v_instance}"
                 s6-svc -d /var/run/s6/legacy-services/dbbackup-"${v_instance}"
@@ -470,15 +478,16 @@ backup_couch() {
 backup_influx() {
      if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
     if [ "${backup_job_db_name,,}" = "all" ] ; then
-        write_log debug "Preparing to back up everything"
+        write_log debug "[backup_influx] Preparing to back up everything"
         db_names=justbackupeverything
     else
         db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
     fi
     if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
 
-    case "${backup_job_db_influx_version,,}" in
+    case "${backup_job_influx_version,,}" in
         1 )
+            print_debug "[backup_influx] Influx DB Version 1 selected"
             for db in ${db_names}; do
                 prepare_dbbackup
                  if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
@@ -507,6 +516,7 @@ backup_influx() {
             done
         ;;
         2 )
+            print_debug "[backup_influx] Influx DB Version 2 selected"
             for db in ${db_names}; do
                 prepare_dbbackup
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
@@ -1049,6 +1059,7 @@ compression() {
 
     case "${backup_job_compression,,}" in
         bz* )
+            print_debug "[compression] Selected BZIP"
             compress_cmd="${play_fair} pbzip2 -q -${backup_job_compression_level} -p${backup_job_parallel_compression_threads} "
             compression_type="bzip2"
             dir_compress_cmd=${compress_cmd}
@@ -1057,6 +1068,7 @@ compression() {
             backup_job_filename=${backup_job_filename}.bz2
         ;;
         gz* )
+            print_debug "[compression] Selected GZIP"
             compress_cmd="${play_fair} pigz -q -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="gzip"
             extension=".gz"
@@ -1065,6 +1077,7 @@ compression() {
             backup_job_filename=${backup_job_filename}.gz
         ;;
         xz* )
+            print_debug "[compression] Selected XZIP"
             compress_cmd="${play_fair} pixz -${backup_job_compression_level} -p ${backup_job_parallel_compression_threads} "
             compression_type="xzip"
             dir_compress_cmd=${compress_cmd}
@@ -1073,6 +1086,7 @@ compression() {
             backup_job_filename=${backup_job_filename}.xz
         ;;
         zst* )
+            print_debug "[compression] Selected ZSTD"
             compress_cmd="${play_fair} zstd -q -q --rm -${backup_job_compression_level} -T${backup_job_parallel_compression_threads} ${gz_rsyncable}"
             compression_type="zstd"
             dir_compress_cmd=${compress_cmd}
@@ -1121,9 +1135,10 @@ create_schedulers() {
     backup() {
         bootstrap_variables upgrade BACKUP
         local backup_instances=$(printenv | sort | grep -c "^DB[0-9]._HOST")
+        print_debug "[create_schedulers] Found '${backup_instances}' DB_HOST instances"
         if [ -n "${DB_HOST}" ] && [ "${backup_instances}" ]; then
           backup_instances=1;
-          print_debug "Detected using old DB_ variables"
+          print_debug "[create_schedulers] Detected using old DB_ variables"
         fi
 
         for (( instance = 01; instance <= backup_instances; )) ; do
@@ -1199,7 +1214,7 @@ file_encryption() {
     if var_true "${DEBUG_FILE_ENCRYPTION}" ; then debug on; fi
     if var_true "${backup_job_encrypt}" ; then
         if [ "${exit_code}" = "0" ] ; then
-            print_debug "Encrypting"
+            print_debug "[file_encryption] Encrypting"
             output_off
             if [ -n "${backup_job_encrypt_passphrase}" ] && [ -n "${backup_job_encrypt_pubkey}" ]; then
                 print_error "Can't encrypt as both ENCRYPT_PASSPHRASE and ENCRYPT_PUBKEY exist!"
@@ -1220,6 +1235,7 @@ file_encryption() {
                 fi
             fi
             if [ -f "${TEMP_PATH}"/"${backup_job_filename}".gpg ]; then
+                print_debug "[file_encryption] Deleting original file"
                 rm -rf "${TEMP_PATH:?}"/"${backup_job_filename:?}"
                 backup_job_filename="${backup_job_filename}.gpg"
 
@@ -1395,23 +1411,23 @@ EOF
         for notification_type in $notification_types ; do
             case "${notification_type,,}" in
                 "custom" )
-                    print_debug "Sending Notification via custom"
+                    print_debug "[notify] Sending Notification via custom"
                     notification_custom "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
                 "email" | "mail" )
-                    print_debug "Sending Notification via email"
+                    print_debug "[notify] Sending Notification via email"
                     notification_email "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
                 "matrix" )
-                    print_debug "Sending Notification via Matrix"
+                    print_debug "[notify] Sending Notification via Matrix"
                     notification_matrix "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
                 "mattermost" )
-                    print_debug "Sending Notification via Mattermost"
+                    print_debug "[notify] Sending Notification via Mattermost"
                     notification_mattermost "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
                 "rocketchat" )
-                    print_debug "Sending Notification via Rocketchat"
+                    print_debug "[notify] Sending Notification via Rocketchat"
                     notification_rocketchat "${1}" "${2}" "${3}" "${4}" "${5}"
                 ;;
                 * )
@@ -1454,8 +1470,37 @@ move_dbbackup() {
                 write_log debug "Moving backup to filesystem"
                 run_as_user mkdir -p "${backup_job_filesystem_path}"
                 if [ "${backup_job_checksum,,}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/ ; fi
+                if var_true "${DEBUG_MOVE_DBBACKUP}"; then
+                cat <<EOF
+## BEGIN Before Moving file from TEMP_PATH $(TZ=${TIMEZONE} date)
+##
+
+$(ls -l "${TEMP_PATH}"/*)
+
+## END
+EOF
+                fi
                 run_as_user mv "${TEMP_PATH}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/"${backup_job_filename}"
                 move_exit_code=$?
+                if var_true "${DEBUG_MOVE_DBBACKUP}"; then
+                cat <<EOF
+## BEGIN After Moving file from TEMP_PATH $(TZ=${TIMEZONE} date)
+##
+
+$(ls -l "${TEMP_PATH}"/*)
+
+## END
+
+## BEGIN After Moving file to _FILESYSTEM_PATH $(TZ=${TIMEZONE} date)
+##
+
+$(ls -l "${backup_job_filesystem_path}"/*)
+
+## END
+
+EOF
+                fi
+
                 if var_true "${backup_job_create_latest_symlink}" ; then
                     run_as_user ln -sfr "${backup_job_filesystem_path}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/latest-"${backup_job_filename_base}"
                 fi
@@ -1661,7 +1706,7 @@ process_limiter() {
 }
 
 run_as_user() {
-    s6-setuidgid "${DBBACKUP_USER}" $@
+    sudo -u "${DBBACKUP_USER}" $@
 }
 
 setup_mode() {
@@ -1894,18 +1939,18 @@ timer() {
         ;;
         datetime)
             time_begin=$(date -d "${backup_job_backup_begin}" +%s)
-            print_debug "BACKUP_BEGIN time = ${time_begin}"
+            print_debug "[timer] [datetime] BACKUP_BEGIN time = ${time_begin}"
             time_wait=$(( time_begin - time_current ))
-            print_debug "Difference in seconds: ${time_wait}"
+            print_debug "[timer] [datetime] Difference in seconds: ${time_wait}"
 
             if (( ${time_wait} < 0 )); then
                 time_wait=$(( (${time_wait} + (${backup_job_backup_interval} - 1)) / (${backup_job_backup_interval} * 60) ))
                 time_wait=$(( ${time_wait} * -1 ))
-                print_debug "Difference in seconds (rounded) time_wait is in the past : ${time_wait}"
+                print_debug "[timer] [datetime] Difference in seconds (rounded) time_wait is in the past : ${time_wait}"
             fi
 
             time_future=$(( time_current + time_wait ))
-            print_debug "Future execution time = ${time_future}"
+            print_debug "[timer] [datetime] Future execution time = ${time_future}"
         ;;
         job)
             case "${2}" in
