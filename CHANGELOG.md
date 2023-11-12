@@ -1,3 +1,9 @@
+## 4.0.12 2023-11-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Allow creating schedulers if _MONGO_CUSTOM_URI is set and _DB_HOST blank
+
+
 ## 4.0.11 2023-11-11 <dave at tiredofit dot ca>
 
    ### Changed

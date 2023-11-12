@@ -1141,10 +1141,11 @@ create_archive() {
 
 create_schedulers() {
     if var_true "${DEBUG_CREATE_SCHEDULERS}" ; then debug on; fi
+
     backup() {
-        bootstrap_variables upgrade BACKUP
-        local backup_instances=$(printenv | sort | grep -c "^DB[0-9]._HOST")
+        local backup_instances=$(set -o posix ; set | grep -Pc "^(DB[0-9]._HOST=|.*MONGO_CUSTOM_URI=)")
         print_debug "[create_schedulers] Found '${backup_instances}' DB_HOST instances"
+
         if [ -n "${DB_HOST}" ] && [ "${backup_instances}" ]; then
           backup_instances=1;
           print_debug "[create_schedulers] Detected using old DB_ variables"
