@@ -1,3 +1,10 @@
+## 4.0.14 2023-11-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Bugfix when PRE/POST scripts found not giving legacy warning
+      - Run pre / post scripts as root
+
+
 ## 4.0.13 2023-11-12 <dave at tiredofit dot ca>
 
    ### Changed

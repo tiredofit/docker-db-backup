@@ -1632,19 +1632,19 @@ pre_dbbackup() {
     ### Pre Backup Custom Script Support
     if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
         write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
-        run_as_user mkdir -p "${backup_job_script_location_pre}"
-        silent run_as_user cp /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
+        mkdir -p "${backup_job_script_location_pre}"
+        silent cp -aR /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
     fi
 
     if [ -d "${backup_job_script_location_pre}" ] && dir_notempty "${backup_job_script_location_pre}" ; then
         for f in $(find ${backup_job_script_location_pre} -name \*.sh -type f); do
             if var_true "${backup_job_pre_script_x_verify}" ; then
-                run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
+                ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
             else
                 if [ -x "${f}" ] ; then
                     write_log notice "Executing pre backup custom script : '${f}'"
                     ## script DB_TYPE DB_HOST DB_NAME STARTEPOCH BACKUP_FILENAME
-                    run_as_user ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
+                    ${f} "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
                 else
                     write_log error "Can't run pre backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
@@ -1687,11 +1687,11 @@ EOZP
     ### Post Script Support
     if [ -n "${backup_job_post_script}" ] ; then
         if var_true "${backup_job_post_script_x_verify}" ; then
-            run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+            eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
         else
             if [ -x "${backup_job_post_script}" ] ; then
                 write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}"
-                run_as_user eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+                eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 write_log error "Can't execute POST_SCRIPT environment variable '${backup_job_post_script}' as its filesystem bit is not executible!"
             fi
@@ -1701,19 +1701,19 @@ EOZP
     ### Post Backup Custom Script Support
     if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
         write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
-        run_as_user mkdir -p "${backup_job_script_location_post}"
-        silent run_as_user cp /assets/custom-scripts/* "${backup_job_script_location_post}"
+        mkdir -p "${backup_job_script_location_post}"
+        cp -aR /assets/custom-scripts/* "${backup_job_script_location_post}"
     fi
 
     if [ -d "${backup_job_script_location_post}" ] && dir_notempty "${backup_job_script_location_post}" ; then
         for f in $(run_as_user find "${backup_job_script_location_post}" -name \*.sh -type f); do
             if var_true "${backup_job_post_script_x_verify}" ; then
-                run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+                ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 if [ -x "${f}" ] ; then
                     write_log notice "Executing post backup custom script : '${f}'"
                     ## script EXIT_CODE DB_TYPE DB_HOST DB_NAME STARTEPOCH FINISHEPOCH DURATIONEPOCH BACKUP_FILENAME FILESIZE CHECKSUMVALUE
-                    run_as_user ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
+                    ${f} "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
                 else
                     write_log error "Can't run post backup custom script: '${f}' as its filesystem bit is not executible!"
                 fi
