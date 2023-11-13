@@ -158,6 +158,11 @@ bootstrap_variables() {
             sed -i "s|_PASS='\(.*\)'|_PASS=\1|g" "${backup_instance_vars}"
         fi
 
+        if grep -qo "MONGO_CUSTOM_URI='.*'" "${backup_instance_vars}"; then
+            print_debug "[bootstrap_variables] [backup_init] Found _MONGO_CUSTOM_URI variable with quotes"
+            sed -i "s|MONGO_CUSTOM_URI='\(.*\)'|MONGO_CUSTOM_URI=\1|g" "${backup_instance_vars}"
+        fi
+
         transform_backup_instance_variable() {
             if grep -q "^DB${1}_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
                 export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2-)"

@@ -1,3 +1,9 @@
+## 4.0.13 2023-11-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Check for any quotes if using MONGO_CUSTOM_URI and remove
+
+
 ## 4.0.12 2023-11-12 <dave at tiredofit dot ca>
 
    ### Changed
