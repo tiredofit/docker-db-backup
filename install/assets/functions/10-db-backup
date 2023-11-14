@@ -1631,7 +1631,7 @@ pre_dbbackup() {
 
     ### Pre Backup Custom Script Support
     if [ -d "/assets/custom-scripts/pre" ] && dir_notempty "/assets/custom-scripts/pre" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
+        write_log warn "Found Custom Post Scripts in /assets/custom-scripts/pre - Automatically moving them to '${backup_job_script_location_pre}'"
         mkdir -p "${backup_job_script_location_pre}"
         silent cp -aR /assets/custom-scripts/pre/* "${backup_job_script_location_pre}"
     fi
@@ -1700,7 +1700,7 @@ EOZP
 
     ### Post Backup Custom Script Support
     if [ -d "/assets/custom-scripts/" ] && dir_notempty "/assets/custom-scripts" ; then
-        write_log warning "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
+        write_log warn "Found Custom Post Scripts in /assets/custom-scripts/ - Automatically moving them to '${backup_job_script_location_post}'"
         mkdir -p "${backup_job_script_location_post}"
         cp -aR /assets/custom-scripts/* "${backup_job_script_location_post}"
     fi
