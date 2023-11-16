@@ -87,6 +87,7 @@ while true; do
     fi
 
     symlink_log
+    cleanup_old_data
 
     if var_false "${persist}" ; then
         print_debug "Exiting due to manual mode"

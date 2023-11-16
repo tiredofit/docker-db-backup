@@ -1,3 +1,9 @@
+## 4.0.15 2023-11-16 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix cleanup of old backups
+
+
 ## 4.0.14 2023-11-13 <dave at tiredofit dot ca>
 
    ### Changed
