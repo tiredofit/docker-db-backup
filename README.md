@@ -742,6 +742,9 @@ $5 body/error message
 
 
 ##### Email Notifications
+
+See more details in the base image listed above for more mail environment variables.
+
 | Parameter   | Description                                                                               | Default | `_FILE` |
 | ----------- | ----------------------------------------------------------------------------------------- | ------- | ------- |
 | `MAIL_FROM` | What email address to send mail from for errors                                           |         |         |

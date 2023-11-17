@@ -1,3 +1,9 @@
+## 4.0.16 2023-11-17 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Switch to using msmtp instead of s-mail for notify()
+
+
 ## 4.0.15 2023-11-16 <dave at tiredofit dot ca>
 
    ### Changed
