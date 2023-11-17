@@ -1,3 +1,9 @@
+## 4.0.17 2023-11-17 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Provide more details when notifying via instant messages
+
+
 ## 4.0.16 2023-11-17 <dave at tiredofit dot ca>
 
    ### Changed

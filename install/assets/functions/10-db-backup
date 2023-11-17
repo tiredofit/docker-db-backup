@@ -1370,13 +1370,13 @@ notify() {
             for mail_recipient in $mail_recipients ; do
                 cat <<EOF | msmtp -t "${mail_recipient}" -c /etc/msmtprc
 To: ${mail_recipient}
-Subject: [db-backup] [${DOMAIN}] ${3}
+Subject: [db-backup] ${4}
 
 Time: ${1}
 Log File: {2}
 Error Code: ${3}
 
-${4}
+${5}
 EOF
             done
         fi
@@ -1392,7 +1392,7 @@ EOF
         if [ -z "${MATTERMOST_WEBHOOK_URL}" ] ; then write_log error "[notifications] No MATTERMOST_WEBHOOK_URL variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
         if var_nottrue "${skip_mattermost}" ; then
         emoji=":bomb:"
-        message="*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+        message="*[db-backup] ${4}*\n${5}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
         mattermost_recipients=$(echo "${MATTERMOST_RECIPIENT}" | tr "," "\n")
             for mattermost_recipient in $mattermost_recipients ; do
                 payload="payload={\"channel\": \"${mattermost_recipient//\"/\\\"}\", \"username\": \"${MATTERMOST_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
@@ -1417,7 +1417,7 @@ EOF
             for matrix_room in $matrix_rooms ; do
                 curl \
                         -XPOST \
-                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}*\"}" \
+                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[db-backup] ${4}*\n${5}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}*\"}" \
                         "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
             done
         fi
@@ -1433,7 +1433,7 @@ EOF
         if [ -z "${ROCKETCHAT_WEBHOOK_URL}" ] ; then write_log error "[notifications] No ROCKETCHAT_WEBHOOK_URL variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
         if var_nottrue "${skip_rocketchat}" ; then
             emoji=":bomb:"
-            message="*[db-backup] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+            message="*[db-backup] ${4}*\n${5}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
             rocketchat_recipients=$(echo "${ROCKETCHAT_RECIPIENT}" | tr "," "\n")
             for rocketchat_recipient in $rocketchat_recipients ; do
                 payload="payload={\"channel\": \"${rocketchat_recipient//\"/\\\"}\", \"username\": \"${ROCKETCHAT_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
