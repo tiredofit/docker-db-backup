@@ -1,3 +1,9 @@
+## 4.0.18 2023-11-18 <joergmschulz@github>
+
+   ### Changed
+      - Fix loading msmtp configuration
+
+
 ## 4.0.17 2023-11-17 <dave at tiredofit dot ca>
 
    ### Changed
