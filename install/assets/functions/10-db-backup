@@ -1368,7 +1368,7 @@ notify() {
             fi
             mail_recipients=$(echo "${MAIL_TO}" | tr "," "\n")
             for mail_recipient in $mail_recipients ; do
-                cat <<EOF | msmtp -t "${mail_recipient}" -c /etc/msmtprc
+                cat <<EOF | msmtp -t "${mail_recipient}" -C /etc/msmtprc
 To: ${mail_recipient}
 Subject: [db-backup] ${4}
 
