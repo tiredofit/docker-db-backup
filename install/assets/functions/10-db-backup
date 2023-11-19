@@ -1025,7 +1025,7 @@ cleanup_old_data() {
     if var_true "${DEBUG_CLEANUP_OLD_DATA}" ; then debug on; fi
     if [ -n "${backup_job_cleanup_time}" ]; then
         if [ "${master_exit_code}" != 1 ]; then
-            case "${backup_job_backup_location,,}" in
+            case "${backup_job_backup_location}" in
                 "blobxfer" )
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${backup_job_filesystem_path}"
