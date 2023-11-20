@@ -1,3 +1,9 @@
+## 4.0.19 2023-11-20 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Make adjustments to cron scheduling feature to be able to handle whitespace properly"
+
+
 ## 4.0.18 2023-11-18 <joergmschulz@github>
 
    ### Changed

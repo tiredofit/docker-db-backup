@@ -1843,7 +1843,7 @@ timer() {
                     if [ "${expression_step}" != "${expression}" ]; then
                         for step in ${validate_temp}; do
                             if [ $(( ( step - expression_start ) % expression_step )) -eq 0 ]; then
-                              validate_all="$validate_all ${step}"
+                              validate_all="${validate_all} ${step}"
                             fi
                         done
                     else
@@ -1853,13 +1853,14 @@ timer() {
 
                 validate_all=$(echo "${validate_all}" | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
                 for entry in $validate_all; do
-                    if [ "${entry}" -ge "${3}" ]; then
+                    if [ ${entry} -ge ${3} ]; then
                       echo "${entry}"
                       return 0
                     fi
                 done
 
-                echo "${validate_all%% *}"
+                echo "${validate_all// /}"
+                #echo "${validate_all%% *}"
             }
 
             local cron_compare="${3}"
@@ -1878,7 +1879,10 @@ timer() {
             local cron_minute="$(echo -n "${2}" | awk '{print $1}')"
             local cron_hour="$(echo -n "${2}" | awk '{print $2}')"
             local cron_day_of_month="$(echo -n "${2}" | awk '{print $3}')"
-            local cron_month="$(echo -n "${2}" | awk '{print $4}')"Generating
+            local cron_month="$(echo -n "${2}" | awk '{print $4}')"
+            local cron_day_of_week="$(echo -n "${2}" | awk '{print $5}')"
+
+            local cron_next_minute="$(date --date=@"${cron_compare}" +"%-M")"
             local cron_next_hour="$(date --date=@"${cron_compare}" +"%-H")"
             local cron_next_day_of_month="$(date --date=@"${cron_compare}" +"%-d")"
             local cron_next_month="$(date --date=@"${cron_compare}" +"%-m")"
@@ -1887,8 +1891,10 @@ timer() {
             local cron_next_year="$(date --date=@"${cron_compare}" +"%-Y")"
 
             local cron_next=
+            local cron_parsed=1
 
-            while [ "$cron_parsed" != "0" ]; do
+            while [ "${cron_parsed}" != "0" ]; do
+                print_debug "[timer] [cron] Parse Minute"
                 cron_next=$(parse_expression "${cron_minute}" 59 "${cron_next_minute}")
                 if [ "${cron_next}" != "${cron_next_minute}" ]; then
                     if [ "${cron_next_minute}" -gt "${cron_next}" ]; then
@@ -1898,20 +1904,22 @@ timer() {
                     cron_next_minute="${cron_next}"
                 fi
 
+                print_debug "[timer] [cron] Parse Hour"
                 cron_next=$(parse_expression "${cron_hour}" 23 "${cron_next_hour}")
                 if [ "${cron_next}" != "${cron_next_hour}" ]; then
                     if [ "${cron_next_hour}" -gt "${cron_next}" ]; then
                         cron_next_day_of_month=$(( cron_next_day_of_month + 1 ))
                     fi
+
                     cron_next_hour="${cron_next}"
-                    #cron_next_minute=0
                 fi
 
+                print_debug "[timer] [cron] Parse Day of Week"
                 cron_next=$(parse_expression "${cron_day_of_week}" 6 "${cron_next_day_of_week}")
                 if [ "${cron_next}" != "${cron_next_day_of_week}" ]; then
-                    day_of_week_difference=$(( ${cron_next} - ${cron_next_day_of_week} ))
+                    day_of_week_difference=$(( cron_next - cron_next_day_of_week ))
 
-                    if [ "${day_of_week_difference}" -lt "0" ]; then
+                    if [ "${day_of_week_difference}" -lt 0 ]; then
                         day_of_week_difference=$(( day_of_week_difference + 7 ))
                     fi
 
@@ -1920,6 +1928,7 @@ timer() {
                     cron_next_minute=0
                 fi
 
+                print_debug "[timer] [cron] Parse day of month"
                 case "${cron_next_month}" in
                     1|3|5|7|8|10|12)
                         last_day_of_month="31"
@@ -1959,6 +1968,7 @@ timer() {
                     cron_next_day_of_month=$cron_next
                 fi
 
+                print_debug "[timer] [cron] Parse Next Month"
                 cron_next=$(parse_expression "${cron_month}" 12 "${cron_next_month}")
                 if [ "${cron_next}" != "${cron_next_month}" ]; then
                     if [ "${cron_next}" -gt "12" ]; then
