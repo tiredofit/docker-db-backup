@@ -16,7 +16,7 @@ fi
 
 trap ctrl_c INT
 
-if [[ "${MODE,,}" =~ "standalone" ]] || [ "${1,,}" = "manual" ] || [ "${1,,}" = "now" ]; then
+if [[ "${MODE,,}" =~ "standalone" ]] || [ "${MODE,,}" = "manual" ] || [ "${1,,}" = "manual" ] || [ "${1,,}" = "now" ]; then
     print_debug "Detected Manual Mode"
     persist=false
     backup_job_backup_begin=+0

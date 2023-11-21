@@ -1,3 +1,10 @@
+## 4.0.20 2023-11-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Update base image to support S6 Overlay 3.1.6.2 to solve shutdown issues specifically with MODE=MANUAL and MANUAL_RUN_FOREVER=TRUE
+      - Add some safety nets for Manual scheduling
+
+
 ## 4.0.19 2023-11-20 <dave at tiredofit dot ca>
 
    ### Changed
