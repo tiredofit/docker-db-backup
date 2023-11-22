@@ -851,7 +851,7 @@ backup_sqlite3() {
     db=$(basename "${backup_job_db_host}")
     db="${db%.*}"
     backup_job_filename=sqlite3_${db}_${now}.sqlite3
-    backup_job_filename_base=sqlite3_${db}.sqlite3
+    backup_job_filename_base=sqlite3_${db}
     pre_dbbackup "${db}"
     write_log notice "Dumping sqlite3 database: '${backup_job_db_host}' ${compression_string}"
     if var_true "${DEBUG_BACKUP_SQLITE3}" ; then debug on; fi

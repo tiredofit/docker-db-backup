@@ -1,3 +1,9 @@
+## 4.0.21 2023-11-22 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for SQLite backups not being cleaned up properly due to a malformed base
+
+
 ## 4.0.20 2023-11-21 <dave at tiredofit dot ca>
 
    ### Changed
