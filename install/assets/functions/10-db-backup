@@ -482,6 +482,7 @@ backup_couch() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup ${backup_job_db_name}
+    cleanup_old_data
 }
 
 backup_influx() {
@@ -522,6 +523,7 @@ backup_influx() {
                 move_dbbackup
                 check_exit_code move "${backup_job_filename_dir}"
                 post_dbbackup "${db}"
+                cleanup_old_data
             done
         ;;
         2 )
@@ -550,6 +552,7 @@ backup_influx() {
                 move_dbbackup
                 check_exit_code move "${backup_job_filename_dir}"
                 post_dbbackup "${db}"
+                cleanup_old_data
             done
         ;;
     esac
@@ -586,6 +589,7 @@ backup_mongo() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup "${backup_job_db_name}"
+    cleanup_old_data
     if var_true "${DEBUG_BACKUP_MONGO}" ; then debug off; fi
 }
 
@@ -614,6 +618,7 @@ backup_mssql() {
             move_dbbackup
             check_exit_code move "${backup_job_filename}"
             post_dbbackup "${backup_job_db_name}"
+            cleanup_old_data
         ;;
         trn|transaction )
             prepare_dbbackup
@@ -636,6 +641,7 @@ backup_mssql() {
             move_dbbackup
             check_exit_code move "${backup_job_filename}"
             post_dbbackup "${backup_job_db_name}"
+            cleanup_old_data
         ;;
     esac
 }
@@ -687,6 +693,7 @@ backup_mysql() {
                 move_dbbackup
                 check_exit_code move "${backup_job_filename}"
                 post_dbbackup "${db}"
+                cleanup_old_data
         done
     else
         write_log debug "Not splitting database dumps into their own files"
@@ -707,6 +714,7 @@ backup_mysql() {
         move_dbbackup
         check_exit_code move "${backup_job_filename}"
         post_dbbackup all
+        cleanup_old_data
     fi
 }
 
@@ -728,6 +736,7 @@ backup_pgsql() {
         move_dbbackup
         check_exit_code move "${backup_job_filename}"
         post_dbbackup "globals"
+        cleanup_old_data
     }
 
     if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
@@ -776,6 +785,7 @@ backup_pgsql() {
                 move_dbbackup
                 check_exit_code move "${backup_job_filename}"
                 post_dbbackup "${db}"
+                cleanup_old_data
         done
         if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     else
@@ -805,6 +815,7 @@ backup_pgsql() {
         move_dbbackup
         check_exit_code move "${backup_job_filename}"
         post_dbbackup all
+        cleanup_old_data
         if var_true "${_postgres_backup_globals}" ; then backup_pgsql_globals; fi
     fi
 }
@@ -844,6 +855,7 @@ backup_redis() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup all
+    cleanup_old_data
 }
 
 backup_sqlite3() {
@@ -872,6 +884,7 @@ backup_sqlite3() {
     move_dbbackup
     check_exit_code move "${backup_job_filename}"
     post_dbbackup "${db}"
+    cleanup_old_data
 }
 
 check_availability() {

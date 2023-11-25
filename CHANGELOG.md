@@ -1,3 +1,9 @@
+## 4.0.22 2023-11-25 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Move cleanup_old_data routines to happen within backup_ function to properly accomodate for globals, and ALL DB_NAME use cases
+
+
 ## 4.0.21 2023-11-22 <dave at tiredofit dot ca>
 
    ### Changed
