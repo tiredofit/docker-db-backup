@@ -1351,20 +1351,20 @@ EOF
 notify() {
     if var_true "${DEBUG_NOTIFY}" ; then debug on; fi
     notification_custom() {
-        if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
-            if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
-                eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
+        if [ -n "${NOTIFICATION_CUSTOM_SCRIPT}" ] ; then
+            if var_true "${NOTIFICATION_CUSTOM_SCRIPT_SKIP_X_VERIFY}" ; then
+                eval "${NOTIFICATION_CUSTOM_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
             else
-                if [ -x "${NOTIFICATION_SCRIPT}" ] ; then
-                    write_log notice "Found NOTIFICATION_SCRIPT environment variable. Executing '${NOTIFICATION_SCRIPT}"
+                if [ -x "${NOTIFICATION_CUSTOM_SCRIPT}" ] ; then
+                    write_log notice "Found NOTIFICATION_CUSTOM_SCRIPT environment variable. Executing '${NOTIFICATION_CUSTOM_SCRIPT}"
                     # script timestamp logfile errorcode subject body
-                    eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
+                    eval "${NOTIFICATION_CUSTOM_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
                 else
-                    write_log error "Can't execute NOTIFICATION_SCRIPT environment variable '${NOTIFICATION_SCRIPT}' as its filesystem bit is not executible!"
+                    write_log error "Can't execute NOTIFICATION_CUSTOM_SCRIPT environment variable '${NOTIFICATION_CUSTOM_SCRIPT}' as its filesystem bit is not executible!"
                 fi
             fi
         else
-            print_error "[notifications] No NOTIFICATION_SCRIPT variable set - Skipping sending Custom notifications"
+            print_error "[notifications] No NOTIFICATION_CUSTOM_SCRIPT variable set - Skipping sending Custom notifications"
         fi
     }
 
@@ -1466,7 +1466,7 @@ EOF
     # $4 body
 
     if var_true "${ENABLE_NOTIFICATIONS}" ; then
-        notification_types=$(echo "${NOTIIFICATION_TYPE}" | tr "," "\n")
+        notification_types=$(echo "${NOTIFICATION_TYPE}" | tr "," "\n")
         for notification_type in $notification_types ; do
             case "${notification_type,,}" in
                 "custom" )

@@ -1,3 +1,9 @@
+## 4.0.23 2023-11-28 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Resolve issue with custom notification scripts not executing
+
+
 ## 4.0.22 2023-11-25 <dave at tiredofit dot ca>
 
    ### Changed
