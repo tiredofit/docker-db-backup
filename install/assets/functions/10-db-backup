@@ -1865,7 +1865,7 @@ timer() {
                     fi
                 done
 
-                validate_all=$(echo "${validate_all}" | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
+                validate_all=$(echo "${validate_all}" | tr ' ' '\n' | sort -g -u | tr '\n' ' ')
                 for entry in $validate_all; do
                     if [ ${entry} -ge ${3} ]; then
                       echo "${entry}"

@@ -1,3 +1,9 @@
+## 4.0.24 2023-11-28 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with cron parsing and 0 being a value getting clobbered by sort command
+
+
 ## 4.0.23 2023-11-28 <dave at tiredofit dot ca>
 
    ### Changed
