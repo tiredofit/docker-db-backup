@@ -94,7 +94,7 @@ bootstrap_variables() {
                             DB"${backup_instance_number}"_BLOBXFER_STORAGE_ACCOUNT_KEY \
                             DB"${backup_instance_number}"_BLOBXFER_REMOTE_PATH \
                             BLOBXFER_STORAGE_ACCOUNT \
-                            BLOBXFER_STORAGE_KEY \
+                            BLOBXFER_STORAGE_ACCOUNT_KEY \
                             DB_HOST \
                             DB_NAME \
                             DB_PORT \
