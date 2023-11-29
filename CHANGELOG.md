@@ -1,3 +1,9 @@
+## 4.0.25 2023-11-29 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix #297 - Add parameters to blobxfer to restore functionality
+
+
 ## 4.0.24 2023-11-28 <dave at tiredofit dot ca>
 
    ### Changed

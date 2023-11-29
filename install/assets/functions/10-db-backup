@@ -188,7 +188,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" BLACKOUT_END backup_job_snapshot_blackout_finish
         transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_REMOTE_PATH backup_job_blobxfer_remote_path
         transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_ACCOUNT backup_job_blobxfer_storage_account
-        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_KEY backup_job_blobxfer_storage_key
+        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_ACCOUNT_KEY backup_job_blobxfer_storage_account_key
         transform_backup_instance_variable "${backup_instance_number}" CHECKSUM backup_job_checksum
         transform_backup_instance_variable "${backup_instance_number}" CLEANUP_TIME backup_job_cleanup_time
         transform_backup_instance_variable "${backup_instance_number}" COMPRESSION backup_job_compression
@@ -1044,7 +1044,7 @@ cleanup_old_data() {
                     run_as_user mkdir -p "${backup_job_filesystem_path}"
                     find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_filename_base}*" -exec rm -f {} \;
                     write_log info "Syncing changes via blobxfer"
-                    silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete --delete-only
+                    silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete --delete-only
                 ;;
                 "file" | "filesystem" )
                     write_log info "Cleaning up old backups on filesystem"
@@ -1599,7 +1599,7 @@ EOF
             ;;
             "blobxfer" )
                 write_log info "Synchronize local storage from S3 Bucket with blobxfer"
-                ${play_fair} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path} --delete
+                ${play_fair} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete
 
                 write_log info "Moving backup to external storage with blobxfer"
                 mkdir -p "${backup_job_filesystem_path}"
@@ -1607,7 +1607,7 @@ EOF
 
                 run_as_user mv "${TEMP_PATH}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/"${backup_job_filename}"
 
-                silent run_as_user ${play_fair} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --local-path ${backup_job_filesystem_path}
+                silent run_as_user ${play_fair} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path}
                 move_exit_code=$?
 
                 if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"."${checksum_extension}" ; fi
