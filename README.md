@@ -536,6 +536,7 @@ Encryption will occur after compression and the resulting filename will have a `
 | `DB01_NAME`                     | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |                           |         |
 |                                 | Backup multiple by separating with commas eg `db1,db2`                                                    |                           | x       |
 | `DB01_NAME_EXCLUDE`             | If using `ALL` - use this as to exclude databases separated via commas from being backed up               |                           | x       |
+| `DB01_SPLIT_DB`                 | If using `ALL` - use this to split each database into its own file as opposed to one singular file        | `FALSE`                   |         |
 | `DB01_PORT`                     | MySQL / MariaDB Port                                                                                      | `3306`                    | x       |
 | `DB01_MYSQL_EVENTS`             | Backup Events for                                                                                         | `TRUE`                    |         |
 | `DB01_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet                                                                                        | `512M`                    |         |
@@ -577,6 +578,7 @@ Encryption will occur after compression and the resulting filename will have a `
 | `DB01_EXTRA_ENUMERATION_OPTS` | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |         |         |
 | `DB01_NAME`                   | Schema Name e.g. `database` or `ALL` to backup all databases the user has access to.                      |         |         |
 |                               | Backup multiple by separating with commas eg `db1,db2`                                                    |         | x       |
+| `DB01_SPLIT_DB`               | If using `ALL` - use this to split each database into its own file as opposed to one singular file        | `FALSE` |         |
 | `DB01_PORT`                   | PostgreSQL Port                                                                                           | `5432`  | x       |
 
 ###### Redis
