@@ -1,3 +1,9 @@
+## 4.0.26 2023-11-30 <dave at tiredofit dot ca>
+
+   ### Added
+      - AWS CLI 1.31.4
+
+
 ## 4.0.25 2023-11-29 <dave at tiredofit dot ca>
 
    ### Changed
