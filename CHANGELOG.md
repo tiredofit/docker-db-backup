@@ -1,3 +1,9 @@
+## 3-3.12.1 2023-11-30 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update AWS CLI to 1.31.4
+
+
 ## 3.12.0 2023-10-29 <alwynpan@github>
 
    ### Added
