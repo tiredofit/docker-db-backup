@@ -22,10 +22,8 @@ if [[ "${MODE,,}" =~ "standalone" ]] || [ "${MODE,,}" = "manual" ] || [ "${1,,}"
     backup_job_backup_begin=+0
 else
     silent sleep {{BACKUP_NUMBER}}
-    set -x
     time_last_run=0
     time_current=$(date +'%s')
-    set +x
     if [[ "${backup_job_backup_begin}" =~ ^\+(.*)$ ]]; then
         print_debug "BACKUP_BEGIN is a jump of minute starting with +"
         timer plusvalue
@@ -45,8 +43,8 @@ else
             backup_job_backup_begin=${backup_job_backup_begin//\'/}
             timer cron "${backup_job_backup_begin}" "${time_current}" "${time_last_run}"
         else
-            echo "${backup_job_backup_begin} /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}} now" > /tmp/.container/cron/{{BACKUP_NUMBER}}-backup
-            crontab -l | { cat; echo "${backup_job_backup_begin} /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}} now"; } | crontab -
+            echo "${backup_job_backup_begin} /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}/run now" > /tmp/.container/cron/{{BACKUP_NUMBER}}-backup
+            crontab -l | { cat; echo "${backup_job_backup_begin} /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}/run now"; } | crontab -
             s6-svc -d /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}
             exit 0
         fi

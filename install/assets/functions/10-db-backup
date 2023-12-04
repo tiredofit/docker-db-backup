@@ -2000,12 +2000,13 @@ timer() {
                 fi
                 cron_parsed=0
             done
-
+set -x
             local cron_future=$(date --date="${cron_next_year}-$(printf "%02d" ${cron_next_month})-$(printf "%02d" ${cron_next_day_of_month})T$(printf "%02d" ${cron_next_hour}):$(printf "%02d" ${cron_next_minute}):00" "+%s")
             local cron_future_difference=$(( cron_future - cron_compare_seconds ))
             time_cron=true
             time_wait="${cron_future_difference}"
             time_future="${cron_future}"
+set +x
         ;;
         datetime)
             time_begin=$(date -d "${backup_job_backup_begin}" +%s)

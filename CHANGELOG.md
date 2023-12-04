@@ -1,3 +1,9 @@
+## 4.0.27 2023-12-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Switch to using actual crontab for cron expressions
+
+
 ## 4.0.26 2023-11-30 <dave at tiredofit dot ca>
 
    ### Added
