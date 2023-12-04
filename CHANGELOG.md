@@ -1,3 +1,10 @@
+## 3-3.12.2 2023-12-03 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update AWS CLI 1.31.5
+      - Use pip to install awscli as opposed to via git repo
+
+
 ## 3-3.12.1 2023-11-30 <dave at tiredofit dot ca>
 
    ### Added
