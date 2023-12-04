@@ -577,7 +577,7 @@ backup_mongo() {
     fi
     if var_true "${DEBUG_BACKUP_MONGO}" ; then debug off; fi
     pre_dbbackup "${backup_job_db_name}"
-    write_log notice "Dumping MongoDB database: '${DB_NAME}' ${compression_string}"
+    write_log notice "Dumping MongoDB database: '${backup_job_db_name}' ${compression_string}"
     if var_true "${DEBUG_BACKUP_MONGO}" ; then debug on; fi
     silent run_as_user ${play_fair} mongodump --archive=${TEMP_PATH}/${backup_job_filename} ${mongo_compression} ${mongo_backup_parameter}
     exit_code=$?
@@ -600,7 +600,7 @@ backup_mssql() {
             backup_job_filename=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.bak
             backup_job_filename_base=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
             pre_dbbackup "${backup_job_db_name}"
-            write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            write_log notice "Dumping MSSQL database: '${backup_job_db_name}'"
             if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
@@ -2000,13 +2000,11 @@ timer() {
                 fi
                 cron_parsed=0
             done
-set -x
             local cron_future=$(date --date="${cron_next_year}-$(printf "%02d" ${cron_next_month})-$(printf "%02d" ${cron_next_day_of_month})T$(printf "%02d" ${cron_next_hour}):$(printf "%02d" ${cron_next_minute}):00" "+%s")
             local cron_future_difference=$(( cron_future - cron_compare_seconds ))
             time_cron=true
             time_wait="${cron_future_difference}"
             time_future="${cron_future}"
-set +x
         ;;
         datetime)
             time_begin=$(date -d "${backup_job_backup_begin}" +%s)
