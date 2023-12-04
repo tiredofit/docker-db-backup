@@ -1,3 +1,10 @@
+## 4.0.28 2023-12-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - AWS Cli 1.31.5
+      - Switch to using PIP for installing AWS-Cli to remove deprecation warnings
+
+
 ## 4.0.27 2023-12-04 <dave at tiredofit dot ca>
 
    ### Changed
