@@ -1,3 +1,9 @@
+## 4.0.29 2023-12-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Skip blobxfer if either account or key is not present
+
+
 ## 4.0.28 2023-12-04 <dave at tiredofit dot ca>
 
    ### Changed
