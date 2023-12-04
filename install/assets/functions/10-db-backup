@@ -1882,12 +1882,12 @@ timer() {
             local cron_compare_difference=$(( cron_compare  - ${4} ))
 
             if [ "${cron_compare_difference}" -lt 60 ]; then
-                cron_compare=$((${cron_compare} + $(( 60 - cron_compare_difference )) ))
+                cron_compare=$((cron_compare + $(( 60 - cron_compare_difference )) ))
             fi
 
             local cron_current_seconds="$(date --date=@"${cron_compare_seconds}" +"%-S")"
             if [ "${cron_current_seconds}" -ne 0 ]; then
-                cron_compare_seconds=$(( cron_compare_seconds - cron_current_seconds ))
+                cron_compare=$(( cron_compare_seconds - cron_current_seconds ))
             fi
 
             local cron_minute="$(echo -n "${2}" | awk '{print $1}')"
@@ -1926,6 +1926,7 @@ timer() {
                     fi
 
                     cron_next_hour="${cron_next}"
+                    cron_next_minute=0
                 fi
 
                 print_debug "[timer] [cron] Parse Day of Week"
