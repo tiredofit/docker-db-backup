@@ -625,7 +625,7 @@ backup_mssql() {
             backup_job_filename=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.trn
             backup_job_filename_base=mssql_${backup_job_db_name,,}_trn_${backup_job_db_host,,}
             pre_dbbackup "${backup_job_db_name}"
-            write_log notice "Dumping MSSQL database: '${DB_NAME}'"
+            write_log notice "Dumping MSSQL database: '${backup_job_db_name}'"
             if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
             silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP LOG [${backup_job_db_name}] TO DISK = N'${TEMP_PATH}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-log', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
@@ -634,7 +634,7 @@ backup_mssql() {
             compression
             pre_dbbackup all
             run_as_user ${compress_cmd} "${TEMP_PATH}/${backup_job_filename_original}"
-            check_exit_code backup "${backup_job_filename}"
+
             file_encryption
             timer backup finish
             generate_checksum
@@ -1043,8 +1043,12 @@ cleanup_old_data() {
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${backup_job_filesystem_path}"
                     find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_filename_base}*" -exec rm -f {} \;
-                    write_log info "Syncing changes via blobxfer"
-                    silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete --delete-only
+                    if  [ -z "${backup_job_blobxfer_storage_account}" ] || [ -z "${backup_job_blobxfer_storage_account_key}" ]; then
+                        write_log warn "Variable _BLOBXFER_STORAGE_ACCOUNT or _BLOBXFER_STORAGE_ACCOUNT_KEY is not set. Skipping blobxfer functions"
+                    else
+                        write_log info "Syncing changes via blobxfer"
+                        silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete --delete-only
+                    fi
                 ;;
                 "file" | "filesystem" )
                     write_log info "Cleaning up old backups on filesystem"
@@ -1598,20 +1602,24 @@ EOF
                 run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"
             ;;
             "blobxfer" )
-                write_log info "Synchronize local storage from S3 Bucket with blobxfer"
-                ${play_fair} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete
+                if  [ -z "${backup_job_blobxfer_storage_account}" ] || [ -z "${backup_job_blobxfer_storage_account_key}" ]; then
+                    write_log warn "Variable _BLOBXFER_STORAGE_ACCOUNT or _BLOBXFER_STORAGE_ACCOUNT_KEY is not set. Skipping blobxfer functions"
+                else
+                    write_log info "Synchronize local storage from S3 Bucket with blobxfer"
+                    ${play_fair} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete
 
-                write_log info "Moving backup to external storage with blobxfer"
-                mkdir -p "${backup_job_filesystem_path}"
-                if [ "${backup_job_checksum}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/; fi
+                    write_log info "Moving backup to external storage with blobxfer"
+                    mkdir -p "${backup_job_filesystem_path}"
+                    if [ "${backup_job_checksum}" != "none" ] ; then run_as_user mv "${TEMP_PATH}"/*."${checksum_extension}" "${backup_job_filesystem_path}"/; fi
 
-                run_as_user mv "${TEMP_PATH}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/"${backup_job_filename}"
+                    run_as_user mv "${TEMP_PATH}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/"${backup_job_filename}"
 
-                silent run_as_user ${play_fair} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path}
-                move_exit_code=$?
+                    silent run_as_user ${play_fair} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path}
+                    move_exit_code=$?
 
-                if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"."${checksum_extension}" ; fi
-                run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"
+                    if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"."${checksum_extension}" ; fi
+                    run_as_user rm -rf "${TEMP_PATH}"/"${backup_job_filename}"
+                fi
             ;;
         esac
     else
