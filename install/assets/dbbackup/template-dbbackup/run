@@ -107,8 +107,8 @@ while true; do
             s6-svc -d /var/run/s6/legacy-services/dbbackup-{{BACKUP_NUMBER}}
         else
             if [ ! "${time_cron}" = "true" ]; then
-                print_notice "Sleeping for another $(($backup_job_backup_interval*60-backup_job_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$(($backup_job_backup_interval*60-backup_job_total_time))))" +'%Y-%m-%d %T %Z') "
-                silent sleep $(($backup_job_backup_interval*60-backup_job_total_time))
+                print_notice "Sleeping for another $((backup_job_backup_interval*60-backup_job_total_time)) seconds. Waking up at $(date -d@"$(( $(date +%s)+$((backup_job_backup_interval*60-backup_job_total_time))))" +'%Y-%m-%d %T %Z') "
+                silent sleep $((backup_job_backup_interval*60-backup_job_total_time))
             else
                 time_last_run=$(date +"%s")
                 timer cron "${backup_job_backup_begin}" "${time_current}" "${time_last_run}"

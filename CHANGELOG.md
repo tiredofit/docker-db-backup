@@ -1,3 +1,9 @@
+## 4.0.30 2023-12-11 <dave at tiredofit dot ca>
+
+   ### Added
+      - Seperate each job with its own temporary folder for isolation and to better cleanup jobs that backup as a directory instead of a flat file
+
+
 ## 4.0.29 2023-12-04 <dave at tiredofit dot ca>
 
    ### Changed
