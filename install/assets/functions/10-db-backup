@@ -153,6 +153,11 @@ bootstrap_variables() {
         fi
         ##
 
+        if grep -qo ".*_NAME='.*'" "${backup_instance_vars}"; then
+            print_debug "[bootstrap_variables] [backup_init] Found _NAME variable with quotes"
+            sed -i "s|_NAME='\(.*\)'|_NAME=\1|g" "${backup_instance_vars}"
+        fi
+
         if grep -qo ".*_PASS='.*'" "${backup_instance_vars}"; then
             print_debug "[bootstrap_variables] [backup_init] Found _PASS variable with quotes"
             sed -i "s|_PASS='\(.*\)'|_PASS=\1|g" "${backup_instance_vars}"
@@ -599,7 +604,7 @@ backup_mssql() {
             pre_dbbackup "${backup_job_db_name}"
             write_log notice "Dumping MSSQL database: '${backup_job_db_name}'"
             if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
-            silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE ['${backup_job_db_name}'] TO DISK = N'${temporary_directory}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+            silent run_as_user ${play_fair} /opt/mssql-tools18/bin/sqlcmd -C -S ${backup_job_db_host}\,${backup_job_db_port} -U ${backup_job_db_user} -P ${backup_job_db_pass} -Q "BACKUP DATABASE [${backup_job_db_name}] TO DISK = N'${temporary_directory}/${backup_job_filename}' WITH NOFORMAT, NOINIT, NAME = '${backup_job_db_name}-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
             exit_code=$?
             if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
             backup_job_filename_original=${backup_job_filename}

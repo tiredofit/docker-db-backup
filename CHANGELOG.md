@@ -1,3 +1,9 @@
+## 4.0.31 2023-12-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Support backing up databases with spaces in them
+
+
 ## 4.0.30 2023-12-11 <dave at tiredofit dot ca>
 
    ### Added
