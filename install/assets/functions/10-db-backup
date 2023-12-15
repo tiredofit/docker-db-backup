@@ -510,15 +510,14 @@ backup_influx() {
                 backup_job_filename=influx_${db}_${backup_job_db_host#*//}_${now}
                 backup_job_filename_base=influx_${db}_${backup_job_db_host#*//}
                  if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
-                compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx database: '${db}'"
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
                 run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${backup_job_db_host}:${backup_job_db_port} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} "${temporary_directory}"/"${backup_job_filename}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename}"
+                compression
                 create_archive
-                backup_job_filename=influx2_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 timer backup finish
                 file_encryption
@@ -538,15 +537,14 @@ backup_influx() {
                  if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 backup_job_filename=influx2_${db}_${backup_job_db_host#*//}_${now}
                 backup_job_filename_base=influx2_${db}_${backup_job_db_host#*//}
-                compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx2 database: '${db}'"
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
                 run_as_user influx backup --org ${backup_job_db_user} ${bucket} --host ${backup_job_db_host}:${backup_job_db_port} --token ${backup_job_db_pass} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --compression none "${temporary_directory}"/"${backup_job_filename}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename}"
+                compression
                 create_archive
-                backup_job_filename=influx2_${db}_${backup_job_db_host#*//}_${now}.tar${extension}
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 timer backup finish
                 file_encryption
@@ -1156,8 +1154,9 @@ create_archive() {
     if var_true "${DEBUG_CREATE_ARCHIVE}" ; then debug on; fi
     if [ "${exit_code}" = "0" ] ; then
         write_log notice "Creating archive file of '${backup_job_filename}' with tar ${compression_string}"
-        run_as_user tar cf - "${temporary_directory}"/"${backup_job_filename}" | ${dir_compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}".tar"${extension}" > /dev/null
-        rm -rf "${temporary_directory}"/"${backup_job_filename}"
+        run_as_user tar cf - "${temporary_directory}"/"${backup_job_filename_dir}" | ${dir_compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename_dir}".tar"${extension}" > /dev/null
+        backup_job_filename="${backup_job_filename_dir}".tar"${extension}"
+        rm -rf "${temporary_directory}"/"${backup_job_filename_dir}"
     else
         write_log error "Skipping creating archive file because backup did not complete successfully"
     fi
@@ -1172,8 +1171,8 @@ create_schedulers() {
         print_debug "[create_schedulers] Found '${backup_instances}' DB_HOST instances"
 
         if [ -n "${DB_HOST}" ] && [ "${backup_instances}" ]; then
-          backup_instances=1;
-          print_debug "[create_schedulers] Detected using old DB_ variables"
+            backup_instances=1;
+            print_debug "[create_schedulers] Detected using old DB_ variables"
         fi
 
         for (( instance = 01; instance <= backup_instances; )) ; do

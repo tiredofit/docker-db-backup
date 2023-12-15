@@ -1,3 +1,9 @@
+## 4.0.32 2023-12-15 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with directories not properly being backed up (InfluxDB)
+
+
 ## 4.0.31 2023-12-12 <dave at tiredofit dot ca>
 
    ### Changed
