@@ -1,3 +1,10 @@
+## 4.0.33 2023-12-18 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Allow _OPTS variabls to contain spaces
+      - Switch references of _DUMP_OPTS to _BACKUP_OPTS
+
+
 ## 4.0.32 2023-12-15 <dave at tiredofit dot ca>
 
    ### Changed

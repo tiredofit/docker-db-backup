@@ -168,6 +168,11 @@ bootstrap_variables() {
             sed -i "s|MONGO_CUSTOM_URI='\(.*\)'|MONGO_CUSTOM_URI=\1|g" "${backup_instance_vars}"
         fi
 
+        if grep -qo ".*_OPTS='.*'" "${backup_instance_vars}"; then
+            print_debug "[bootstrap_variables] [backup_init] Found _OPTS variable with quotes"
+            sed -i "s|_OPTS='\(.*\)'|_OPTS=\1|g" "${backup_instance_vars}"
+        fi
+
         transform_backup_instance_variable() {
             if grep -q "^DB${1}_${2}=" "${backup_instance_vars}" && [ "$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2)" != "unset" ]; then
                 export "$3"="$(grep "^DB${1}_${2}=" "${backup_instance_vars}" | cut -d = -f2-)"
@@ -204,7 +209,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PASSPHRASE backup_job_encrypt_passphrase
         transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PRIVATE_KEY backup_job_encrypt_private_key
         transform_backup_instance_variable "${backup_instance_number}" ENCRYPT_PUBLIC_KEY backup_job_encrypt_public_key
-        transform_backup_instance_variable "${backup_instance_number}" EXTRA_DUMP_OPTS backup_job_extra_dump_opts
+        transform_backup_instance_variable "${backup_instance_number}" EXTRA_BACKUP_OPTS backup_job_extra_backup_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_ENUMERATION_OPTS backup_job_extra_enumeration_opts
         transform_backup_instance_variable "${backup_instance_number}" EXTRA_OPTS backup_job_extra_opts
         transform_backup_instance_variable "${backup_instance_number}" FILESYSTEM_ARCHIVE_PATH backup_job_filesystem_archive_path
@@ -513,7 +518,7 @@ backup_influx() {
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx database: '${db}'"
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
-                run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${backup_job_db_host}:${backup_job_db_port} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} "${temporary_directory}"/"${backup_job_filename}"
+                run_as_user influxd backup ${influx_compression} ${bucket} -portable -host ${backup_job_db_host}:${backup_job_db_port} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} "${temporary_directory}"/"${backup_job_filename}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename}"
                 compression
@@ -540,7 +545,7 @@ backup_influx() {
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx2 database: '${db}'"
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
-                run_as_user influx backup --org ${backup_job_db_user} ${bucket} --host ${backup_job_db_host}:${backup_job_db_port} --token ${backup_job_db_pass} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --compression none "${temporary_directory}"/"${backup_job_filename}"
+                run_as_user influx backup --org ${backup_job_db_user} ${bucket} --host ${backup_job_db_host}:${backup_job_db_port} --token ${backup_job_db_pass} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} --compression none "${temporary_directory}"/"${backup_job_filename}"
                 exit_code=$?
                 check_exit_code backup "${backup_job_filename}"
                 compression
@@ -571,9 +576,9 @@ backup_mongo() {
         compression_string="and compressing with gzip"
     fi
     if [ -n "${backup_job_mongo_custom_uri}" ] ; then
-        mongo_backup_parameter="--uri=${backup_job_mongo_custom_uri} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}"
+        mongo_backup_parameter="--uri=${backup_job_mongo_custom_uri} ${backup_job_extra_opts} ${backup_job_extra_backup_opts}"
     else
-        mongo_backup_parameter="--host ${backup_job_db_host} --port ${backup_job_db_port} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}"
+        mongo_backup_parameter="--host ${backup_job_db_host} --port ${backup_job_db_port} ${MONGO_USER_STR}${MONGO_PASS_STR}${MONGO_AUTH_STR}${MONGO_DB_STR} ${backup_job_extra_opts} ${backup_job_extra_backup_opts}"
     fi
     if var_true "${DEBUG_BACKUP_MONGO}" ; then debug off; fi
     pre_dbbackup "${backup_job_db_name}"
@@ -683,7 +688,7 @@ backup_mysql() {
                 pre_dbbackup "${db}"
                 write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
-                run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} $db | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+                run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} $db | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
                 if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
                 check_exit_code backup "${backup_job_filename}"
@@ -704,7 +709,7 @@ backup_mysql() {
         pre_dbbackup all
         write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
-        run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+        run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
         if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
         check_exit_code backup "${backup_job_filename}"
@@ -726,7 +731,7 @@ backup_pgsql() {
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
         if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
-        run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+        run_as_user ${play_fair} pg_dumpall -h "${backup_job_db_host}" -U "${backup_job_db_user}" -p "${backup_job_db_port}" -g ${backup_job_extra_opts} ${backup_job_extra_backup_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
         if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
         check_exit_code "${backup_job_filename}"
@@ -775,7 +780,7 @@ backup_pgsql() {
                 pre_dbbackup "${db}"
                 write_log notice "Dumping PostgresSQL database: '${db}' ${compression_string}"
                 if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug on; fi
-                run_as_user ${play_fair} pg_dump -h "${backup_job_db_host}" -p "${backup_job_db_port}" -U "${backup_job_db_user}" $db ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+                run_as_user ${play_fair} pg_dump -h "${backup_job_db_host}" -p "${backup_job_db_port}" -U "${backup_job_db_user}" $db ${backup_job_extra_opts} ${backup_job_extra_backup_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
                 if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
                 check_exit_code backup "${backup_job_filename}"
@@ -805,7 +810,7 @@ backup_pgsql() {
         for x_db_name in ${tmp_db_names} ; do
             pgexclude_arg=$(echo ${pgexclude_arg} --exclude-database=${x_db_name})
         done
-        run_as_user ${play_fair} pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_dump_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+        run_as_user ${play_fair} pg_dumpall -h ${backup_job_db_host} -p ${backup_job_db_port} -U ${backup_job_db_user} ${pgexclude_arg} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
         if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
         check_exit_code backup "${backup_job_filename}"
@@ -826,7 +831,7 @@ backup_redis() {
     backup_job_filename=redis_all_${backup_job_db_host,,}_${now}.rdb
     backup_job_filename_base=redis_${backup_job_db_host,,}
     if var_true "${DEBUG_BACKUP_REDIS}" ; then debug on; fi
-    echo bgsave | silent run_as_user ${play_fair} redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${temporary_directory}/${backup_job_filename} ${backup_job_extra_opts} ${backup_job_extra_dump_opts}
+    echo bgsave | silent run_as_user ${play_fair} redis-cli -h ${backup_job_db_host} -p ${backup_job_db_port} ${REDIS_PASS_STR} --rdb ${temporary_directory}/${backup_job_filename} ${backup_job_extra_opts} ${backup_job_extra_backup_opts}
     sleep 10
     try=5
     while [ $try -gt 0 ] ; do
