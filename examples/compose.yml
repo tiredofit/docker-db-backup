@@ -31,8 +31,8 @@ services:
       - BACKUP_JOB_CONCURRENCY=1     # Only run one job at a time
       - DEFAULT_CHECKSUM=NONE        # Don't create checksums
       - DEFAULT_COMPRESSION=ZSTD     # Compress all with ZSTD
-      - DEFAULT_DUMP_INTERVAL=1440   # Backup every 1440 minutes
-      - DEFAULT_DUMP_BEGIN=0000      # Start backing up at midnight
+      - DEFAULT_BACKUP_INTERVAL=1440   # Backup every 1440 minutes
+      - DEFAULT_BACKUP_BEGIN=0000      # Start backing up at midnight
       - DEFAULT_CLEANUP_TIME=8640    # Cleanup backups after a week
 
       - DB01_TYPE=mariadb
@@ -40,8 +40,8 @@ services:
       - DB01_NAME=example
       - DB01_USER=example
       - DB01_PASS=examplepassword
-      - DB01_DUMP_INTERVAL=30        # (override) Backup every 30 minutes
-      - DB01_DUMP_BEGIN=+1           # (override) Backup starts immediately
+      - DB01_BACKUP_INTERVAL=30        # (override) Backup every 30 minutes
+      - DB01_BACKUP_BEGIN=+1           # (override) Backup starts immediately
       - DB01_CLEANUP_TIME=180        # (override) Cleanup backups they are older than 180 minutes
       - DB01_CHECKSUM=SHA1           # (override) Create a SHA1 checksum
       - DB01_COMPRESSION=GZ          # (override) Compress with GZIP
@@ -51,8 +51,8 @@ services:
       #- DB02_NAME=example
       #- DB02_USER=example
       #- DB02_PASS=examplepassword
-      #- DB02_DUMP_INTERVAL=60         # (override) Backup every 60 minutes
-      #- DB02_DUMP_BEGIN=+10           # (override) Backup starts in ten minutes
+      #- DB02_BACKUP_INTERVAL=60         # (override) Backup every 60 minutes
+      #- DB02_BACKUP_BEGIN=+10           # (override) Backup starts in ten minutes
       #- DB02_CLEANUP_TIME=240         # (override) Cleanup backups they are older than 240 minutes
       #- DB02_CHECKSUM=MD5             # (override) Create a SHA1 checksum
       #- DB02_COMPRESSION=BZ           # (override) Compress with BZIP
