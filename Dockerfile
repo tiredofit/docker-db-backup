@@ -71,13 +71,13 @@ RUN source /assets/functions/00-container && \
     \
     apkArch="$(uname -m)"; \
     case "$apkArch" in \
-	x86_64) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=amd64; ;; \
+	    x86_64) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=amd64; ;; \
         arm64 ) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=arm64 ;; \
         *) sleep 0.1 ;; \
     esac; \
     \
-    if [ $mssql = "true" ] ; then curl -O https://download.microsoft.com/download/3/5/5/355d7943-a338-41a7-858d-53b259ea33f5/msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk ; curl -O https://download.microsoft.com/download/3/5/5/355d7943-a338-41a7-858d-53b259ea33f5/mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; echo y | apk add --allow-untrusted msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; else echo >&2 "Detected non x86_64 or ARM64 build variant, skipping MSSQL installation" ; fi; \
-    if [ $influx2 = "true" ] ; then curl -sSL https://dl.influxdata.com/influxdb/releases/influxdb2-client-${INFLUX2_CLIENT_VERSION}-linux-${influx_arch}.tar.gz | tar xvfz - --strip=1 -C /usr/src/ ; chmod +x /usr/src/influx ; mv /usr/src/influx /usr/sbin/ ; else echo >&2 "Unable to build Influx 2 on this system" ; fi ; \
+    if [[ $mssql = "true" ]] ; then curl -O https://download.microsoft.com/download/3/5/5/355d7943-a338-41a7-858d-53b259ea33f5/msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk ; curl -O https://download.microsoft.com/download/3/5/5/355d7943-a338-41a7-858d-53b259ea33f5/mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; echo y | apk add --allow-untrusted msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; else echo >&2 "Detected non x86_64 or ARM64 build variant, skipping MSSQL installation" ; fi; \
+    if [[ $influx2 = "true" ]] ; then curl -sSL https://dl.influxdata.com/influxdb/releases/influxdb2-client-${INFLUX2_CLIENT_VERSION}-linux-${influx_arch}.tar.gz | tar xvfz - --strip=1 -C /usr/src/ ; chmod +x /usr/src/influx ; mv /usr/src/influx /usr/sbin/ ; else echo >&2 "Unable to build Influx 2 on this system" ; fi ; \
     clone_git_repo https://github.com/influxdata/influxdb "${INFLUX1_CLIENT_VERSION}" && \
     go build -o /usr/sbin/influxd ./cmd/influxd && \
     strip /usr/sbin/influxd && \
