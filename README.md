@@ -325,7 +325,7 @@ If `DEFAULT_BACKUP_LOCTION` = `FILESYSTEM` then the following options are used:
 
 | Variable                             | Description                                                                                           | Default                               |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `DEFAULT_CREATE_LATEST_SYMLINK`      | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)-(DB_NAME)-(DB_HOST)` | `TRUE`                                |
+| `DEFAULT_CREATE_LATEST_SYMLINK`      | Create a symbolic link pointing to last backup in this format: `latest-(DB_TYPE)_(DB_NAME)_(DB_HOST)` | `TRUE`                                |
 | `DEFAULT_FILESYSTEM_PATH`            | Directory where the database dumps are kept.                                                          | `/backup`                             |
 | `DEFAULT_FILESYSTEM_PATH_PERMISSION` | Permissions to apply to backup directory                                                              | `700`                                 |
 | `DEFAULT_FILESYSTEM_ARCHIVE_PATH`    | Optional Directory where the database dumps archives are kept                                         | `${DEFAULT_FILESYSTEM_PATH}/archive/` |
