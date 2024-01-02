@@ -72,7 +72,7 @@ RUN source /assets/functions/00-container && \
     apkArch="$(uname -m)"; \
     case "$apkArch" in \
 	    x86_64) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=amd64; ;; \
-        arm64 ) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=arm64 ;; \
+        arm64 | aarch64 ) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=arm64 ;; \
         *) sleep 0.1 ;; \
     esac; \
     \
