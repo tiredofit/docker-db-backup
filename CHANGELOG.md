@@ -1,3 +1,9 @@
+## 4.0.34 2024-01-02 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Change the way architectures are detected to re-enable backups with MSSQL and Influx2
+
+
 ## 4.0.33 2023-12-18 <dave at tiredofit dot ca>
 
    ### Changed
