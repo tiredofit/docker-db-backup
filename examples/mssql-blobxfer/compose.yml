@@ -45,7 +45,7 @@ services:
       - DB01_NAME=test1             # Create this database
       - DB01_USER=sa
       - DB01_PASS=5hQa0utRFBpIY3yhoIyE
-      - DB01_DUMP_INTERVAL=5        # backup every 5 minute
+      - DB01_BACKUP_INTERVAL=5        # backup every 5 minute
       # - DB01_DUMP_BEGIN=0000      # backup starts at midnight vs not set immediately
       - DB01_CLEANUP_TIME=60         # clean backups they are older than 60 minutes
       - DB01_CHECKSUM=SHA1          # Set Checksum to be SHA1
