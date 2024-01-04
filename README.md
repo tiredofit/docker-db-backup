@@ -118,7 +118,7 @@ Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Postgres, Red
 
 ### Build from Source
 
-Clone this repository and build the image with `docker build <arguments> (imagename) .`
+Clone this repository and build the image with `docker build <arguments- (imagename) .`
 
 ### Prebuilt Images
 
@@ -239,7 +239,7 @@ Encryption occurs after compression and the encrypted filename will have a `.gpg
 | `DEFAULT_BACKUP_BLACKOUT_BEGIN` | Use `HHMM` notation to start a blackout period where no backups occur eg `0420`                                                                |         |
 | `DEFAULT_BACKUP_BLACKOUT_END`   | Use `HHMM` notation to set the end period where no backups occur eg `0430`                                                                     |         |
 
-> You may need to wrap your `DEFAULT_BACKUP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
+- You may need to wrap your `DEFAULT_BACKUP_BEGIN` value in quotes for it to properly parse. There have been reports of backups that start with a `0` get converted into a different format which will not allow the timer to start at the correct time.
 
 
 ##### Default Database Options
@@ -361,8 +361,8 @@ If `DEFAULT_BACKUP_LOCATION` = `blobxfer` then the following options are used:.
 | `DEFAULT_BLOBXFER_STORAGE_ACCOUNT_KEY` | Microsoft Azure Cloud storage account key.  |                     | x       |
 | `DEFAULT_BLOBXFER_REMOTE_PATH`         | Remote Azure path                           | `/docker-db-backup` | x       |
 
-> This service uploads files from backup targed directory `DEFAULT_FILESYSTEM_PATH`.
-> If the a cleanup configuration in `DEFAULT_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
+- This service uploads files from backup targed directory `DEFAULT_FILESYSTEM_PATH`.
+- If the a cleanup configuration in `DEFAULT_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ##### Hooks
 
@@ -521,9 +521,9 @@ Encryption will occur after compression and the resulting filename will have a `
 |                       | Version 2.x                                                                                             | `8086`  |         |
 | `DB01_INFLUX_VERSION` | What Version of Influx are you backing up from `1`.x or `2` series - amd64 and aarch/armv8 only for `2` | `2`     |         |
 
-> Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`.
-> You may use `DB_NAME=ALL` to backup the entire set of databases.
-> For `DB_HOST` use syntax of `http(s)://db-name`
+- Your Organization will be mapped to `DB_USER` and your root token will need to be mapped to `DB_PASS`.
+- You may use `DB_NAME=ALL` to backup the entire set of databases.
+- For `DB_HOST` use syntax of `http(s)://db-name`
 
 
 ###### MariaDB/MySQL
@@ -629,7 +629,7 @@ If `DB01_BACKUP_LOCATION` = `S3` then the following options are used:
 | _*OR*_                     |                                                                                           |         |         |
 | `DB01_S3_CERT_SKIP_VERIFY` | Skip verifying self signed certificates when connecting                                   | `TRUE`  |         |
 
-> When `DB01_S3_KEY_ID` and/or `DB01_S3_KEY_SECRET` is not set, will try to use IAM role assigned (if any) for uploading the backup files to S3 bucket.
+- When `DB01_S3_KEY_ID` and/or `DB01_S3_KEY_SECRET` is not set, will try to use IAM role assigned (if any) for uploading the backup files to S3 bucket.
 
 ###### Azure
 
@@ -641,8 +641,8 @@ If `DB01_BACKUP_LOCATION` = `blobxfer` then the following options are used:.
 | `DB01_BLOBXFER_STORAGE_ACCOUNT_KEY` | Microsoft Azure Cloud storage account key.  |                     | x       |
 | `DB01_BLOBXFER_REMOTE_PATH`         | Remote Azure path                           | `/docker-db-backup` | x       |
 
-> This service uploads files from backup directory `DB01_BACKUP_FILESYSTEM_PATH`.
-> If the a cleanup configuration in `DB01_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
+- This service uploads files from backup directory `DB01_BACKUP_FILESYSTEM_PATH`.
+- If the a cleanup configuration in `DB01_CLEANUP_TIME` is defined, the remote directory on Azure storage will also be cleaned automatically.
 
 ##### Hooks
 
@@ -823,7 +823,7 @@ The image will also allow you to use environment variables or Docker secrets use
 
 The script can also be executed skipping the interactive mode by using the following syntax/
 
-    `restore <filename> <db_type> <db_hostname> <db_name> <db_user> <db_pass> <db_port>`
+    `restore <filename- <db_type- <db_hostname- <db_name- <db_user- <db_pass- <db_port-`
 
 If you only enter some of the arguments you will be prompted to fill them in.
 
