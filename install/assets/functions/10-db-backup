@@ -767,7 +767,7 @@ backup_pgsql() {
         _postgres_backup_globals=false
     fi
 
-    if var_false "${_postgres_backup_globals}" && var_true "${backup_job_backup_pgsql_globals}" ; then _postgres_backup_globals=true; fi
+    if var_false "${_postgres_backup_globals}" & var_true "${backup_job_backup_pgsql_globals}" ; then _postgres_backup_globals=true; fi
     if var_true "${DEBUG_BACKUP_PGSQL}" ; then debug off; fi
     write_log debug "Databases Found: $(echo ${db_names} | xargs | tr ' ' ',')"
 
