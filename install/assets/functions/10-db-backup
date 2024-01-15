@@ -762,7 +762,7 @@ backup_pgsql() {
                 write_log debug "Excluding '${db_exclude}' from ALL DB_NAME backups"
                 db_names=$(echo "$db_names" | sed "/${db_exclude}/d" )
             done
-        _postgres_backup_globals=true
+            _postgres_backup_globals=true
         fi
     else
         db_names=$(echo "${backup_job_db_name}" | tr ',' '\n')
@@ -1390,7 +1390,7 @@ notify() {
         if [ -z "${SMTP_HOST}" ] ; then write_log error "[notifications] No SMTP_HOST variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
         if [ -z "${SMTP_PORT}" ] ; then write_log error "[notifications] No SMTP_PORT variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
         if var_nottrue "${skip_mail}" ; then
-            if ! grep -q ^from /etc/msmptrc ; then
+            if ! grep -q ^from /etc/msmtprc ; then
                 echo "from ${MAIL_FROM}" >> /etc/msmtprc
             fi
             mail_recipients=$(echo "${MAIL_TO}" | tr "," "\n")
