@@ -1,3 +1,9 @@
+## 4.0.35 2024-01-14 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with emaail notifications and not being able to add from statement
+
+
 ## 4.0.34 2024-01-02 <dave at tiredofit dot ca>
 
    ### Changed
