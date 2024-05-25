@@ -1,5 +1,5 @@
 ARG DISTRO=alpine
-ARG DISTRO_VARIANT=3.19
+ARG DISTRO_VARIANT=3.20
 
 FROM docker.io/tiredofit/${DISTRO}:${DISTRO_VARIANT}
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
@@ -9,7 +9,9 @@ ENV INFLUX1_CLIENT_VERSION=1.8.0 \
     INFLUX2_CLIENT_VERSION=2.7.3 \
     MSODBC_VERSION=18.3.2.1-1 \
     MSSQL_VERSION=18.3.1.1-1 \
-    AWS_CLI_VERSION=1.31.5 \
+    MYSQL_VERSION=mysql-8.4.0 \
+    MYSQL_REPO_URL=https://github.com/mysql/mysql-server \
+    AWS_CLI_VERSION=1.32.113 \
     CONTAINER_ENABLE_MESSAGING=TRUE \
     CONTAINER_ENABLE_MONITORING=TRUE \
     IMAGE_NAME="tiredofit/db-backup" \
@@ -27,11 +29,13 @@ RUN source /assets/functions/00-container && \
                     build-base \
                     bzip2-dev \
                     cargo \
+                    cmake \
                     git \
                     go \
                     libarchive-dev \
                     openssl-dev \
                     libffi-dev \
+                    ncurses-dev \
                     python3-dev \
                     py3-pip \
                     xz-dev \
@@ -47,8 +51,10 @@ RUN source /assets/functions/00-container && \
                     mariadb-client \
                     mariadb-connector-c \
                     mongodb-tools \
+                    ncurses \
                     openssl \
                     pigz \
+                    pixz \
                     postgresql16 \
                     postgresql16-client \
                     pv \
@@ -81,24 +87,24 @@ RUN source /assets/functions/00-container && \
     clone_git_repo https://github.com/influxdata/influxdb "${INFLUX1_CLIENT_VERSION}" && \
     go build -o /usr/sbin/influxd ./cmd/influxd && \
     strip /usr/sbin/influxd && \
+    \
+    clone_git_repo "${MYSQL_REPO_URL}" "${MYSQL_VERSION}" && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=MinSizeRel \
+        -DCMAKE_INSTALL_PREFIX=/opt/mysql \
+        -DFORCE_INSOURCE_BUILD=1 \
+        -DWITHOUT_SERVER:BOOL=ON \
+        && \
+    make -j$(nproc) install && \
+    \
+    pip3 install --break-system-packages awscli==${AWS_CLI_VERSION} && \
+    pip3 install --break-system-packages blobxfer && \
+    \
     mkdir -p /usr/src/pbzip2 && \
     curl -sSL https://launchpad.net/pbzip2/1.1/1.1.13/+download/pbzip2-1.1.13.tar.gz | tar xvfz - --strip=1 -C /usr/src/pbzip2 && \
     cd /usr/src/pbzip2 && \
     make && \
     make install && \
-    mkdir -p /usr/src/pixz && \
-    curl -sSL https://github.com/vasi/pixz/releases/download/v1.0.7/pixz-1.0.7.tar.xz | tar xvfJ - --strip 1 -C /usr/src/pixz && \
-    cd /usr/src/pixz && \
-    ./configure \
-        --prefix=/usr \
-        --sysconfdir=/etc \
-        --localstatedir=/var \
-        && \
-    make && \
-    make install && \
-    \
-    pip3 install --break-system-packages awscli==${AWS_CLI_VERSION} && \
-    pip3 install --break-system-packages blobxfer && \
     \
     package remove .db-backup-build-deps && \
     package cleanup && \

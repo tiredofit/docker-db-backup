@@ -221,6 +221,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" INFLUX_VERSION backup_job_influx_version
         transform_backup_instance_variable "${backup_instance_number}" LOG_LEVEL backup_job_log_level
         transform_backup_instance_variable "${backup_instance_number}" MONGO_CUSTOM_URI backup_job_mongo_custom_uri
+        transform_backup_instance_variable "${backup_instance_number}" MYSQL_CLIENT backup_job_mysql_client
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_ENABLE_TLS backup_job_mysql_enable_tls
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_EVENTS backup_job_mysql_events
         transform_backup_instance_variable "${backup_instance_number}" MYSQL_MAX_ALLOWED_PACKET backup_job_mysql_max_allowed_packet
@@ -401,6 +402,20 @@ EOF
                 dbtype=mysql
                 backup_job_db_port=${backup_job_db_port:-3306}
                 check_var backup_job_db_name DB"${v_instance}"_NAME "database name. Seperate multiple with commas"
+                case "${backup_job_mysql_client,,}" in
+                    mariadb )
+                        _mysql_prefix=/usr/bin/
+                    ;;
+                    mysql )
+                        _mysql_prefix=/opt/mysql/bin/
+                    ;;
+                    * )
+                        print_error "I don't understand '${backup_job_mysql_client,,}' as a client. Exiting.."
+                        exit 99
+                    ;;
+                esac
+
+                print_debug "Using '${backup_job_mysql_client,,}' as client"
 
                 if [ -n "${backup_job_db_pass}" ] ; then export MYSQL_PWD=${backup_job_db_pass} ; fi
                 if var_true "${backup_job_mysql_enable_tls}" ; then
@@ -665,7 +680,7 @@ backup_mysql() {
 
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(run_as_user mysql -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        db_names=$(run_as_user ${_mysql_prefix}mysql -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${backup_job_db_name_exclude}" ] ; then
             db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do
@@ -682,13 +697,13 @@ backup_mysql() {
     if var_true "${backup_job_split_db}" ; then
         for db in ${db_names} ; do
                 prepare_dbbackup
-                backup_job_filename=mysql_${db}_${backup_job_db_host,,}_${now}.sql
-                backup_job_filename_base=mysql_${db}_${backup_job_db_host,,}
+                backup_job_filename=${backup_job_mysql_client,,}_${db}_${backup_job_db_host,,}_${now}.sql
+                backup_job_filename_base=${backup_job_mysql_client,,}_${db}_${backup_job_db_host,,}
                 compression
                 pre_dbbackup "${db}"
                 write_log notice "Dumping MySQL/MariaDB database: '${db}' ${compression_string}"
                 if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
-                run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} $db | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+                run_as_user ${play_fair} ${_mysql_prefix}mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} $db | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
                 exit_code=$?
                 if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
                 check_exit_code backup "${backup_job_filename}"
@@ -703,13 +718,13 @@ backup_mysql() {
     else
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
-        backup_job_filename=mysql_all_${backup_job_db_host,,}_${now}.sql
-        backup_job_filename_base=mysql_all_${backup_job_db_host,,}
+        backup_job_filename=${backup_job_mysql_client,,}_all_${backup_job_db_host,,}_${now}.sql
+        backup_job_filename_base=${backup_job_mysql_client,,}_all_${backup_job_db_host,,}
         compression
         pre_dbbackup all
         write_log notice "Dumping all MySQL / MariaDB databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
         if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug on; fi
-        run_as_user ${play_fair} mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+        run_as_user ${play_fair} ${_mysql_prefix}mysqldump --max-allowed-packet=${backup_job_mysql_max_allowed_packet} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${events} ${single_transaction} ${stored_procedures} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_backup_opts} --databases $(echo ${db_names} | xargs) | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
         exit_code=$?
         if var_true "${DEBUG_BACKUP_MYSQL}" ; then debug off; fi
         check_exit_code backup "${backup_job_filename}"

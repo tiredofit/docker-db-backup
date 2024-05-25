@@ -1,3 +1,15 @@
+## 4.1.0 2024-05-25 <dave at tiredofit dot ca>
+
+    Note that arm/v7 builds have been removed from this release going forward
+
+   ### Added
+      - Introduce DEFAULT/DBXX_MYSQL_CLIENT option to use mariadb or mysql for client dumping to solve incompatibility issues
+      - Alpine 3.20 Base
+      - MariaDB 10.11.8 Client
+      - AWS Client 1.32.113
+      - MySQL Client 8.4.0
+
+
 ## 4.0.35 2024-01-14 <dave at tiredofit dot ca>
 
    ### Changed

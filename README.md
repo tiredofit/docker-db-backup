@@ -267,6 +267,7 @@ Encryption occurs after compression and the encrypted filename will have a `.gpg
 | `DEFAULT_EXTRA_BACKUP_OPTS`        | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |                           |         |
 | `DEFAULT_EXTRA_ENUMERATION_OPTS`   | Pass extra arguments to the database enumeration command only, add them here e.g. `--extra-command`       |                           |         |
 | `DEFAULT_EXTRA_OPTS`               | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |                           |         |
+| `DEFAULT_MYSQL_CLIENT`             | Choose between `mariadb` or `mysql` client to perform dump operations for compatibility purposes          | `mariadb`                 |         |
 | `DEFAULT_MYSQL_EVENTS`             | Backup Events                                                                                             | `TRUE`                    |         |
 | `DEFAULT_MYSQL_MAX_ALLOWED_PACKET` | Max allowed packet                                                                                        | `512M`                    |         |
 | `DEFAULT_MYSQL_SINGLE_TRANSACTION` | Backup in a single transaction                                                                            | `TRUE`                    |         |
