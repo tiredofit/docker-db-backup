@@ -1,3 +1,9 @@
+## 4.1.1 2024-06-19 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue where postgresql globals when backing up ALL not being deleted (#352)
+
+
 ## 4.1.0 2024-05-25 <dave at tiredofit dot ca>
 
     Note that arm/v7 builds have been removed from this release going forward

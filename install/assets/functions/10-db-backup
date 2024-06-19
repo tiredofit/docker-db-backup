@@ -525,11 +525,11 @@ backup_influx() {
             print_debug "[backup_influx] Influx DB Version 1 selected"
             for db in ${db_names}; do
                 prepare_dbbackup
-                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
                 if [ "${db}" != "justbackupeverything" ] ; then bucket="-db ${db}" ; else db=all ; fi
                 backup_job_filename=influx_${db}_${backup_job_db_host#*//}_${now}
                 backup_job_filename_base=influx_${db}_${backup_job_db_host#*//}
-                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
+                if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug off; fi
                 pre_dbbackup "${db}"
                 write_log notice "Dumping Influx database: '${db}'"
                 if var_true "${DEBUG_BACKUP_INFLUX}" ; then debug on; fi
@@ -742,6 +742,7 @@ backup_pgsql() {
     backup_pgsql_globals() {
         prepare_dbbackup
         backup_job_filename=pgsql_globals_${backup_job_db_host,,}_${now}.sql
+        backup_job_global_base=pgsql_globals_${backup_job_db_host,,}
         compression
         pre_dbbackup "globals"
         print_notice "Dumping PostgresSQL globals: with 'pg_dumpall -g' ${compression_string}"
@@ -1063,6 +1064,10 @@ cleanup_old_data() {
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${backup_job_filesystem_path}"
                     find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_filename_base}*" -exec rm -f {} \;
+                    if var_true "${_postgres_backup_globals}"; then
+                        find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_global_base}*" -exec rm -f {} \;
+                    fi
+
                     if  [ -z "${backup_job_blobxfer_storage_account}" ] || [ -z "${backup_job_blobxfer_storage_account_key}" ]; then
                         write_log warn "Variable _BLOBXFER_STORAGE_ACCOUNT or _BLOBXFER_STORAGE_ACCOUNT_KEY is not set. Skipping blobxfer functions"
                     else
@@ -1074,6 +1079,9 @@ cleanup_old_data() {
                     write_log info "Cleaning up old backups on filesystem"
                     run_as_user mkdir -p "${backup_job_filesystem_path}"
                     run_as_user find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_filename_base}*" -exec rm -f {} \;
+                    if var_true "${_postgres_backup_globals}"; then
+                        run_as_user find "${backup_job_filesystem_path}"/  -type f -mmin +"${backup_job_cleanup_time}" -iname "${backup_job_global_base}*" -exec rm -f {} \;
+                    fi
                 ;;
                 "s3" | "minio" )
                     write_log info "Cleaning up old backups on S3 storage"
