@@ -66,6 +66,7 @@ bootstrap_variables() {
                             DEFAULT_BLOBXFER_STORAGE_ACCOUNT \
                             DEFAULT_BLOBXFER_STORAGE_ACCOUNT_KEY \
                             DEFAULT_BLOBXFER_REMOTE_PATH \
+                            DEFAULT_BLOBXFER_MODE \
                             DB"${backup_instance_number}"_AUTH \
                             DB"${backup_instance_number}"_TYPE \
                             DB"${backup_instance_number}"_HOST \
@@ -93,6 +94,7 @@ bootstrap_variables() {
                             DB"${backup_instance_number}"_BLOBXFER_STORAGE_ACCOUNT \
                             DB"${backup_instance_number}"_BLOBXFER_STORAGE_ACCOUNT_KEY \
                             DB"${backup_instance_number}"_BLOBXFER_REMOTE_PATH \
+                            DB"${backup_instance_number}"_BLOBXFER_MODE \
                             BLOBXFER_STORAGE_ACCOUNT \
                             BLOBXFER_STORAGE_ACCOUNT_KEY \
                             DB_HOST \
@@ -199,6 +201,7 @@ bootstrap_variables() {
         transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_REMOTE_PATH backup_job_blobxfer_remote_path
         transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_ACCOUNT backup_job_blobxfer_storage_account
         transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_STORAGE_ACCOUNT_KEY backup_job_blobxfer_storage_account_key
+        transform_backup_instance_variable "${backup_instance_number}" BLOBXFER_MODE backup_job_blobxfer_mode
         transform_backup_instance_variable "${backup_instance_number}" CHECKSUM backup_job_checksum
         transform_backup_instance_variable "${backup_instance_number}" CLEANUP_TIME backup_job_cleanup_time
         transform_backup_instance_variable "${backup_instance_number}" COMPRESSION backup_job_compression
@@ -1072,7 +1075,7 @@ cleanup_old_data() {
                         write_log warn "Variable _BLOBXFER_STORAGE_ACCOUNT or _BLOBXFER_STORAGE_ACCOUNT_KEY is not set. Skipping blobxfer functions"
                     else
                         write_log info "Syncing changes via blobxfer"
-                        silent run_as_user blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete --delete-only
+                        silent run_as_user blobxfer upload --no-overwrite --mode ${backup_job_blobxfer_mode} --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete --delete-only
                     fi
                 ;;
                 "file" | "filesystem" )
@@ -1635,8 +1638,8 @@ EOF
                 if  [ -z "${backup_job_blobxfer_storage_account}" ] || [ -z "${backup_job_blobxfer_storage_account_key}" ]; then
                     write_log warn "Variable _BLOBXFER_STORAGE_ACCOUNT or _BLOBXFER_STORAGE_ACCOUNT_KEY is not set. Skipping blobxfer functions"
                 else
-                    write_log info "Synchronize local storage from S3 Bucket with blobxfer"
-                    ${play_fair} blobxfer download --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --delete
+                    write_log info "Synchronize local storage from blob with blobxfer"
+                    ${play_fair} blobxfer download --mode ${backup_job_blobxfer_mode} --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path} --restore-file-lmt --delete
 
                     write_log info "Moving backup to external storage with blobxfer"
                     mkdir -p "${backup_job_filesystem_path}"
@@ -1644,7 +1647,7 @@ EOF
 
                     run_as_user mv "${temporary_directory}"/"${backup_job_filename}" "${backup_job_filesystem_path}"/"${backup_job_filename}"
 
-                    silent run_as_user ${play_fair} blobxfer upload --mode file --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path}
+                    silent run_as_user ${play_fair} blobxfer upload --no-overwrite --mode ${backup_job_blobxfer_mode} --remote-path ${backup_job_blobxfer_remote_path} --storage-account ${backup_job_blobxfer_storage_account} --storage-account-key ${backup_job_blobxfer_storage_account_key} --local-path ${backup_job_filesystem_path}
                     move_exit_code=$?
 
                     if [ "${backup_job_checksum}" != "none" ] ; then run_as_user rm -rf "${temporary_directory}"/"${backup_job_filename}"."${checksum_extension}" ; fi
