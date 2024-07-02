@@ -1,3 +1,12 @@
+## 4.1.2 2024-07-02 <effectivelywild@github>
+
+   ### Added
+      - Add support for Azure Blob containers
+      - Fix timestamps when comparing previous backups
+      - Resolve unnecessary read operations in Azure
+      - Resolve issues with backup cleanup operations in Azure
+
+
 ## 4.1.1 2024-06-19 <dave at tiredofit dot ca>
 
    ### Changed
