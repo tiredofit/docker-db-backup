@@ -1,3 +1,9 @@
+## 4.1.3 2024-07-05 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Rebuild to support tiredofit/alpine:7.10.0
+
+
 ## 4.1.2 2024-07-02 <effectivelywild@github>
 
    ### Added
