@@ -1,3 +1,12 @@
+## 4.1.4 2024-08-13 <dave at tiredofit dot ca>
+
+Please note that if using encryption using a passphrase, you may be encountering issues with manual decryption. This release fixes that.
+If you try to manually decrypt and your passphrase fails. Try wrapping it in single (') or double (") quotes.
+
+   ### Changed
+      - Fix for stray quotes appearing inside of ENCRYPT_PASSPHRASE variables
+
+
 ## 4.1.3 2024-07-05 <dave at tiredofit dot ca>
 
    ### Changed

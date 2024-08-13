@@ -165,6 +165,11 @@ bootstrap_variables() {
             sed -i "s|_PASS='\(.*\)'|_PASS=\1|g" "${backup_instance_vars}"
         fi
 
+        if grep -qo ".*_PASSPHRASE='.*'" "${backup_instance_vars}"; then
+            print_debug "[bootstrap_variables] [backup_init] Found _PASSPHRASE variable with quotes"
+            sed -i "s|_PASSPHRASE='\(.*\)'|_PASSPHRASE=\1|g" "${backup_instance_vars}"
+        fi
+
         if grep -qo "MONGO_CUSTOM_URI='.*'" "${backup_instance_vars}"; then
             print_debug "[bootstrap_variables] [backup_init] Found _MONGO_CUSTOM_URI variable with quotes"
             sed -i "s|MONGO_CUSTOM_URI='\(.*\)'|MONGO_CUSTOM_URI=\1|g" "${backup_instance_vars}"
@@ -657,7 +662,6 @@ backup_mssql() {
             compression
             pre_dbbackup all
             run_as_user ${compress_cmd} "${temporary_directory}/${backup_job_filename_original}"
-
             file_encryption
             timer backup finish
             generate_checksum
