@@ -1397,7 +1397,7 @@ notify() {
                 eval "${NOTIFICATION_CUSTOM_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
             else
                 if [ -x "${NOTIFICATION_CUSTOM_SCRIPT}" ] ; then
-                    write_log notice "Found NOTIFICATION_CUSTOM_SCRIPT environment variable. Executing '${NOTIFICATION_CUSTOM_SCRIPT}"
+                    write_log notice "Found NOTIFICATION_CUSTOM_SCRIPT environment variable. Executing '${NOTIFICATION_CUSTOM_SCRIPT}'"
                     # script timestamp logfile errorcode subject body
                     eval "${NOTIFICATION_CUSTOM_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
                 else
@@ -1684,7 +1684,7 @@ pre_dbbackup() {
             run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
         else
             if [ -x "${backup_job_pre_script}" ] ; then
-                write_log notice "Found PRE_SCRIPT environment variable. Executing '${backup_job_pre_script}"
+                write_log notice "Found PRE_SCRIPT environment variable. Executing '${backup_job_pre_script}'"
                 run_as_user eval "${backup_job_pre_script}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${backup_job_filename}"
             else
                 write_log error "Can't execute PRE_SCRIPT environment variable '${backup_job_pre_script}' as its filesystem bit is not executible!"
@@ -1753,7 +1753,7 @@ EOZP
             eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
         else
             if [ -x "${backup_job_post_script}" ] ; then
-                write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}"
+                write_log notice "Found POST_SCRIPT environment variable. Executing '${backup_job_post_script}'"
                 eval "${backup_job_post_script}" "${exit_code}" "${dbtype}" "${backup_job_db_host}" "${1}" "${dbbackup_start_time}" "${dbbackup_finish_time}" "${dbbackup_total_time}" "${backup_job_filename}" "${filesize}" "${checksum_value}" "${move_exit_code}"
             else
                 write_log error "Can't execute POST_SCRIPT environment variable '${backup_job_post_script}' as its filesystem bit is not executible!"
