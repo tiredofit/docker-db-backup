@@ -1,3 +1,10 @@
+## 4.1.8 2024-10-29 <dave at tiredofit dot ca>
+
+Rebuild using 4.1.4 sources - ignore any versions of 4.1.5-4.1.7
+
+   ### Added
+
+
 ## 4.1.4 2024-08-13 <dave at tiredofit dot ca>
 
 Please note that if using encryption using a passphrase, you may be encountering issues with manual decryption. This release fixes that.
