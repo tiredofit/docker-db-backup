@@ -1,3 +1,15 @@
+## 4.1.9 2024-11-07 <dave at tiredofit dot ca>
+
+   ### Added
+      - Pin to tiredofit/alpine:edge-7.10.19
+      - MySQL 8.4.3 client
+      - MSSQL and MSODBC 18.4.1.1-1
+      - Mysql 11.x Support
+      - Influx2 Client 2.7.5
+      - AWS Client 1.35.13
+      - Postgresql 17.x Support
+
+
 ## 4.1.8 2024-10-29 <dave at tiredofit dot ca>
 
 Rebuild using 4.1.4 sources - ignore any versions of 4.1.5-4.1.7
