@@ -1,3 +1,11 @@
+## 4.1.10 2024-12-12 <dave at tiredofit dot ca>
+
+   ### Added
+      - Use tiredofit/alpine:3.21-7.10.27 base
+      - Use the actual binary name when dumping mariadb and mysql databases
+      - Silence warnings that are appearing due to filenames, ssl warnings re MariaDB / MySQL
+
+
 ## 4.1.9 2024-11-07 <dave at tiredofit dot ca>
 
    ### Added
