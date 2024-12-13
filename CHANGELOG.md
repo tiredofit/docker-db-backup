@@ -1,3 +1,9 @@
+## 4.1.11 2024-12-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix when backing up 'ALL' databases with MariaDB
+
+
 ## 4.1.10 2024-12-12 <dave at tiredofit dot ca>
 
    ### Added
