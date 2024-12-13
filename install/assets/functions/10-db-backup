@@ -691,7 +691,7 @@ backup_mysql() {
 
     if [ "${backup_job_db_name,,}" = "all" ] ; then
         write_log debug "Preparing to back up everything except for information_schema and _* prefixes"
-        db_names=$(run_as_user ${_mysql_prefix}${_mysql_bin_prefix} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
+        db_names=$(run_as_user ${_mysql_prefix}${_mysql_bin_prefix/-/} -h ${backup_job_db_host} -P ${backup_job_db_port} -u${backup_job_db_user} ${mysql_tls_args} ${backup_job_extra_opts} ${backup_job_extra_enumeration_opts} --batch -e "SHOW DATABASES;" | grep -v Database | grep -v schema )
         if [ -n "${backup_job_db_name_exclude}" ] ; then
             db_names_exclusions=$(echo "${backup_job_db_name_exclude}" | tr ',' '\n')
             for db_exclude in ${db_names_exclusions} ; do

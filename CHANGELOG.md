@@ -1,3 +1,9 @@
+## 4.1.12 2024-12-13 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for 4.1.11
+
+
 ## 4.1.11 2024-12-13 <dave at tiredofit dot ca>
 
    ### Changed
