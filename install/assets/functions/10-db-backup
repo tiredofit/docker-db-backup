@@ -972,7 +972,7 @@ check_availability() {
             "mysql" )
                 counter=0
                 export MYSQL_PWD=${backup_job_db_pass}
-                while ! (run_as_user ${_mysql_prefix}${_mysql_bin_prefix}admin -u"${backup_job_db_user}" -P"${backup_job_db_port}" -h"${backup_job_db_host}" ${mysql_tls_args} status > /dev/null 2>&1) ; do
+                while ! (run_as_user ${_mysql_prefix}${_mysql_bin_prefix}admin -u"${backup_job_db_user}" -P"${backup_job_db_port}" -h"${backup_job_db_host}" status > /dev/null 2>&1) ; do
                     sleep 5
                     (( counter+=5 ))
                     write_log warn "MySQL/MariaDB Server '${backup_job_db_host}' is not accessible, retrying.. (${counter} seconds so far)"
