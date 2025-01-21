@@ -1,3 +1,9 @@
+## 4.1.14 2025-01-21 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Downgrade AWS Client to 1.36.40 due to incompatibilities with providers with 1.37x. for time being
+
+
 ## 4.1.13 2025-01-21 <dave at tiredofit dot ca>
 
    ### Added
