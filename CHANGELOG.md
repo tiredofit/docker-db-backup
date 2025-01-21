@@ -1,3 +1,13 @@
+## 4.1.13 2025-01-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update MySQL client to 8.4.4
+      - Update AWS Client to 1.37.2
+
+   ### Changed
+      - Seperate MySQL and MariaDB TLS Configurationf for arguments that have deviated
+
+
 ## 4.1.12 2024-12-13 <dave at tiredofit dot ca>
 
    ### Changed
