@@ -429,6 +429,14 @@ EOF
 
                 if [ -n "${backup_job_db_pass}" ] ; then export MYSQL_PWD=${backup_job_db_pass} ; fi
                 if var_true "${backup_job_mysql_enable_tls}" ; then
+                    case "${backup_job_mysql_client,,}" in
+                        mariadb )
+                            mysql_tls_args="--ssl"
+                        ;;
+                        mysql )
+                            mysql_tls_args="--ssl-mode=REQUIRED"
+                        ;;
+                    esac
                     if [ -n "${backup_job_mysql_tls_ca_file}" ] ; then
                         mysql_tls_args="--ssl_ca=${backup_job_mysql_tls_ca_file}"
                     fi
@@ -440,14 +448,28 @@ EOF
                     fi
 
                     if var_true "${backup_job_mysql_tls_verify}" ; then
-                        mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
+                        case "${backup_job_mysql_client,,}" in
+                            mariadb )
+                                mysql_tls_args="${mysql_tls_args} --sslverify-server-cert"
+                            ;;
+                            mysql )
+                                mysql_tls_args="${mysql_tls_args} --ssl-mode=VERIFY_CA"
+                            ;;
+                        esac
                     fi
 
                     if [ -n "${backup_job_mysql_tls_version}" ] ; then
                         mysql_tls_args="${mysql_tls_args} --tls_version=${backup_job_mysql_tls_version}"
                     fi
                 else
-                    mysql_tls_args="--disable-ssl"
+                    case "${backup_job_mysql_client,,}" in
+                        mariadb )
+                            mysql_tls_args="--disable-ssl"
+                        ;;
+                        mysql )
+                            mysql_tls_args="--ssl-mode=DISABLED"
+                        ;;
+                    esac
                 fi
             ;;
             "mssql" | "microsoftsql" )
