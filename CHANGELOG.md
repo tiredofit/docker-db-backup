@@ -1,3 +1,12 @@
+## 4.1.15 2025-01-29 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add support for username and password support when checking for connectivity to couchdb (credit: JvSomeren)
+
+   ### Changed
+      - Fix issue with couchdb compression routines
+
+
 ## 4.1.14 2025-01-21 <dave at tiredofit dot ca>
 
    ### Changed
