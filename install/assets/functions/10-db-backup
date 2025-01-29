@@ -532,7 +532,7 @@ backup_couch() {
     prepare_dbbackup
     backup_job_filename=couch_${backup_job_db_name}_${backup_job_db_host#*//}_${now}.txt
     backup_job_filename_base=couch_${backup_job_db_name}_${backup_job_db_host#*//}
-    compressionzyclonite
+    compression
     if var_true "${DEBUG_BACKUP_COUCH}" ; then debug off; fi
     check_exit_code backup "${backup_job_filename}"
     timer backup finish
