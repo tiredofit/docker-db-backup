@@ -943,14 +943,16 @@ backup_sqlite3() {
 
 check_availability() {
     if var_true "${DEBUG_CHECK_AVAILABILITY}" ; then debug on; fi
-    ### Set the Database Type
     if var_false "${backup_job_skip_availability_check}" ; then
         case "${dbtype}" in
             "couch" )
                 counter=0
                 code_received=0
+                if [ -n "${backup_job_db_user}" ] && [ -n ${backup_job_db_pass} ]; then
+                    _ca_couch_auth="-u ${backup_job_db_user}:${backup_job_db_pass}"
+                fi
                 while [ "${code_received}" != "200" ]; do
-                    code_received=$(run_as_user curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${backup_job_db_host}:${backup_job_db_port})
+                    code_received=$(run_as_user curl -XGET -sSL -o /dev/null -L -w ''%{http_code}'' ${_ca_couch_auth} ${backup_job_db_host}:${backup_job_db_port})
                     if [ "${code_received}" = "200" ] ; then break ; fi
                     sleep 5
                     (( counter+=5 ))
