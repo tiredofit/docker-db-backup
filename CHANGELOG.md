@@ -1,3 +1,10 @@
+## 4.1.16 2025-02-21 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update to tiredofit/alpine:7.10.28
+      - Support TLS connectivity with restore script (credit fermion2020@github)
+
+
 ## 4.1.15 2025-01-29 <dave at tiredofit dot ca>
 
    ### Added
