@@ -3,6 +3,7 @@ ARG DISTRO_VARIANT=3.21-7.10.28
 
 FROM docker.io/tiredofit/${DISTRO}:${DISTRO_VARIANT}
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
+LABEL org.opencontainers.image.source="https://github.com/tiredofit/docker-db-backup"
 
 ENV INFLUX1_CLIENT_VERSION=1.8.0 \
     INFLUX2_CLIENT_VERSION=2.7.5 \
