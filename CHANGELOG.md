@@ -1,3 +1,9 @@
+## 4.1.17 2025-04-17 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix issue with Postgres database cleanup when ALL databases being backed up as one file (SPLIT_DB=FALSE)
+
+
 ## 4.1.16 2025-02-21 <dave at tiredofit dot ca>
 
    ### Added

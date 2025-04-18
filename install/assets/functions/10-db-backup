@@ -846,7 +846,11 @@ backup_pgsql() {
         write_log debug "Not splitting database dumps into their own files"
         prepare_dbbackup
         backup_job_filename=pgsql_all_${backup_job_db_host,,}_${now}.sql
-        backup_job_filename_base=pgsql_${db}_${backup_job_db_host,,}
+        if [ "${backup_job_db_name,,}" = "all" ] ; then
+            backup_job_filename_base=pgsql_all_${backup_job_db_host,,}
+        else
+            backup_job_filename_base=pgsql_${db}_${backup_job_db_host,,}
+        fi
         compression
         pre_dbbackup all
         write_log notice "Dumping all PostgreSQL databases: '$(echo ${db_names} | xargs | tr ' ' ',')' ${compression_string}"
