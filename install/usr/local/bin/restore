@@ -1132,15 +1132,15 @@ EOF
         echo -e "${coff}"
         read -p "$(echo -e ${clg}** ${cdgy}Enter Value \(${cwh}Y${cdgy}\) \| \(${cwh}N${cdgy}\) \| \(${cwh}Q${cdgy}\)  : ${cwh}${coff})" q_menu_mongo_dropdb
         case "${q_menu_mongo_dropdb,,}" in
-            "y" | "yes" | * )
-                mongo_dropdb="--drop"
-            ;;
             "n" | "update" )
                 unset mongo_dropdb
             ;;
             "q" | "exit" )
                 print_info "Quitting Script"
                 exit 1
+            ;;
+            "y" | "yes" | * )
+                mongo_dropdb="--drop"
             ;;
         esac
 
