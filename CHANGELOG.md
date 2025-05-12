@@ -1,3 +1,9 @@
+## 4.1.18 2025-05-12 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix MongoDB restore from not dropping DB each time before restore except explicitly told (credit logicoa@github)
+
+
 ## 4.1.17 2025-04-17 <dave at tiredofit dot ca>
 
    ### Changed
