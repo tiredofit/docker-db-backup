@@ -1247,7 +1247,7 @@ create_schedulers() {
             cp -R /assets/dbbackup/template-dbbackup /etc/services.available/dbbackup-"${instance}"
             sed -i "s|{{BACKUP_NUMBER}}|${instance}|g" /etc/services.available/dbbackup-"${instance}"/run
             if [ "${MODE,,}" = "manual" ] ; then service_stop dbbackup-"${instance}" ; fi
-            cat <<EOF >> /usr/bin/backup"${instance}"-now
+            cat <<EOF > /usr/bin/backup"${instance}"-now
 #!/bin/bash
 source /assets/functions/00-container
 PROCESS_NAME=db-backup${instance}
@@ -1267,7 +1267,7 @@ EOF
 
 EOF
             else
-                echo "/usr/bin/backup${instance}-now now" >> /usr/bin/backup-now
+                echo "/usr/bin/backup${instance}-now now" > /usr/bin/backup-now
             fi
 
             instance=$(echo "${instance} +1" | bc)

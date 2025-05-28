@@ -1,3 +1,9 @@
+## 4.1.19 2025-05-28 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Force overwrite manual scripts as opposed to append (#414)
+
+
 ## 4.1.18 2025-05-12 <dave at tiredofit dot ca>
 
    ### Changed
