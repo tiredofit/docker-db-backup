@@ -1,3 +1,9 @@
+## 4.1.20 2025-07-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix backup error checking routines #417 - credit alteriks@github
+
+
 ## 4.1.19 2025-05-28 <dave at tiredofit dot ca>
 
    ### Changed
