@@ -1,3 +1,9 @@
+## 4.1.21 2025-08-08 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for 4.1.20 release inadvertently failing backups (credit tlex@github)
+
+
 ## 4.1.20 2025-07-23 <dave at tiredofit dot ca>
 
    ### Changed
