@@ -674,6 +674,30 @@ backup_mssql() {
             post_dbbackup "${backup_job_db_name}"
             cleanup_old_data
         ;;
+        sqlpackage )
+            prepare_dbbackup
+            backup_job_filename_base=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}
+            backup_job_filename_base=$(sed 's/ /-/g' <<< "${backup_job_filename_base}")
+            backup_job_filename=${backup_job_filename_base}_${now}.dacpac
+            pre_dbbackup "${backup_job_db_name}"
+            write_log notice "Dumping MSSQL database: '${backup_job_db_name}'"
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug on; fi
+            silent ${play_fair} /root/.dotnet/tools/sqlpackage /Action:Extract /SourceConnectionString:"Data Source=${backup_job_db_host},${backup_job_db_port};Database='${backup_job_db_name}';User Id='${backup_job_db_user}';Password='${backup_job_db_pass}';Encrypt=False;" /p:ExtractApplicationScopedObjectsOnly=false /p:VerifyExtraction=true /p:ExtractAllTableData=true /TargetFile:"${temporary_directory}/${backup_job_filename}"
+            exit_code=$?
+            silent chown "${DBBACKUP_USER}":"${DBBACKUP_GROUP}" "${temporary_directory}/${backup_job_filename}"
+            if var_true "${DEBUG_BACKUP_MSSQL}" ; then debug off; fi
+            backup_job_filename_original=${backup_job_filename}
+            compression
+            pre_dbbackup all
+            run_as_user ${compress_cmd} "${temporary_directory}/${backup_job_filename_original}"
+            file_encryption
+            timer backup finish
+            generate_checksum
+            move_dbbackup
+            check_exit_code move "${backup_job_filename}"
+            post_dbbackup "${backup_job_db_name}"
+            cleanup_old_data
+        ;;
         trn|transaction )
             prepare_dbbackup
             backup_job_filename=mssql_${backup_job_db_name,,}_${backup_job_db_host,,}_${now}.trn

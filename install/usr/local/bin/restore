@@ -619,6 +619,11 @@ get_dbtype() {
             DEFAULT_PORT=${DEFAULT_PORT:-"5432"}
             print_debug "Parsed DBType: Postgresql"
         ;;
+        mssql | sqlserver )
+            parsed_type=true
+            DEFAULT_PORT=${DEFAULT_PORT:-"1433"}
+            print_debug "Parsed DBType: Microsoft SQL"
+        ;;
         * )
             print_debug "Parsed DBType: UNKNOWN"
         ;;
@@ -672,6 +677,7 @@ ${q_dbtype_menu}
     M ) MySQL / MariaDB
     O ) MongoDB
     P ) Postgresql
+    S ) Microsoft SQL
     Q ) Quit
 
 EOF
@@ -694,6 +700,11 @@ EOF
                     p* )
                         r_dbtype=postgresql
                         DEFAULT_PORT=${DEFAULT_PORT:-"5432"}
+                        break
+                    ;;
+                    s )
+                        r_dbtype=sqlserver
+                        DEFAULT_PORT=${DEFAULT_PORT:-"1433"}
                         break
                     ;;
                     q* )
@@ -724,6 +735,11 @@ EOF
                     p* )
                         r_dbtype=postgresql
                         DEFAULT_PORT=${DEFAULT_PORT:-"5432"}
+                        break
+                    ;;
+                    s* )
+                        r_dbtype=sqlserver
+                        DEFAULT_PORT=${DEFAULT_PORT:-"1433"}
                         break
                     ;;
                     q* )
@@ -767,6 +783,11 @@ EOF
                         DEFAULT_PORT=${DEFAULT_PORT:-"5432"}
                         break
                     ;;
+                    s* )
+                        r_dbtype=sqlserver
+                        DEFAULT_PORT=${DEFAULT_PORT:-"1433"}
+                        break
+                    ;;
                     q* )
                         print_info "Quitting Script"
                         exit 1
@@ -800,6 +821,11 @@ EOF
                     p* )
                         r_dbtype=postgresql
                         DEFAULT_PORT=${DEFAULT_PORT:-"5432"}
+                        break
+                    ;;
+                    s* )
+                        r_dbtype=sqlserver
+                        DEFAULT_PORT=${DEFAULT_PORT:-"1433"}
                         break
                     ;;
                     q* )
@@ -1118,6 +1144,14 @@ case "${r_dbtype}" in
         export PGPASSWORD=${r_dbpass}
         pv ${r_filename} | ${decompress_cmd}cat | psql  -d ${r_dbname} -h ${r_dbhost} -p ${r_dbport} -U ${r_dbuser}
         exit_code=$?
+    ;;
+    mssql | sqlserver )
+        print_info "Restoring '${r_filename}' into '${r_dbhost}'/'${r_dbname}'"
+        temp_filename=$(mktemp).dacpac
+        pv ${r_filename} | ${decompress_cmd}cat > ${temp_filename}
+        silent ${play_fair} /root/.dotnet/tools/sqlpackage /Action:Publish /SourceFile:"${temp_filename}" /TargetConnectionString:"Data Source=${r_dbhost},${r_dbport};Database=${r_dbname};User Id=${r_dbuser};Password=${r_dbpass};Encrypt=False;"
+        exit_code=$?
+        rm ${temp_filename}
     ;;
     mongo )
         cat << EOF

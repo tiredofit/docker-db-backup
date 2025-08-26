@@ -8,6 +8,8 @@ ENV INFLUX1_CLIENT_VERSION=1.8.0 \
     INFLUX2_CLIENT_VERSION=2.7.5 \
     MSODBC_VERSION=18.4.1.1-1 \
     MSSQL_VERSION=18.4.1.1-1 \
+    DOTNET_VERSION=8.0.413 \
+    SQLPACKAGE_VERSION=170.1.61 \
     MYSQL_VERSION=mysql-8.4.4 \
     MYSQL_REPO_URL=https://github.com/mysql/mysql-server \
     AWS_CLI_VERSION=1.36.40 \
@@ -85,6 +87,22 @@ RUN source /assets/functions/00-container && \
         curl -sSLO https://download.microsoft.com/download/7/6/d/76de322a-d860-4894-9945-f0cc5d6a45f8/msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk ; \
         curl -sSLO https://download.microsoft.com/download/7/6/d/76de322a-d860-4894-9945-f0cc5d6a45f8/mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; \
         echo y | apk add --allow-untrusted msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; \
+        # Install dotnet
+        package install .db-backup-dotnet-deps \
+            ca-certificates \
+            krb5-libs \
+            libgcc \
+            libintl \
+            libunwind \
+            icu-libs \
+            libssl3 \
+            libstdc++ \
+            zlib \
+            && \
+        curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version ${DOTNET_VERSION}; \
+        ln -s /root/.dotnet/ /usr/share/dotnet ; \
+        # Install sqlpackage
+        /root/.dotnet/dotnet tool install --global Microsoft.SqlPackage --version ${SQLPACKAGE_VERSION}; \
     else \
         echo >&2 "Detected non x86_64 or ARM64 build variant, skipping MSSQL installation" ; \
     fi; \
