@@ -73,6 +73,7 @@ RUN source /assets/functions/00-container && \
                     xz \
                     zip \
                     zstd \
+                    netcat-openbsd \
                     && \
     \
     case "$(uname -m)" in \
