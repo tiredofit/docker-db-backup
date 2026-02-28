@@ -481,6 +481,13 @@ EOF
                 dbtype=mssql
                 backup_job_db_port=${backup_job_db_port:-1433}
             ;;
+            neo4j* )
+                dbtype=neo4j
+                backup_job_db_port=${backup_job_db_port:-7687}
+                check_var backup_job_db_name DB"${v_instance}"_NAME "database name"
+                check_var backup_job_db_user DB"${v_instance}"_USER "database username"
+                check_var backup_job_db_pass DB"${v_instance}"_PASS "database password"
+            ;;
             postgres* | "pgsql" )
                 dbtype=pgsql
                 backup_job_db_port=${backup_job_db_port:-5432}
@@ -697,6 +704,38 @@ backup_mssql() {
             cleanup_old_data
         ;;
     esac
+}
+
+backup_neo4j() {
+    if var_true "${DEBUG_BACKUP_NEO4J}" ; then debug on; fi
+    prepare_dbbackup
+    backup_job_filename=neo4j_${backup_job_db_name}_${backup_job_db_host,,}_${now}.cypher
+    backup_job_filename_base=neo4j_${backup_job_db_name}_${backup_job_db_host,,}
+    compression
+    pre_dbbackup "${backup_job_db_name}"
+    write_log notice "Dumping Neo4J database: '${backup_job_db_name}' ${compression_string}"
+    if var_true "${DEBUG_BACKUP_NEO4J}" ; then debug on; fi
+    run_as_user ${play_fair} cypher-shell \
+        -a "neo4j://${backup_job_db_host}:${backup_job_db_port}" \
+        -u "${backup_job_db_user}" \
+        -p "${backup_job_db_pass}" \
+        -d "${backup_job_db_name}" \
+        --format plain \
+        ${backup_job_extra_opts} \
+        ${backup_job_extra_backup_opts} \
+        "CALL apoc.export.cypher.all(null, {stream:true, format:'cypher-shell'}) YIELD cypherStatements RETURN cypherStatements" \
+        | ${compress_cmd} | run_as_user tee "${temporary_directory}"/"${backup_job_filename}" > /dev/null
+    exit_code=$((PIPESTATUS[0] + PIPESTATUS[1] + PIPESTATUS[2]))
+    if var_true "${DEBUG_BACKUP_NEO4J}" ; then debug off; fi
+    check_exit_code backup "${backup_job_filename}"
+    timer backup finish
+    file_encryption
+    generate_checksum
+    move_dbbackup
+    check_exit_code move "${backup_job_filename}"
+    post_dbbackup "${backup_job_db_name}"
+    cleanup_old_data
+    if var_true "${DEBUG_BACKUP_NEO4J}" ; then debug off; fi
 }
 
 backup_mysql() {
@@ -1012,6 +1051,14 @@ check_availability() {
                     sleep 5
                     (( counter+=5 ))
                     write_log warn "MSSQL Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
+                done
+            ;;
+            "neo4j" )
+                counter=0
+                while ! (run_as_user cypher-shell -a "neo4j://${backup_job_db_host}:${backup_job_db_port}" -u "${backup_job_db_user}" -p "${backup_job_db_pass}" -d "${backup_job_db_name}" "RETURN 1;" > /dev/null 2>&1) ; do
+                    sleep 5
+                    (( counter+=5 ))
+                    write_log warn "Neo4J Host '${backup_job_db_host}' is not accessible, retrying.. ($counter seconds so far)"
                 done
             ;;
             "pgsql" )

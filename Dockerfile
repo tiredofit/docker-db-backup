@@ -10,6 +10,7 @@ ENV INFLUX1_CLIENT_VERSION=1.8.0 \
     MSSQL_VERSION=18.4.1.1-1 \
     MYSQL_VERSION=mysql-8.4.4 \
     MYSQL_REPO_URL=https://github.com/mysql/mysql-server \
+    NEO4J_VERSION=5.26.0 \
     AWS_CLI_VERSION=1.36.40 \
     CONTAINER_ENABLE_MESSAGING=TRUE \
     CONTAINER_ENABLE_MONITORING=TRUE \
@@ -52,6 +53,7 @@ RUN source /assets/functions/00-container && \
                     mariadb-connector-c \
                     mongodb-tools \
                     ncurses \
+                    openjdk17-jre-headless \
                     openssl \
                     pigz \
                     pixz \
@@ -96,6 +98,14 @@ RUN source /assets/functions/00-container && \
     else \
         echo >&2 "Unable to build Influx 2 on this system" ; \
     fi ; \
+    \
+    mkdir -p /usr/src/neo4j && \
+    curl -sSL https://dist.neo4j.org/neo4j-community-${NEO4J_VERSION}-unix.tar.gz | tar xzf - --strip-components=1 -C /usr/src/neo4j && \
+    mkdir -p /opt/neo4j/bin /opt/neo4j/lib && \
+    cp /usr/src/neo4j/bin/cypher-shell /opt/neo4j/bin/ && \
+    cp /usr/src/neo4j/lib/*.jar /opt/neo4j/lib/ && \
+    chmod +x /opt/neo4j/bin/cypher-shell && \
+    ln -sf /opt/neo4j/bin/cypher-shell /usr/local/bin/cypher-shell && \
     \
     clone_git_repo https://github.com/influxdata/influxdb "${INFLUX1_CLIENT_VERSION}" && \
     go build -o /usr/sbin/influxd ./cmd/influxd && \
