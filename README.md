@@ -13,7 +13,7 @@
 
 This will build a container for backing up multiple types of DB Servers
 
-Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Postgres, Redis servers.
+Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Neo4J, Postgres, Redis servers.
 
 - dump to local filesystem or backup to S3 Compatible services, and Azure.
 - multiple backup job support
@@ -62,6 +62,7 @@ Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Postgres, Red
         - [MariaDB/MySQL](#mariadbmysql)
         - [Microsoft SQL](#microsoft-sql)
         - [MongoDB](#mongodb)
+        - [Neo4J](#neo4j)
         - [Postgresql](#postgresql)
         - [Redis](#redis)
       - [Default Storage Options](#default-storage-options)
@@ -82,6 +83,7 @@ Backs up CouchDB, InfluxDB, MySQL/MariaDB, Microsoft SQL, MongoDB, Postgres, Red
         - [MariaDB/MySQL](#mariadbmysql-1)
         - [Microsoft SQL](#microsoft-sql-1)
         - [MongoDB](#mongodb-1)
+        - [Neo4J](#neo4j-1)
         - [Postgresql](#postgresql-1)
         - [Redis](#redis-1)
         - [SQLite](#sqlite)
@@ -296,6 +298,38 @@ Encryption occurs after compression and the encrypted filename will have a `.gpg
 | `MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`    |         | x       |
 |                    | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. |         |         |
 |                    | You can override them by making your own entries                                                                                     |         |         |
+
+###### Neo4J
+
+| Variable       | Description | Default | `_FILE` |
+| -------------- | ----------- | ------- | ------- |
+| `DEFAULT_PORT` | Neo4J Port  | `7687`  | x       |
+
+> Requires the [APOC](https://neo4j.com/docs/apoc/current/) plugin to be installed on the Neo4J server.
+> `DB_NAME` should be set to the target database name (default Neo4J database is named `neo4j`).
+> Uses the Bolt protocol via `cypher-shell` to export all data as Cypher statements.
+>
+> **Installing APOC on your Neo4J server:**
+>
+> *Docker (environment variable):*
+> ```bash
+> docker run \
+>   -e NEO4J_PLUGINS='["apoc"]' \
+>   -e NEO4J_apoc_export_file_enabled=true \
+>   -e NEO4J_dbms_security_procedures__unrestricted='apoc.*' \
+>   neo4j:latest
+> ```
+>
+> *Docker Compose:*
+> ```yaml
+> environment:
+>   - NEO4J_PLUGINS=["apoc"]
+>   - NEO4J_apoc_export_file_enabled=true
+>   - NEO4J_dbms_security_procedures__unrestricted=apoc.*
+> ```
+>
+> *Manual installation:*
+> Download the APOC JAR from [Neo4J APOC Releases](https://github.com/neo4j/apoc/releases) and place it in your Neo4J `plugins/` directory.
 
 ###### Postgresql
 
@@ -570,6 +604,18 @@ Encryption will occur after compression and the resulting filename will have a `
 | `DB01_MONGO_CUSTOM_URI` | If you wish to override the MongoDB Connection string enter it here e.g. `mongodb+srv://username:password@cluster.id.mongodb.net`    |         | x       |
 |                         | This environment variable will be parsed and populate the `DB_NAME` and `DB_HOST` variables to properly build your backup filenames. |         |         |
 |                         | You can override them by making your own entries                                                                                     |         |         |
+
+###### Neo4J
+
+| Variable                 | Description                                                                                               | Default | `_FILE` |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | ------- | ------- |
+| `DB01_EXTRA_OPTS`        | Pass extra arguments to the backup and database enumeration command, add them here e.g. `--extra-command` |         |         |
+| `DB01_EXTRA_BACKUP_OPTS` | Pass extra arguments to the backup command only, add them here e.g. `--extra-command`                     |         |         |
+| `DB01_NAME`              | Database name e.g. `neo4j`                                                                                |         | x       |
+| `DB01_PORT`              | Neo4J Bolt Port                                                                                           | `7687`  | x       |
+
+> Requires the [APOC](https://neo4j.com/docs/apoc/current/) plugin to be installed on the Neo4J server.
+> Uses `cypher-shell` via the Bolt protocol to export the entire database as Cypher statements.
 
 ###### Postgresql
 
