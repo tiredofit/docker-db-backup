@@ -183,6 +183,9 @@ RUN source /assets/functions/00-container && \
                     zstd \
                     && \
     \
+    echo ""
+    RUN set -ex && \
+    source /assets/functions/00-container && \
     case "$(uname -m)" in \
 	    "x86_64" ) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=amd64; ;; \
         "arm64" | "aarch64" ) mssql=true ; mssql_arch=arm64; influx2=true ; influx_arch=arm64 ;; \
