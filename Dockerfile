@@ -181,6 +181,7 @@ RUN source /assets/functions/00-container && \
                     xz \
                     zip \
                     zstd \
+                    netcat-openbsd \
                     && \
     \
     echo ""
