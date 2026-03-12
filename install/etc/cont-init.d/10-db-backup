@@ -6,6 +6,31 @@ prepare_service 03-monitoring
 PROCESS_NAME="db-backup"
 output_off
 
+cat <<EOF
+
+*******************************************************************************************
+*                                                                                         *
+*                    END OF LIFE NOTICE MARCH 12 , 2026                                   *
+*                           tiredofit/db-backup                                           *
+*                                                                                         *
+* This image is no longer maintained as of and will not receive updates.                  *
+*                                                                                         *
+* A successor image is available at:                                                      *
+*                                                                                         *
+* Repository | Documentation:                                                             *
+*   - https://github.com/nfrastack/container-db-backup                                    *
+*                                                                                         *
+* Image Registries:                                                                       *
+*   - https://hub.docker.com/r/nfrastack/db-backup                                        *
+*   - https://github.com/nfrastack/container-db-backup/pkgs/container/container-db-backup *
+*                                                                                         *
+* Please visit https://nfrastack.com for more information.                                *
+*                                                                                         *
+*******************************************************************************************
+
+EOF
+
+sleep 15
 setup_mode
 db_backup_container_init
 create_schedulers backup

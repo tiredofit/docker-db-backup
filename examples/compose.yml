@@ -2,11 +2,11 @@ services:
   example-db:
     hostname: example-db-host
     container_name: example-db
-    image: tiredofit/mariadb:10.11
+    image: docker.io/nfrastack/mariadb:11.8
     ports:
       - 3306:3306
     volumes:
-      - ./db:/var/lib/mysql
+      - ./db:/data
     environment:
       - ROOT_PASS=examplerootpassword
       - DB_NAME=example
