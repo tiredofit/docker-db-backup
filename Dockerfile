@@ -1,5 +1,5 @@
 ARG DISTRO=alpine
-ARG DISTRO_VARIANT=3.21-7.10.28
+ARG DISTRO_VARIANT=3.21-7.10.31
 
 FROM docker.io/tiredofit/${DISTRO}:${DISTRO_VARIANT}
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
@@ -75,7 +75,7 @@ RUN source /assets/functions/00-container && \
    wget -O config/config.sub 'https://git.savannah.gnu.org/cgit/config.git/plain/config.sub?id=7d3d27baf8107b630586c962c057e22149653deb' && \
    export LLVM_CONFIG="/usr/lib/llvm19/bin/llvm-config" && \
    export CLANG=clang-19  && \
-   ./configure \
+    ./configure \
         --build="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
         --prefix=/usr/local \
         --with-includes=/usr/local/include \
@@ -84,6 +84,7 @@ RUN source /assets/functions/00-container && \
         --with-pgport=5432 \
         --disable-rpath \
         --enable-integer-datetimes \
+        --enable-thread-safety \
         --enable-tap-tests \
         --with-gnu-ld \
         --with-icu \
@@ -99,8 +100,8 @@ RUN source /assets/functions/00-container && \
         --with-uuid=e2fs \
         --with-zstd \
         && \
-    make -j "$(nproc)" world && \
-    make install-world && \
+    make -j "$(nproc)" world-bin && \
+    make install-world-bin && \
     make -j "$(nproc)" -C contrib && \
     make -C contrib/ install && \
     runDeps="$( \
@@ -183,6 +184,11 @@ RUN source /assets/functions/00-container && \
                     zstd \
                     && \
     \
+    echo ""
+    RUN set -ex && \
+    source /assets/functions/00-container && \
+    mkdir -p /opt/microsoft/msodbcsql18/ && \
+    touch /opt/microsoft/msodbcsql18/ACCEPT_EULA && \
     case "$(uname -m)" in \
 	    "x86_64" ) mssql=true ; mssql_arch=amd64; influx2=true ; influx_arch=amd64; ;; \
         "arm64" | "aarch64" ) mssql=true ; mssql_arch=arm64; influx2=true ; influx_arch=arm64 ;; \
@@ -190,8 +196,8 @@ RUN source /assets/functions/00-container && \
     esac; \
     \
     if [ "${mssql,,}" = "true" ] ; then \
-        curl -sSLO https://download.microsoft.com/download/9dcab408-e0d4-4571-a81a-5a0951e3445f/msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk ; \
-        curl -sSLO https://download.microsoft.com/download/b60bb8b6-d398-4819-9950-2e30cf725fb0/mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; \
+        curl -O https://download.microsoft.com/download/9dcab408-e0d4-4571-a81a-5a0951e3445f/msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk ; \
+        curl -O https://download.microsoft.com/download/b60bb8b6-d398-4819-9950-2e30cf725fb0/mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; \
         echo y | apk add --allow-untrusted msodbcsql18_${MSODBC_VERSION}_${mssql_arch}.apk mssql-tools18_${MSSQL_VERSION}_${mssql_arch}.apk ; \
     else \
         echo >&2 "Detected non x86_64 or ARM64 build variant, skipping MSSQL installation" ; \
